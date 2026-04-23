@@ -8,6 +8,7 @@ const eslintConfig = defineConfig([
   {
     rules: {
       'no-unsafe-optional-chaining': 'error',
+      '@typescript-eslint/no-unused-vars': ['warn', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
     },
   },
   // Override default ignores of eslint-config-next.

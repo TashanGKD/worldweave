@@ -94,12 +94,12 @@ const LIVEBENCH_REMOTE_EMBED_UPGRADE_LIMIT = Number(process.env.WORLD_ARENA_REMO
 const LIVEBENCH_STATE_FILE = path.join(process.cwd(), '.cache', 'world-source-knowledge-state.json');
 const LIVEBENCH_RETAINED_ARCHIVE_FILE = path.join(process.cwd(), '.cache', 'world-livebench-retained-archive.json');
 const LIVEBENCH_VOTE_JOURNAL_FILE = path.join(process.cwd(), '.cache', 'world-livebench-votes.jsonl');
-const LIVEBENCH_GRAPH_DIR = path.join(process.cwd(), '.cache', 'world-source-knowledge-graphs');
+const _LIVEBENCH_GRAPH_DIR = path.join(process.cwd(), '.cache', 'world-source-knowledge-graphs');
 const LIVEBENCH_ARENA_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-source-knowledge-arena-cache.json');
 const LIVEBENCH_ZVEC_DIR = path.join(process.cwd(), '.cache', 'world-source-knowledge-zvec');
 const LIVEBENCH_ZVEC_MANIFEST_FILE = path.join(LIVEBENCH_ZVEC_DIR, 'manifest.json');
 const LEGACY_LIVEBENCH_STATE_FILE = path.join(process.cwd(), '.cache', 'world-livebench-state.json');
-const LEGACY_LIVEBENCH_GRAPH_DIR = path.join(process.cwd(), '.cache', 'world-livebench-graphs');
+const _LEGACY_LIVEBENCH_GRAPH_DIR = path.join(process.cwd(), '.cache', 'world-livebench-graphs');
 const LEGACY_LIVEBENCH_ARENA_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-livebench-arena-cache.json');
 const LEGACY_LIVEBENCH_ZVEC_DIR = path.join(process.cwd(), '.cache', 'world-livebench-zvec');
 const LEGACY_LIVEBENCH_ZVEC_MANIFEST_FILE = path.join(LEGACY_LIVEBENCH_ZVEC_DIR, 'manifest.json');
@@ -2056,7 +2056,7 @@ async function readRetainedLiveBenchArchive(): Promise<RetainedLiveBenchArchive>
   }
 }
 
-function shouldRetainQuestionInArchive(question: LiveQuestion) {
+function _shouldRetainQuestionInArchive(question: LiveQuestion) {
   const normalized = normalizeStoredQuestionForArena(question);
   if (!isExternalLiveBenchQuestion(normalized)) return false;
   if (normalized.status === 'pending') return false;
@@ -2438,7 +2438,7 @@ function applyManualVerifiedOutcome(question: LiveQuestion): LiveQuestion {
   };
 }
 
-async function buildInternalIndustryQuestions(store: LiveBenchStore, signals: WorldSignal[]): Promise<LiveQuestion[]> {
+async function _buildInternalIndustryQuestions(store: LiveBenchStore, signals: WorldSignal[]): Promise<LiveQuestion[]> {
   const freshSignals = signals.filter((signal) => new Date(signal.publishedAt).getTime() >= Date.now() - WATCHLIST_WINDOW_DAYS * 86400000);
   const questions: LiveQuestion[] = [];
 
@@ -5022,7 +5022,7 @@ function isSyntheticXiaId(xiaId: string) {
   return SYNTHETIC_XIA_ID_SET.has(xiaId);
 }
 
-function isSyntheticXiaVote(vote: LiveVote) {
+function _isSyntheticXiaVote(vote: LiveVote) {
   return vote.source === 'xia' && isSyntheticXiaId(vote.xia_id);
 }
 
@@ -5030,7 +5030,7 @@ function isSourceAttachedFormalVote(vote: LiveVote) {
   return vote.source === 'xia' && !isSyntheticXiaId(vote.xia_id) && (vote.source_attached === true || Boolean(vote.source_snapshot_id));
 }
 
-type LiveBenchRosterEntry = {
+type _LiveBenchRosterEntry = {
   xia_id: string;
   label: string;
 };
@@ -5622,7 +5622,7 @@ export function buildLiveBenchQuestionDetailFromSnapshot(
   };
 }
 
-async function syncQuestions(store: LiveBenchStore, signals: WorldSignal[]): Promise<LiveBenchStore> {
+async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Promise<LiveBenchStore> {
   const archive = await readRetainedLiveBenchArchive();
   const storeWithArchive = mergeRetainedArchiveIntoStore(store, archive);
   const stale =
@@ -6495,7 +6495,7 @@ export async function buildLiveBenchArenaState(
     const fallbackEvidenceChunks = backgroundResult.chunks.filter((chunk) => !isOffTopicChunkForQuestion(question, chunk));
     const primaryEvidenceChunks =
       rankedZvec.length > 0 ? rankedZvec : fallbackEvidenceChunks.slice(0, LIVEBENCH_ZVEC_TOP_K);
-    const hasStrongEvidence = primaryEvidenceChunks.length > 0 && hasStrongEvidenceForQuestion(question, primaryEvidenceChunks);
+    const _hasStrongEvidence = primaryEvidenceChunks.length > 0 && hasStrongEvidenceForQuestion(question, primaryEvidenceChunks);
     const referenceChunks = primaryEvidenceChunks;
 
     let baseline = store.votes.find((vote) => vote.question_id === question.question_id && vote.source === 'baseline') || null;

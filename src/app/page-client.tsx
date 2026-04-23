@@ -1,13 +1,13 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Link2, MapPin, Radio, RefreshCw } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type {
   LiveBenchArenaState,
   LiveBenchPlatformModelSummary,
@@ -567,7 +567,7 @@ function focusFallbackWatchNext(scene: WorldScene, region?: string | null) {
   return `${place || '这条线'}接下来更关键的是执行层变化、官方回应和周边地点会不会一起出现新动向。`;
 }
 
-function validationStatusLabel(value: string) {
+function _validationStatusLabel(value: string) {
   if (value === 'confirmed') return '已验证';
   if (value === 'falsified') return '已证伪';
   return '待确认';
@@ -669,7 +669,7 @@ function sceneDisplayLabel(scene: WorldScene) {
   return labels[scene] || scene;
 }
 
-function integrationShapeLabel(value: string | null) {
+function _integrationShapeLabel(value: string | null) {
   const labels: Record<string, string> = {
     'direct-source': '可直连',
     'aggregator-layer': '聚合层',
@@ -679,13 +679,13 @@ function integrationShapeLabel(value: string | null) {
   return value ? labels[value] || value : '待定';
 }
 
-function priorityTone(value: string | null) {
+function _priorityTone(value: string | null) {
   if (value === 'p0') return 'border-sky-200 bg-sky-50 text-sky-700';
   if (value === 'p1') return 'border-violet-200 bg-violet-50 text-violet-700';
   return 'border-slate-200 bg-slate-50 text-slate-600';
 }
 
-function sourceCategoryLabel(value: string) {
+function _sourceCategoryLabel(value: string) {
   const labels: Record<string, string> = {
     'world-monitor': '实时监测',
     literature: '论文源',
@@ -697,7 +697,7 @@ function sourceCategoryLabel(value: string) {
   return labels[value] || value || '其他';
 }
 
-function alignmentTagLabel(tag: string) {
+function _alignmentTagLabel(tag: string) {
   const labels: Record<string, string> = {
     'geo:mapped': '落点',
     'geo:unmapped': '关联点',
@@ -718,13 +718,13 @@ function alignmentTagLabel(tag: string) {
   return labels[tag] || tag;
 }
 
-function compactText(value?: string | null, max = 160) {
+function _compactText(value?: string | null, max = 160) {
   const text = cleanNarrativeText(value);
   if (!text) return '';
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
-function arenaQuestionAsked(snapshot: LiveQuestionSnapshot) {
+function _arenaQuestionAsked(snapshot: LiveQuestionSnapshot) {
   return cleanPresentationText(snapshot.question.title_zh || snapshot.question.title);
 }
 
@@ -770,13 +770,13 @@ function arenaCitationNumbers(snapshot: LiveQuestionSnapshot, citationIds?: stri
     .filter((value): value is number => typeof value === 'number');
 }
 
-function arenaCitationLabel(snapshot: LiveQuestionSnapshot, citationIds?: string[] | null) {
+function _arenaCitationLabel(snapshot: LiveQuestionSnapshot, citationIds?: string[] | null) {
   return arenaCitationNumbers(snapshot, citationIds)
     .map((value) => `[${value}]`)
     .join('');
 }
 
-function arenaCitedReferences(snapshot: LiveQuestionSnapshot, citationIds?: string[] | null) {
+function _arenaCitedReferences(snapshot: LiveQuestionSnapshot, citationIds?: string[] | null) {
   const citationSet = new Set(asArray(citationIds).filter(Boolean));
   if (citationSet.size === 0) return [];
   return arenaReferenceList(snapshot).filter((reference) => citationSet.has(reference.ref_id)).slice(0, 3);
@@ -786,7 +786,7 @@ function arenaQuestionHref(snapshot: LiveQuestionSnapshot) {
   return snapshot.question.origin_url || snapshot.question.platform_question_url || null;
 }
 
-function arenaQuestionMeta(snapshot: LiveQuestionSnapshot) {
+function _arenaQuestionMeta(snapshot: LiveQuestionSnapshot) {
   const parts = [arenaTopicLabel(snapshot.question.topic_bucket), snapshot.question.region_hint]
     .map((value) => {
       const cleaned = cleanPresentationText(value);
@@ -833,7 +833,7 @@ function arenaPlatformProbability(snapshot: LiveQuestionSnapshot) {
   return snapshot.question.platform_probability_yes;
 }
 
-function arenaPlatformProbabilityLabel(snapshot: LiveQuestionSnapshot) {
+function _arenaPlatformProbabilityLabel(snapshot: LiveQuestionSnapshot) {
   const probability = arenaPlatformProbability(snapshot);
   return typeof probability === 'number' ? `YES ${arenaPercent(probability)}` : '暂未给出';
 }
@@ -1002,7 +1002,7 @@ function arenaRegionLabel(snapshot: LiveQuestionSnapshot) {
   return cleaned;
 }
 
-function arenaReferenceNote(reference: { note?: string | null }) {
+function _arenaReferenceNote(reference: { note?: string | null }) {
   const note = cleanPresentationText(reference.note || '');
   return /[\u4e00-\u9fa5]/.test(note) ? note : '';
 }
@@ -1086,7 +1086,7 @@ function renderArenaReferenceRows(
 
 
 
-function threadRelationLabel(value?: string | null) {
+function _threadRelationLabel(value?: string | null) {
   if (value === 'upgrade') return '把旧判断往上推了一格';
   if (value === 'downgrade') return '把旧判断往下收了一格';
   if (value === 'revise') return '对旧判断做了修正';
@@ -1184,14 +1184,14 @@ function signalOpenHref(id: string, url?: string) {
   return hasOpenableSourceUrl(url) ? url! : signalDetailHref(id);
 }
 
-function reliabilityTone(tier?: string) {
+function _reliabilityTone(tier?: string) {
   if (tier === 'stable') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (tier === 'watchlist') return 'border-amber-200 bg-amber-50 text-amber-700';
   if (tier === 'blocked_or_unknown') return 'border-rose-200 bg-rose-50 text-rose-700';
   return 'border-slate-200 bg-slate-50 text-slate-600';
 }
 
-function reliabilityLabel(tier?: string) {
+function _reliabilityLabel(tier?: string) {
   if (tier === 'stable') return '稳定信源';
   if (tier === 'watchlist') return '观察中';
   if (tier === 'blocked_or_unknown') return '受限';
@@ -1213,7 +1213,7 @@ function shellCardClass() {
   return 'overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/88 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur';
 }
 
-function visibleAlignmentTags(tags: string[]) {
+function _visibleAlignmentTags(tags: string[]) {
   return tags.filter((tag) => {
     if (!tag) return false;
     if (tag.startsWith('feed:')) return false;
@@ -1344,7 +1344,7 @@ export default function PageClient({
   const [loading, setLoading] = useState(!hasUsefulDashboardState(normalizedInitialState));
   const [error, setError] = useState<string | null>(null);
 
-  const loadDashboard = async (nextScene: WorldScene) => {
+  const loadDashboard = useCallback(async (nextScene: WorldScene) => {
     setLoading(true);
     setError(null);
 
@@ -1409,7 +1409,7 @@ export default function PageClient({
     } finally {
       setLoading(false);
     }
-  };
+  }, [explain, marketSnapshot]);
 
   useEffect(() => {
     purgeLegacyDashboardCaches();
@@ -1440,7 +1440,7 @@ export default function PageClient({
       }
     }
     void loadDashboard(scene);
-  }, [scene, initialScene, initialState, initialSubworlds, initialMarketSnapshot, initialExplain]);
+  }, [initialExplain, initialMarketSnapshot, initialScene, initialSubworlds, loadDashboard, normalizedInitialState, scene]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -1448,7 +1448,7 @@ export default function PageClient({
     }, AUTO_REFRESH_MS);
 
     return () => window.clearInterval(timer);
-  }, [scene]);
+  }, [loadDashboard, scene]);
 
   useEffect(() => {
     const handleFocusRefresh = () => {
@@ -1461,7 +1461,7 @@ export default function PageClient({
       window.removeEventListener('focus', handleFocusRefresh);
       window.removeEventListener('online', handleFocusRefresh);
     };
-  }, [scene]);
+  }, [loadDashboard, scene]);
 
   const markers = useMemo(
     () => {

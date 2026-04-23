@@ -11,7 +11,7 @@ import type {
   LiveBenchEvaluation,
   LiveBenchPlatformModelSummary,
   LiveQuestionPlatform,
-  LiveBenchQuestionDetail,
+  LiveBenchQuestionDetail as _LiveBenchQuestionDetail,
   LiveBenchQuestionPreview,
   LiveBenchArenaState,
   MissionMode,
@@ -2468,7 +2468,7 @@ async function primeSignalTranslations(signals: WorldSignal[]): Promise<void> {
   }
 }
 
-async function ensureSignalTranslations(signals: WorldSignal[]): Promise<void> {
+async function _ensureSignalTranslations(signals: WorldSignal[]): Promise<void> {
   const runtime = getRuntimeStore();
   await ensureTranslatedSignalsLoaded();
   const candidates = signals
@@ -2616,11 +2616,11 @@ function inferScene(title: string, summary: string, tags: string[], sourceName =
   const warSignal = hasTag('war', 'conflict', 'security', 'military', 'missile', 'ceasefire', 'sanction') || hasPattern(warPattern);
   const healthSignal = hasTag('health', 'outbreak', 'biosecurity', 'clinical', 'vaccine', 'disease', 'virus', 'who') || hasPattern(healthPattern);
   const capacitySignal = hasTag('capacity', 'shipping', 'energy', 'supply-chain', 'logistics', 'manufacturing', 'commodities') || hasPattern(capacityPattern);
-  const technologySignal =
+  const _technologySignal =
     hasTag('technology', 'ai', 'llm', 'research', 'chip', 'chips', 'semiconductor', 'model') ||
     hasPattern(technologyPattern) ||
     techSource;
-  const financeSignal =
+  const _financeSignal =
     hasTag('finance', 'market', 'macro', 'policy', 'monitor-snapshot', 'bank', 'bond', 'equity', 'anchor') ||
     hasFinancePattern(financePattern) ||
     financeSource;
@@ -4237,7 +4237,7 @@ function normalizeValidationState(report: WorldReport): WorldReport {
   };
 }
 
-function buildValidationSummary(reports: WorldReport[], scene: WorldScene): WorldValidationSummary {
+function _buildValidationSummary(reports: WorldReport[], scene: WorldScene): WorldValidationSummary {
   const scoped = reports
     .filter((report) => isWithinDaysWindow(report.created_at, WEEKLY_PREDICTION_WINDOW_DAYS))
     .filter(
@@ -6913,7 +6913,7 @@ function resolveObserverId(xiaId?: string): string {
   return normalizeText(xiaId) || DEFAULT_WORLDLINE_ID;
 }
 
-function buildNodeActivities(signal: WorldSignal, reports: WorldReport[]): WorldNodeActivity[] {
+function _buildNodeActivities(signal: WorldSignal, reports: WorldReport[]): WorldNodeActivity[] {
   return reports
     .filter((report) => report.signal_id === signal.id || report.region === signal.region)
     .filter((report) => isWithinRecentWindow(report.created_at))
@@ -6950,7 +6950,7 @@ function getSignalLastReportAt(signal: WorldSignal, reports: WorldReport[]): str
   return match?.created_at || null;
 }
 
-function getNodeUpdatedAt(signal: WorldSignal, reports: WorldReport[]): string {
+function _getNodeUpdatedAt(signal: WorldSignal, reports: WorldReport[]): string {
   const lastReportAt = getSignalLastReportAt(signal, reports);
   if (!lastReportAt) {
     return signal.observedAt;
@@ -6961,7 +6961,7 @@ function getNodeUpdatedAt(signal: WorldSignal, reports: WorldReport[]): string {
     : signal.observedAt;
 }
 
-function getNodeDisplayLevel(signal: WorldSignal, reports: WorldReport[]): WorldDisplayLevel {
+function _getNodeDisplayLevel(signal: WorldSignal, reports: WorldReport[]): WorldDisplayLevel {
   const lastReportAt = getSignalLastReportAt(signal, reports);
   if (!lastReportAt) {
     return signal.displayLevel;
@@ -7019,7 +7019,7 @@ function buildStateMetrics(
   };
 }
 
-function buildTrails(scopedSignals: WorldSignal[], reports: WorldReport[], scene: WorldScene): WorldTrail[] {
+function _buildTrails(scopedSignals: WorldSignal[], reports: WorldReport[], scene: WorldScene): WorldTrail[] {
   const signalMap = new Map(scopedSignals.map((signal) => [signal.id, signal]));
   const palette = ['#2563EB', '#0F766E', '#7C3AED', '#EA580C', '#DB2777'];
 
@@ -8483,7 +8483,7 @@ async function buildSourceGovernanceState() {
   };
 }
 
-async function dispatchWorldMission(scene: WorldScene = 'global', mode?: MissionMode) {
+async function _dispatchWorldMission(scene: WorldScene = 'global', mode?: MissionMode) {
   const runtime = getRuntimeStore();
   await ensureRuntimeHistoryLoaded();
   const briefing = await getWorldBriefing(scene, mode);
@@ -8507,7 +8507,7 @@ async function dispatchWorldMission(scene: WorldScene = 'global', mode?: Mission
   };
 }
 
-async function continueWorldMission(
+async function _continueWorldMission(
   briefing?: WorldBriefing,
   missionId?: string,
   scene: WorldScene = 'global',
@@ -8561,7 +8561,7 @@ async function continueWorldMission(
   };
 }
 
-async function createWorldReport(
+async function _createWorldReport(
   briefing?: WorldBriefing,
   missionId?: string,
   draft?: ReportDraftInput,
@@ -8623,7 +8623,7 @@ async function createWorldReport(
   return runtime.reports.find((item) => item.report_id === report.report_id) || report;
 }
 
-async function backfillWorldReportGraphMetadata() {
+async function _backfillWorldReportGraphMetadata() {
   const runtime = getRuntimeStore();
   await ensureRuntimeHistoryLoaded();
   const before = [...runtime.reports]

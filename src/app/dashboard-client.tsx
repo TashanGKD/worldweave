@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Link2, MapPin, Radio, RefreshCw } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -603,19 +603,6 @@ function sourceRuntimeSupport(
     .join(' ');
 }
 
-function signalMixSummary(summary: WorldDashboardSourceRefreshSummary | null | undefined) {
-  if (!summary) return '当前信号混合情况还在统计。';
-  return `信号池共 ${summary.signal_mix.total_signal_count} 条，其中 ${summary.signal_mix.minimax_labeled_count} 条已完成统一打标。`;
-}
-
-function signalMixSupport(summary: WorldDashboardSourceRefreshSummary | null | undefined) {
-  if (!summary) return '主流信号、公众号内容和外部监测源会进入同一套标签链。';
-  if (summary.signal_mix.wechat_count === 0) {
-    return '当前窗口里还没有公众号信号进入展示层。';
-  }
-  return `公众号内容已并入统一标签链，当前覆盖率 ${formatPercent(summary.signal_mix.wechat_labeled_count / summary.signal_mix.wechat_count)}。`;
-}
-
 function livebenchPoolHeadline(summary: WorldDashboardLiveBenchSummary | null | undefined) {
   if (!summary) return '题池覆盖还在同步。';
   const pendingSettlement = summary.settlement_pending_count || 0;
@@ -644,7 +631,7 @@ export default function DashboardClient({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadDashboard = async (nextScene: WorldScene, options: { manual?: boolean; background?: boolean } = {}) => {
+  const loadDashboard = useCallback(async (nextScene: WorldScene, options: { manual?: boolean; background?: boolean } = {}) => {
     if (!options.background && !hasUsefulDashboardState(state)) setLoading(true);
     if (options.manual) setRefreshing(true);
     setError(null);
@@ -688,7 +675,7 @@ export default function DashboardClient({
       setLoading(false);
       if (options.manual) setRefreshing(false);
     }
-  };
+  }, [questionPool.length, state]);
 
   useEffect(() => {
     let backgroundTimer: number | null = null;
@@ -732,14 +719,14 @@ export default function DashboardClient({
     return () => {
       if (backgroundTimer !== null) window.clearTimeout(backgroundTimer);
     };
-  }, [scene, initialScene, initialState, initialSubworlds]);
+  }, [initialScene, initialSubworlds, loadDashboard, normalizedInitialState, scene]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       void loadDashboard(scene, { background: true });
     }, AUTO_REFRESH_MS);
     return () => window.clearInterval(timer);
-  }, [scene]);
+  }, [loadDashboard, scene]);
 
   useEffect(() => {
     const handleFocusRefresh = () => {
@@ -751,7 +738,7 @@ export default function DashboardClient({
       window.removeEventListener('focus', handleFocusRefresh);
       window.removeEventListener('online', handleFocusRefresh);
     };
-  }, [scene]);
+  }, [loadDashboard, scene]);
 
   const markers = useMemo(() => {
     const todayStart = startOfToday();
@@ -889,8 +876,6 @@ export default function DashboardClient({
       copy_hint: '信源查询会沉淀为复盘样本，后续回答会吸收验证过的方法。',
     };
   }, [state?.skill_entry]);
-  const activeSubworld = subworlds.find((world) => world.key === scene) || null;
-
   const handleCopySkillEntry = async () => {
     if (!skillEntry?.url) return;
     const copied = await copyTextWithFallback(skillEntry.url);
