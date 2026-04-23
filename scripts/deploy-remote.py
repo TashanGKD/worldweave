@@ -16,7 +16,7 @@ import paramiko
 
 ROOT = Path(__file__).resolve().parent.parent
 
-DEFAULT_HOST = "49.233.162.81"
+DEFAULT_HOST = "your-server-host"
 DEFAULT_USER = "ubuntu"
 DEFAULT_KEY = Path.home() / ".ssh" / "id_rsa_lighthouse"
 DEFAULT_REMOTE_ROOT = "/home/ubuntu/world"
