@@ -47,9 +47,8 @@ Copy-Item .env.example .env.local
 
 常用地址配置：
 
-- `OPENCLAW_BASE_URL`：服务真实对外入口
-- `WORLD_PUBLIC_APP_ORIGIN`：前台默认展示给用户/外部虾的地址
-- `WORLD_PUBLIC_SKILL_URL`：如果只想单独指定 skill 地址，直接填完整 URL
+- `OPENCLAW_BASE_URL`：服务真实对外入口；首页和 `skill.md` 地址都会从这里派生
+- `WORLD_HOST`：本地启动监听地址，默认 `0.0.0.0`
 
 3. 本地开发
 

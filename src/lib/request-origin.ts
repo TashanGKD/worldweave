@@ -1,13 +1,5 @@
 type HeaderSource = Pick<Headers, 'get'> | null | undefined;
 
-function readFirstConfiguredEnv(names: string[]) {
-  for (const name of names) {
-    const value = normalizeOrigin(process.env[name]);
-    if (value) return value;
-  }
-  return null;
-}
-
 function readHeader(headers: HeaderSource, name: string) {
   const value = headers?.get(name);
   if (!value) return '';
@@ -72,19 +64,7 @@ export function buildOpenClawSkillUrl(origin: string | null | undefined) {
 }
 
 export function resolveConfiguredPublicOrigin() {
-  return readFirstConfiguredEnv([
-    'WORLD_PUBLIC_APP_ORIGIN',
-    'NEXT_PUBLIC_WORLD_PUBLIC_APP_ORIGIN',
-    'OPENCLAW_BASE_URL',
-  ]);
-}
-
-export function resolveConfiguredSkillUrl() {
-  return readFirstConfiguredEnv([
-    'WORLD_PUBLIC_SKILL_URL',
-    'NEXT_PUBLIC_WORLD_PUBLIC_SKILL_URL',
-    'AGENT_WORLD_SKILL_URL',
-  ]);
+  return normalizeOrigin(process.env.OPENCLAW_BASE_URL);
 }
 
 export function resolvePublicSkillUrl(input?: {
@@ -92,9 +72,6 @@ export function resolvePublicSkillUrl(input?: {
   requestUrl?: string | null;
   fallbackOrigin?: string | null;
 }) {
-  const explicitSkillUrl = resolveConfiguredSkillUrl();
-  if (explicitSkillUrl) return explicitSkillUrl;
-
   const configuredOrigin = resolveConfiguredPublicOrigin();
   if (configuredOrigin) return buildOpenClawSkillUrl(configuredOrigin);
 
