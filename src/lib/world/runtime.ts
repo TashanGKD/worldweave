@@ -7522,7 +7522,7 @@ export async function getCachedWorldLiveBenchQuestionPreviews(
 }
 
 function buildOpenClawSkillEntry(requestOrigin?: string | null) {
-  const publicUrl = resolvePublicSkillUrl({ fallbackOrigin: requestOrigin }) || 'https://world.coze.site/skill.md';
+  const publicUrl = resolvePublicSkillUrl({ fallbackOrigin: requestOrigin }) || '/api/v1/openclaw/skill.md';
 
     return {
       mode: 'anonymous' as const,

@@ -28,7 +28,6 @@ Generated directories such as `.cache`, `graphify-out`, and `.graphify-venv` are
 ## Allowed Root Files
 
 - `.babelrc`
-- `.coze`
 - `.env.example`
 - `.env.local`
 - `.gitignore`

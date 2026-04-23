@@ -1,7 +1,7 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
+WORLD_WORKSPACE_PATH="${WORLD_WORKSPACE_PATH:-$(pwd)}"
 PORT=5000
 DEPLOY_RUN_PORT="${DEPLOY_RUN_PORT:-$PORT}"
 BUILD_LOCK_FILE="${BUILD_LOCK_FILE:-/tmp/world-threads-build.lock}"
@@ -15,7 +15,7 @@ ensure_production_build() {
         exec 9>"${BUILD_LOCK_FILE}"
         flock 9
 
-        cd "${COZE_WORKSPACE_PATH}"
+        cd "${WORLD_WORKSPACE_PATH}"
         if has_production_build; then
             echo "Production build detected."
             exit 0
@@ -27,7 +27,7 @@ ensure_production_build() {
 }
 
 start_service() {
-    cd "${COZE_WORKSPACE_PATH}"
+    cd "${WORLD_WORKSPACE_PATH}"
     if [[ -f ".env.local" ]]; then
         set -a
         # Prefer workspace-local runtime values over outer shell leftovers.

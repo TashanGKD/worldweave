@@ -20,7 +20,6 @@ const generated = new Map([
 
 const allowedRootFiles = new Set([
   '.babelrc',
-  '.coze',
   '.env.example',
   '.env.local',
   '.gitignore',

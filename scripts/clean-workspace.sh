@@ -1,9 +1,9 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
+WORLD_WORKSPACE_PATH="${WORLD_WORKSPACE_PATH:-$(pwd)}"
 
-cd "${COZE_WORKSPACE_PATH}"
+cd "${WORLD_WORKSPACE_PATH}"
 
 echo "Cleaning generated research and cache artifacts..."
 

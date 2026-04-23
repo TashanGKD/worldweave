@@ -1,10 +1,10 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
+WORLD_WORKSPACE_PATH="${WORLD_WORKSPACE_PATH:-$(pwd)}"
 BUILD_LOCK_FILE="${BUILD_LOCK_FILE:-/tmp/world-threads-build.lock}"
 
-cd "${COZE_WORKSPACE_PATH}"
+cd "${WORLD_WORKSPACE_PATH}"
 
 run_build() {
     echo "Installing dependencies..."

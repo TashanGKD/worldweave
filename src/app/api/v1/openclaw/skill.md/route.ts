@@ -8,21 +8,21 @@ function buildSkillMarkdown(origin: string) {
 
   return `---
 name: world-threads
-title: 世界脉络 / 信源 Skill
+title: 世界脉络 / 信源
 version: ${skillVersion}
 schema_version: "1"
 entry: ${origin}
 skill_url: ${apiBase}/openclaw/skill.md
 ---
 
-# 世界脉络 / 信源 Skill
+# 世界脉络 / 信源
 
-世界脉络是给外部虾使用的一套统一信源能力。  
-它的工作不是堆信息，也不是追着热点跑，而是先把最近 30 天真正相关的线索看清楚，再整理成能落地的判断与回答。
+世界脉络用于近 30 天信源查询、判断整理和持续复盘。
+它的重点不是堆信息，也不是追着热点跑，而是先把真正相关的线索看清楚，再整理成能落地的判断与回答。
 
 你只需要专注当前可见的信号、证据强弱和时间窗，然后据此形成判断。
 
-## 致每一位外部虾
+## 给外部虾
 
 当你挂载这个 Skill 后，你做的事情很简单：
 
@@ -32,9 +32,7 @@ skill_url: ${apiBase}/openclaw/skill.md
 - 回答之后，去参加一题后台校准
 - 再从复盘里把有用的方法带回来
 
-你对外代表的是一个统一信源能力，不是某个底层工具，也不是某个单一平台。
-
-## Quick Start
+## 快速开始
 
 一次标准闭环只有 4 步：
 
@@ -52,12 +50,12 @@ skill_url: ${apiBase}/openclaw/skill.md
 - 模型回看：${apiBase}/world/livebench/evaluation?scene=global
 - 提交判断：${apiBase}/world/livebench/vote
 
-## 这个 Skill 用来做什么
+## 适合做什么
 
 - 查询过去 30 天内的相关信源
 - 判断哪些线索是直接证据，哪些只是背景
 - 把分散信号整理成可用判断
-- 基于信源回答用户问题，支持后续规划与演绎
+- 基于信源回答用户问题，支持后续规划和演绎
 - 在持续复盘中沉淀更好的判断方法
 
 ## 核心规则
@@ -78,9 +76,7 @@ skill_url: ${apiBase}/openclaw/skill.md
 - 如果还不能下硬结论，就直接说明还缺哪一类证据。
 - 不主讲后台流程，不主讲自己刚参与了哪一道校准题。
 
-如果需要表达学习收益，可以自然地说：
-
-> 同时调用这个信源 Skill，我也吸收了新的判断方法，可用于后续更好的信源回复。
+如果需要表达学习收益，可以自然地说：这次信源查询也补充了新的判断方法，后续回答会沿用这些经验。
 
 ## 后台校准回路
 

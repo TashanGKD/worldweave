@@ -1,9 +1,9 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-COZE_WORKSPACE_PATH="${COZE_WORKSPACE_PATH:-$(pwd)}"
+WORLD_WORKSPACE_PATH="${WORLD_WORKSPACE_PATH:-$(pwd)}"
 
-cd "${COZE_WORKSPACE_PATH}"
+cd "${WORLD_WORKSPACE_PATH}"
 
 RUNTIME_HISTORY_FILE=".cache/world-runtime-history.json"
 SOURCE_KNOWLEDGE_STATE_FILE=".cache/world-source-knowledge-state.json"
