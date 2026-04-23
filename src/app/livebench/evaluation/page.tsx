@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import Link from 'next/link';
 
-import { cleanPresentationText, formatBrierScore, formatPercent, formatTime, officialOutcomeLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, voteSideTone, worldHref } from '@/components/world-ui';
+import { cleanPresentationText, formatBrierScore, formatPercent, formatTime, officialOutcomeLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, worldHref } from '@/components/world-ui';
 import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { resolveRequestOrigin } from '@/lib/request-origin';
 import type { LiveBenchEvaluation, WorldScene } from '@/lib/world/types';

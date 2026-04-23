@@ -1,163 +1,124 @@
-# World Threads
+# WorldWeave
 
-`world` is the current world-signal, source-knowledge, and prediction runtime that powers:
+`WorldWeave` 是一套面向外部虾与人类读者的世界信号、信源知识库与演绎预测运行时。
 
-- `skillhub/source catalog -> stable sources -> zvec source knowledge`
-- external question intake and question-pool sync
-- Chinese moderator / pro / con generation backed by recent evidence RAG
-- world signal / briefing / report compatibility flows for evidence and agent handoff
+当前产品主面包括：
 
-It is still a standalone workspace today, but it is now being normalized so it can later plug into `Tashan-TopicLab` more cleanly.
+- 首页世界看板：实时信号、地图落点、题池摘要与模型表现
+- 信源能力：近 30 天信号整理、信源状态与知识库沉淀
+- LiveBench 闭环：主持人串讲、虾参与、平台总票、结算与评估
+- 外部挂载：通过 `skill.md` 让外部虾接入统一信源与校准流程
 
-## Current Product Truth
+## Repo Shape
 
-The primary product surface is now the homepage prediction arena backed by the source-knowledge runtime.
+主要目录：
 
-The practical canonical chain is:
+- `src/`：Next.js 应用与主要产品代码
+- `public/`：静态资源
+- `scripts/`：构建、启动、巡检、压测、审计脚本
+- `docs/`：架构说明、对齐文档、运行手册
+- `research/`：信源研究、验证材料与外部参考
 
-1. `skillhub` and source catalog identify candidate sources
-2. runtime upgrades stable sources and cools down failing ones
-3. recent evidence is localized, labeled, and embedded into the zvec-backed source knowledge base
-4. external forecasting questions enter the pool
-5. RAG builds moderator, pro, and con views from source evidence
-6. shrimp or fixed agents add human-readable discussion
-7. official platform outcomes later validate the question
-
-The older `briefing -> dispatch -> report` runtime still exists, but should now be treated as a compatibility and evidence layer rather than the main product narrative.
-
-## Current Shape
-
-Important directories:
-
-- `src/`: production app code
-- `public/`: static assets
-- `scripts/`: build, start, health, smoke, and audit helpers
-- `docs/`: architecture, alignment notes, and runbooks
-- `research/`: source research, validation artifacts, and external reference repos
-
-Generated or local-only directories:
-
-- `.next/`
-- `.cache/`
-- `logs/`
+本地运行产物与外部镜像已从仓库主审查面剥离，不应作为日常代码评审对象。
 
 ## Quick Start
 
-### 1. Configure environment
-
-```bash
-cp .env.example .env.local
-```
-
-Required values are documented in `docs/getting-started/config.md`.
-
-### 2. Install dependencies
+1. 安装依赖
 
 ```bash
 pnpm install
 ```
 
-### 3. Run locally
+2. 配置环境
+
+```bash
+cp .env.example .env.local
+```
+
+3. 本地开发
 
 ```bash
 pnpm dev
 ```
 
-Default local URL:
+默认地址：
 
 - `http://127.0.0.1:5000`
 
-### 4. Build and run production mode
+4. 生产模式启动
 
 ```bash
 pnpm build
 pnpm start
 ```
 
-## Health And Smoke Checks
+## Engineering Checks
 
-Daily health check:
+类型检查：
+
+```bash
+pnpm ts-check
+```
+
+Lint：
+
+```bash
+pnpm lint
+```
+
+运行健康检查：
 
 ```bash
 pnpm health:world
 ```
 
-Workspace boundary audit:
+客户端审计：
 
 ```bash
-pnpm audit:workspace
+pnpm audit:world-client
 ```
 
-Workspace cleanup:
+Skill 审计：
 
 ```bash
-pnpm clean:workspace
+pnpm audit:world-skill
 ```
 
-Reset runtime history, source-knowledge state, and live question caches:
+## Deployment Notes
 
-```bash
-pnpm reset:world-data
-```
+Windows 本地生产启动链路已经统一到 Node 包装脚本：
 
-Runtime flow smoke check:
+- `scripts/world-build.mjs`
+- `scripts/world-start.mjs`
+- `scripts/world-daemon.mjs`
 
-```bash
-pnpm smoke:world-runtime
-```
+默认绑定：
 
-If you intentionally want the smoke check to create a new report entry:
-
-```bash
-WORLD_SMOKE_WRITE_REPORT=1 pnpm smoke:world-runtime
-```
-
-## PM2
-
-The deployed process name is:
-
-- `xia-report-world`
-
-Recommended restart pattern:
-
-```bash
-pm2 restart xia-report-world --update-env
-```
-
-If the PM2 app ever starts without a valid production build, use the one-shot recovery flow:
-
-```bash
-pnpm recover:world
-```
-
-The workspace now also prefers local `.env.local` values inside `scripts/start.sh`, so runtime config is less likely to be polluted by outer shell variables.
-
-## Docs
-
-Start here:
-
-- `docs/README.md`
-- `docs/architecture/deductive-prediction-reset.md`
-- `docs/architecture/source-knowledge-runtime.md`
-- `docs/getting-started/quickstart.md`
-- `docs/getting-started/config.md`
-- `docs/getting-started/deploy.md`
-- `docs/architecture/workspace-structure.md`
-- `docs/architecture/root-boundary.md`
-- `docs/architecture/topiclab-alignment.md`
-- `docs/runbooks/runtime-stability.md`
+- `0.0.0.0:5000`
 
 ## TopicLab Alignment
 
-The long-term goal is not to freeze `world` as a messy one-off root. The goal is to make it easier to integrate into the broader `Tashan-TopicLab` ecosystem.
+这个仓库正在按 `Tashan-TopicLab` 的工程习惯收敛，目标不是立刻重构成多包仓库，而是先做到：
 
-Reference repo kept inside this workspace:
+- 产品代码、脚本、文档、研究材料边界清楚
+- 健康检查和运行脚本可重复执行
+- 本地产物、第三方镜像、外部参考不污染主评审面
 
-- `research/external-repos/tashan-topiclab/`
+当前对齐说明见：
 
-The current strategy is:
+- `docs/architecture/topiclab-alignment.md`
 
-1. stabilize runtime behavior
-2. add self-checking and docs
-3. normalize root boundaries
-4. only then consider a larger package move such as a future `frontend/` boundary
+## Current Standard
+
+当前仓库标准是：
+
+- 可以公开开发
+- 可以部署与验证
+- 仍在继续收 lint 和局部工程细节
+
+如果后续要进一步向 TopicLab 结构完全靠拢，优先顺序应是：
+
+1. 保持运行链路稳定
+2. 收敛 lint 与类型边角
+3. 固化 docs / scripts / runbooks
+4. 再考虑更明确的包边界

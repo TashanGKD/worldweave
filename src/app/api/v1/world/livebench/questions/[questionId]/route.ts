@@ -5,6 +5,29 @@ import { getCachedLiveBenchQuestionDetail } from '@/lib/world/livebench';
 import type { WorldScene } from '@/lib/world/types';
 
 const QUESTION_DETAIL_FAST_TIMEOUT_MS = 3000;
+type LooseRecord = Record<string, unknown>;
+type LoosePosition = Record<string, unknown>;
+
+type XiaQuestionDetail = LooseRecord & {
+  aggregate_vote?: LooseRecord;
+  question?: LooseRecord;
+  preview?: LooseRecord;
+  moderator_brief?: LooseRecord;
+  external_discussion?: LooseRecord;
+  xia_positions?: {
+    yes?: LoosePosition[];
+    no?: LoosePosition[];
+    unclear?: LoosePosition[];
+  };
+  evidence?: unknown;
+  settlement?: unknown;
+  generated_at?: unknown;
+  scene?: unknown;
+};
+
+function asOptionalString(value: unknown) {
+  return typeof value === 'string' ? value : undefined;
+}
 
 function timeout<T>(ms: number, value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
@@ -92,14 +115,14 @@ function compactXiaText(value: unknown, fallback = '') {
   return text.replace(/\s+/g, ' ').trim().slice(0, 220);
 }
 
-function buildPeerDigest(positions: Array<Record<string, unknown>> | undefined) {
+function buildPeerDigest(positions: LoosePosition[] | undefined) {
   return (positions || [])
     .map((position) => compactXiaText(position.human_readable_why || position.human_readable_prediction))
     .filter(Boolean)
     .slice(0, 3);
 }
 
-function stripInternalQuestionFields(question: Record<string, unknown>) {
+function stripInternalQuestionFields(question: LooseRecord) {
   const {
     source_platform: _sourcePlatform,
     source_question_id: _sourceQuestionId,
@@ -112,7 +135,7 @@ function stripInternalQuestionFields(question: Record<string, unknown>) {
   return rest;
 }
 
-function stripInternalPositionFields(position: Record<string, unknown>) {
+function stripInternalPositionFields(position: LoosePosition) {
   const {
     probability_yes: _probabilityYes,
     origin_url: _originUrl,
@@ -122,8 +145,10 @@ function stripInternalPositionFields(position: Record<string, unknown>) {
   return rest;
 }
 
-function toXiaFacingQuestionDetail(detail: Record<string, any>) {
+function toXiaFacingQuestionDetail(detail: XiaQuestionDetail) {
   const aggregateVote = detail.aggregate_vote || {};
+  const preview = detail.preview || {};
+  const moderatorBrief = detail.moderator_brief || {};
   const peerDigest = {
     yes: buildPeerDigest(detail.xia_positions?.yes),
     no: buildPeerDigest(detail.xia_positions?.no),
@@ -135,31 +160,31 @@ function toXiaFacingQuestionDetail(detail: Record<string, any>) {
     question: detail.question ? stripInternalQuestionFields(detail.question) : detail.question,
     preview: detail.preview
       ? {
-          question_id: detail.preview.question_id,
-          status: detail.preview.status,
-          settlement_status: detail.preview.settlement_status,
-          title: cleanXiaTitle(detail.preview.title),
-          background: detail.preview.background,
-          region_label: detail.preview.region_label,
-          topic_label: detail.preview.topic_label,
-          resolve_at: detail.preview.resolve_at,
-          official_outcome: detail.preview.official_outcome,
-          official_resolved_at: detail.preview.official_resolved_at,
-          moderator_line: cleanXiaFacingText(detail.preview.moderator_line),
-          evidence_count: detail.preview.evidence_count,
-          rule_count: detail.preview.rule_count,
-          discussion_count: detail.preview.discussion_count,
-          xia_count: detail.preview.xia_count,
+          question_id: preview.question_id,
+          status: preview.status,
+          settlement_status: preview.settlement_status,
+          title: cleanXiaTitle(asOptionalString(preview.title)),
+          background: preview.background,
+          region_label: preview.region_label,
+          topic_label: preview.topic_label,
+          resolve_at: preview.resolve_at,
+          official_outcome: preview.official_outcome,
+          official_resolved_at: preview.official_resolved_at,
+          moderator_line: cleanXiaFacingText(asOptionalString(preview.moderator_line)),
+          evidence_count: preview.evidence_count,
+          rule_count: preview.rule_count,
+          discussion_count: preview.discussion_count,
+          xia_count: preview.xia_count,
           missing_xia_count: aggregateVote.missing_count || 0,
         }
       : detail.preview,
     moderator_brief: {
-      ...(detail.moderator_brief || {}),
-      brief: cleanXiaFacingText(detail.moderator_brief?.brief),
-      current_bias: cleanXiaFacingText(detail.moderator_brief?.current_bias),
-      key_turning_points: Array.isArray(detail.moderator_brief?.key_turning_points)
-        ? detail.moderator_brief.key_turning_points.map(cleanXiaFacingText)
-        : detail.moderator_brief?.key_turning_points,
+      ...moderatorBrief,
+      brief: cleanXiaFacingText(asOptionalString(moderatorBrief.brief)),
+      current_bias: cleanXiaFacingText(asOptionalString(moderatorBrief.current_bias)),
+      key_turning_points: Array.isArray(moderatorBrief.key_turning_points)
+        ? moderatorBrief.key_turning_points.map((item) => cleanXiaFacingText(asOptionalString(item)))
+        : moderatorBrief.key_turning_points,
     },
     external_discussion: detail.external_discussion,
     xia_positions: {
@@ -179,7 +204,7 @@ function toXiaFacingQuestionDetail(detail: Record<string, any>) {
         '再读主持人串讲、背景材料、其他虾分歧和模型总票方向。',
         '最后提交是/不是、理由、改判条件，并在结算后复盘。',
       ],
-      host_background: compactXiaText(detail.moderator_brief?.summary),
+      host_background: compactXiaText(moderatorBrief.summary),
       platform_background: compactXiaText(detail.external_discussion?.summary),
       peer_digest: peerDigest,
       aggregate_direction: {
@@ -208,7 +233,7 @@ export async function GET(
     const decodedQuestionId = decodeURIComponent(pathQuestionId);
     const cachedDetail = await getCachedLiveBenchQuestionDetail(scene, decodedQuestionId);
     if (cachedDetail) {
-      return NextResponse.json(xiaFacing ? toXiaFacingQuestionDetail(cachedDetail as Record<string, any>) : cachedDetail, {
+      return NextResponse.json(xiaFacing ? toXiaFacingQuestionDetail(cachedDetail as unknown as XiaQuestionDetail) : cachedDetail, {
         headers: {
           'Cache-Control': 'no-store, max-age=0',
           'x-world-detail-source': 'cache',
@@ -231,7 +256,7 @@ export async function GET(
         },
       );
     }
-    return NextResponse.json(xiaFacing ? toXiaFacingQuestionDetail(detail as Record<string, any>) : detail, {
+    return NextResponse.json(xiaFacing ? toXiaFacingQuestionDetail(detail as unknown as XiaQuestionDetail) : detail, {
       headers: {
         'Cache-Control': 'no-store, max-age=0',
         'x-world-detail-source': liveDetail ? 'live' : 'cache-fallback',
