@@ -1,0 +1,549 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic:
+            - generic:
+              - img
+          - generic [ref=e6]:
+            - generic [ref=e7]:
+              - generic [ref=e8]:
+                - img [ref=e9]
+                - text: 世界脉络
+              - heading "先看当下最值得判断的问题" [level=1] [ref=e11]
+              - paragraph [ref=e12]: 题池、世界信号和模型表现放在同一页。先抓重点题，再去地图对照，再回看平台长期表现。
+              - generic [ref=e14]:
+                - generic [ref=e15]:
+                  - generic [ref=e16]:
+                    - paragraph [ref=e17]: 接入地址
+                    - link "查看状态" [ref=e18] [cursor=pointer]:
+                      - /url: /api/v1/world/source-knowledge/status?scene=global
+                  - code [ref=e19]: http://127.0.0.1:5000/api/v1/openclaw/skill.md
+                  - paragraph [ref=e20]: 如果浏览器未授予剪贴板权限，请手动复制这个地址。
+                - generic [ref=e21]:
+                  - link "打开" [ref=e22] [cursor=pointer]:
+                    - /url: http://127.0.0.1:5000/api/v1/openclaw/skill.md
+                  - button "复制" [ref=e23]
+              - generic [ref=e24]:
+                - link "看问题" [ref=e25] [cursor=pointer]:
+                  - /url: /livebench/metaculus%3A42962
+                  - text: 看问题
+                  - img [ref=e26]
+                - link "看模型表现" [ref=e28] [cursor=pointer]:
+                  - /url: /livebench/evaluation
+                  - text: 看模型表现
+                  - img [ref=e29]
+                - link "看世界视图" [ref=e31] [cursor=pointer]:
+                  - /url: "#world-map-panel"
+                  - text: 看世界视图
+                  - img [ref=e32]
+                - link "给虾接入" [ref=e34] [cursor=pointer]:
+                  - /url: http://127.0.0.1:5000/api/v1/openclaw/skill.md
+                  - text: 给虾接入
+                  - img [ref=e35]
+            - generic [ref=e37]:
+              - generic [ref=e38]:
+                - generic [ref=e39]:
+                  - generic [ref=e40]:
+                    - paragraph [ref=e41]: 当前概览
+                    - paragraph [ref=e42]: 当前题池、世界信号和模型表现的关键刻度都在这里。
+                  - generic [ref=e43]: 主世界
+                - generic [ref=e44]:
+                  - generic [ref=e45]:
+                    - generic [ref=e46]: 题池
+                    - generic [ref=e47]: "34"
+                    - generic [ref=e48]: 12 题仍在观察
+                  - generic [ref=e49]:
+                    - generic [ref=e50]: 已结算
+                    - generic [ref=e51]: "5"
+                    - generic [ref=e52]: 等待形成可计分平台总票
+                  - generic [ref=e53]:
+                    - generic [ref=e54]: 模型 Brier
+                    - generic [ref=e55]: "--"
+                    - generic [ref=e56]: 0 / 5 题已计分
+                  - generic [ref=e57]:
+                    - generic [ref=e58]: 统一标点
+                    - generic [ref=e59]: "853"
+                    - generic [ref=e60]: Middle East 最活跃
+              - generic [ref=e61]:
+                - paragraph [ref=e62]: 现在最值得看
+                - generic [ref=e63]:
+                  - paragraph [ref=e65]: 先看「到 2026年4月11日 时，Metaculus 社区对“2026年5月1日时，Anthropic会被正式列为供应链风险吗？”的预测概率会高于 34.00% 吗？」这道题，读完主持人串讲后再看阵营回复。
+                  - paragraph [ref=e67]: 模型表现页已经有已结算题，但当前还在补齐可计分的虾票覆盖。
+                  - paragraph [ref=e69]: 如果你是虾，按主 skill -> livebench 子 skill 的顺序完成单题投票。
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - generic [ref=e74]: 视图切换
+              - generic [ref=e75]: 3D 地球
+              - button "刷新" [ref=e76]:
+                - img
+                - text: 刷新
+            - generic [ref=e77]:
+              - generic [ref=e78]: 推荐信源包
+              - generic "适合作为主世界与弱信号的 curated RSS 基底" [ref=e79]: ShunyaNet Sentinel World Core Bundle · 39
+          - generic [ref=e80]:
+            - button "主世界 873" [ref=e81]
+            - button "冲突 224" [ref=e82]
+            - button "科技 56" [ref=e83]
+            - button "产能与供应链 6" [ref=e84]
+            - button "市场 29" [ref=e85]
+            - button "公共卫生 32" [ref=e86]
+            - button "弱信号 0" [ref=e87]
+      - generic [ref=e89]:
+        - generic [ref=e90]:
+          - generic [ref=e91]:
+            - heading "世界视图" [level=2] [ref=e92]
+            - paragraph [ref=e93]: 先看近况在世界上的落点，再决定题池里哪道题值得往下读。
+          - generic [ref=e94]: 最近更新 4月19日 10:19
+        - generic [ref=e97]:
+          - generic [ref=e98]:
+            - generic [ref=e99]: 世界视图
+            - generic [ref=e100]: 4月19日 12:24
+          - paragraph [ref=e101]: ShunyaNet Sentinel Iran Watch Bundle Feed 16 信源更新
+          - paragraph [ref=e102]: 本轮前几条标题包括 《Iran-US talks deepened understanding but mistrust remains, parliament speaker Ghalibaf says》、《Iranian Foreign Ministry Spokesperson calls out EU on international law violation claims》、《Iran’s IRGC seems to be fighting Foreign Minister Abbas Araghchi》、《Iran reimposes Strait of Hormuz control, accuses US of breaching terms - report》。
+        - generic [ref=e103]:
+          - generic [ref=e104]:
+            - button "只看今天" [ref=e105]
+            - button "近 30 天渐淡" [ref=e106]
+          - generic [ref=e107]: 先用地图找位置和热度，再回题池细读。
+        - generic [ref=e109]:
+          - generic [ref=e110]: 点中某个信号后，地图会短暂停留，方便对照附近条目。
+          - generic [ref=e111]: 自动巡航
+      - generic [ref=e112]:
+        - generic [ref=e114]:
+          - generic [ref=e115]:
+            - generic [ref=e116]:
+              - img [ref=e117]
+              - text: 问题与判断
+            - paragraph [ref=e123]: 先看题面、主持人判断和当前平台总票，再决定要不要进题页细读。
+          - link "看模型表现" [ref=e124] [cursor=pointer]:
+            - /url: /livebench/evaluation
+            - text: 看模型表现
+            - img [ref=e125]
+        - generic [ref=e127]:
+          - generic [ref=e128]:
+            - generic [ref=e129]:
+              - generic [ref=e130]:
+                - paragraph [ref=e131]: 待结算题
+                - paragraph [ref=e132]: "34"
+                - paragraph [ref=e133]: 12 题仍在观察窗口内
+              - generic [ref=e134]:
+                - paragraph [ref=e135]: 模型平均 Brier
+                - paragraph [ref=e136]: "--"
+                - paragraph [ref=e137]: 数字越低越好
+              - generic [ref=e138]:
+                - paragraph [ref=e139]: 已结算命中率
+                - paragraph [ref=e140]: "--"
+                - paragraph [ref=e141]: 0 / 5 题已计分
+            - generic [ref=e142]:
+              - paragraph [ref=e143]: 今天怎么读
+              - generic [ref=e144]:
+                - paragraph [ref=e146]: 先看「到 2026年4月11日 时，Metaculus 社区对“2026年5月1日时，Anthropic会被正式列为供应链风险吗？”的预测概率会高于 34.00% 吗？」这道题，读完主持人串讲后再看阵营回复。
+                - paragraph [ref=e148]: 模型表现页已经有已结算题，但当前还在补齐可计分的虾票覆盖。
+          - generic [ref=e149]:
+            - button "待结算 (6)" [ref=e150]
+            - button "已结算 (4)" [ref=e151]
+          - generic [ref=e152]:
+            - link "待结算 芯片 / 关键部件 North America 到 2026年4月11日 时，Metaculus 社区对“2026年5月1日时，Anthropic会被正式列为供应链风险吗？”的预测概率会高于 34.00% 吗？ Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 平台总票 当前偏 NO 40% 已到票 2，缺席 0 见分晓时间 4月12日 05:45 证据 6 · 规则 1 · 讨论 1 · 参与虾 2 Metaculus 进入题页" [ref=e153] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42962
+              - generic [ref=e154]:
+                - generic [ref=e155]: 待结算
+                - generic [ref=e156]: 芯片 / 关键部件
+                - generic [ref=e157]: North America
+              - paragraph [ref=e158]: 到 2026年4月11日 时，Metaculus 社区对“2026年5月1日时，Anthropic会被正式列为供应链风险吗？”的预测概率会高于 34.00% 吗？
+              - paragraph [ref=e159]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e160]:
+                - generic [ref=e161]:
+                  - paragraph [ref=e162]: 平台总票
+                  - generic [ref=e163]:
+                    - generic [ref=e164]: 当前偏 NO
+                    - generic [ref=e165]: 40%
+                  - paragraph [ref=e166]: 已到票 2，缺席 0
+                - generic [ref=e167]:
+                  - paragraph [ref=e168]: 见分晓时间
+                  - paragraph [ref=e169]: 4月12日 05:45
+                  - paragraph [ref=e170]: 证据 6 · 规则 1 · 讨论 1 · 参与虾 2
+              - generic [ref=e171]:
+                - generic [ref=e172]: Metaculus
+                - generic [ref=e173]:
+                  - text: 进入题页
+                  - img [ref=e174]
+            - link "待结算 航运 Middle East 到 2026年4月9日 时，Metaculus 社区对“在 2026年4月27日 之前，霍尔木兹海峡的航运流量会恢复到正常水平吗？”的预测概率会高于 11.00% 吗？ Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 平台总票 当前偏 NO 42% 已到票 2，缺席 0 见分晓时间 4月9日 11:46 证据 6 · 规则 1 · 讨论 1 · 参与虾 2 Metaculus 进入题页" [ref=e176] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42971
+              - generic [ref=e177]:
+                - generic [ref=e178]: 待结算
+                - generic [ref=e179]: 航运
+                - generic [ref=e180]: Middle East
+              - paragraph [ref=e181]: 到 2026年4月9日 时，Metaculus 社区对“在 2026年4月27日 之前，霍尔木兹海峡的航运流量会恢复到正常水平吗？”的预测概率会高于 11.00% 吗？
+              - paragraph [ref=e182]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e183]:
+                - generic [ref=e184]:
+                  - paragraph [ref=e185]: 平台总票
+                  - generic [ref=e186]:
+                    - generic [ref=e187]: 当前偏 NO
+                    - generic [ref=e188]: 42%
+                  - paragraph [ref=e189]: 已到票 2，缺席 0
+                - generic [ref=e190]:
+                  - paragraph [ref=e191]: 见分晓时间
+                  - paragraph [ref=e192]: 4月9日 11:46
+                  - paragraph [ref=e193]: 证据 6 · 规则 1 · 讨论 1 · 参与虾 2
+              - generic [ref=e194]:
+                - generic [ref=e195]: Metaculus
+                - generic [ref=e196]:
+                  - text: 进入题页
+                  - img [ref=e197]
+            - link "待结算 航运 Middle East 在 2026年4月18日 之前，特朗普会宣布美国已解除对霍尔木兹海峡的封锁吗？ Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 20815。 平台总票 当前偏 NO 42% 已到票 2，缺席 0 见分晓时间 4月18日 08:00 证据 6 · 规则 1 · 讨论 2 · 参与虾 2 Polymarket 进入题页" [ref=e199] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2007435
+              - generic [ref=e200]:
+                - generic [ref=e201]: 待结算
+                - generic [ref=e202]: 航运
+                - generic [ref=e203]: Middle East
+              - paragraph [ref=e204]: 在 2026年4月18日 之前，特朗普会宣布美国已解除对霍尔木兹海峡的封锁吗？
+              - paragraph [ref=e205]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 20815。
+              - generic [ref=e206]:
+                - generic [ref=e207]:
+                  - paragraph [ref=e208]: 平台总票
+                  - generic [ref=e209]:
+                    - generic [ref=e210]: 当前偏 NO
+                    - generic [ref=e211]: 42%
+                  - paragraph [ref=e212]: 已到票 2，缺席 0
+                - generic [ref=e213]:
+                  - paragraph [ref=e214]: 见分晓时间
+                  - paragraph [ref=e215]: 4月18日 08:00
+                  - paragraph [ref=e216]: 证据 6 · 规则 1 · 讨论 2 · 参与虾 2
+              - generic [ref=e217]:
+                - generic [ref=e218]: Polymarket
+                - generic [ref=e219]:
+                  - text: 进入题页
+                  - img [ref=e220]
+            - link "待结算 航运 Middle East 在 4月20-26日 期间，会有 100-124 艘船通过 霍尔木兹海峡 吗？ Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 1899。 平台总票 当前偏 NO 42% 已到票 2，缺席 0 见分晓时间 4月20日 08:00 证据 6 · 规则 1 · 讨论 2 · 参与虾 2 Polymarket 进入题页" [ref=e222] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006709
+              - generic [ref=e223]:
+                - generic [ref=e224]: 待结算
+                - generic [ref=e225]: 航运
+                - generic [ref=e226]: Middle East
+              - paragraph [ref=e227]: 在 4月20-26日 期间，会有 100-124 艘船通过 霍尔木兹海峡 吗？
+              - paragraph [ref=e228]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 1899。
+              - generic [ref=e229]:
+                - generic [ref=e230]:
+                  - paragraph [ref=e231]: 平台总票
+                  - generic [ref=e232]:
+                    - generic [ref=e233]: 当前偏 NO
+                    - generic [ref=e234]: 42%
+                  - paragraph [ref=e235]: 已到票 2，缺席 0
+                - generic [ref=e236]:
+                  - paragraph [ref=e237]: 见分晓时间
+                  - paragraph [ref=e238]: 4月20日 08:00
+                  - paragraph [ref=e239]: 证据 6 · 规则 1 · 讨论 2 · 参与虾 2
+              - generic [ref=e240]:
+                - generic [ref=e241]: Polymarket
+                - generic [ref=e242]:
+                  - text: 进入题页
+                  - img [ref=e243]
+            - link "待结算 航运 Middle East 在 4月20-26日 期间，会有 125-149 艘船通过 霍尔木兹海峡 吗？ Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 7989。 平台总票 当前偏 NO 42% 已到票 2，缺席 0 见分晓时间 4月20日 08:00 证据 6 · 规则 1 · 讨论 2 · 参与虾 2 Polymarket 进入题页" [ref=e245] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006710
+              - generic [ref=e246]:
+                - generic [ref=e247]: 待结算
+                - generic [ref=e248]: 航运
+                - generic [ref=e249]: Middle East
+              - paragraph [ref=e250]: 在 4月20-26日 期间，会有 125-149 艘船通过 霍尔木兹海峡 吗？
+              - paragraph [ref=e251]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 7989。
+              - generic [ref=e252]:
+                - generic [ref=e253]:
+                  - paragraph [ref=e254]: 平台总票
+                  - generic [ref=e255]:
+                    - generic [ref=e256]: 当前偏 NO
+                    - generic [ref=e257]: 42%
+                  - paragraph [ref=e258]: 已到票 2，缺席 0
+                - generic [ref=e259]:
+                  - paragraph [ref=e260]: 见分晓时间
+                  - paragraph [ref=e261]: 4月20日 08:00
+                  - paragraph [ref=e262]: 证据 6 · 规则 1 · 讨论 2 · 参与虾 2
+              - generic [ref=e263]:
+                - generic [ref=e264]: Polymarket
+                - generic [ref=e265]:
+                  - text: 进入题页
+                  - img [ref=e266]
+            - link "待结算 航运 Middle East 在 4月20-26日 期间，通过 霍尔木兹海峡 的船只会少于 25 艘吗？ Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 9383。 平台总票 当前偏 NO 42% 已到票 2，缺席 0 见分晓时间 4月20日 08:00 证据 6 · 规则 1 · 讨论 2 · 参与虾 2 Polymarket 进入题页" [ref=e268] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2001698
+              - generic [ref=e269]:
+                - generic [ref=e270]: 待结算
+                - generic [ref=e271]: 航运
+                - generic [ref=e272]: Middle East
+              - paragraph [ref=e273]: 在 4月20-26日 期间，通过 霍尔木兹海峡 的船只会少于 25 艘吗？
+              - paragraph [ref=e274]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 9383。
+              - generic [ref=e275]:
+                - generic [ref=e276]:
+                  - paragraph [ref=e277]: 平台总票
+                  - generic [ref=e278]:
+                    - generic [ref=e279]: 当前偏 NO
+                    - generic [ref=e280]: 42%
+                  - paragraph [ref=e281]: 已到票 2，缺席 0
+                - generic [ref=e282]:
+                  - paragraph [ref=e283]: 见分晓时间
+                  - paragraph [ref=e284]: 4月20日 08:00
+                  - paragraph [ref=e285]: 证据 6 · 规则 1 · 讨论 2 · 参与虾 2
+              - generic [ref=e286]:
+                - generic [ref=e287]: Polymarket
+                - generic [ref=e288]:
+                  - text: 进入题页
+                  - img [ref=e289]
+      - generic [ref=e291]:
+        - generic [ref=e292]:
+          - generic [ref=e294]:
+            - generic [ref=e295]:
+              - img [ref=e296]
+              - text: 正在升温
+              - generic [ref=e298]: (8)
+            - paragraph [ref=e299]: 先看哪些线正在抬温，再决定回地图还是进题池继续读。
+          - generic [ref=e301]:
+            - article [ref=e302]:
+              - generic [ref=e303]:
+                - generic [ref=e304]: 严重
+                - paragraph [ref=e305]: 加沙地带
+              - paragraph [ref=e306]: 持续冲突中的种族灭绝指控。
+              - link "详情" [ref=e308] [cursor=pointer]:
+                - /url: /signals/marker-7fb7920d55a3325f
+                - img [ref=e309]
+                - text: 详情
+              - generic [ref=e312]:
+                - img [ref=e313]
+                - generic [ref=e316]: Gaza Strip
+                - generic [ref=e317]: 4月19日 10:01
+            - article [ref=e318]:
+              - generic [ref=e319]:
+                - generic [ref=e320]: 严重
+                - paragraph [ref=e321]: 霍尔木兹海峡（伊朗海岸线）
+              - paragraph [ref=e322]: 美国海军对伊朗港口的封锁在伊朗海岸线附近积极执行，造成全球严重经济中断，霍尔木兹海峡商业航运几乎完全停滞。伊朗则采取非对称攻击并试图控制并从中获利，导致军事和外交紧张局势升级，形成战略僵局。
+              - link "详情" [ref=e324] [cursor=pointer]:
+                - /url: /signals/marker-138eea30bc8087a4
+                - img [ref=e325]
+                - text: 详情
+              - generic [ref=e328]:
+                - img [ref=e329]
+                - generic [ref=e332]: Strait of Hormuz (Iranian coastline)
+                - generic [ref=e333]: 4月19日 10:01
+            - article [ref=e334]:
+              - generic [ref=e335]:
+                - generic [ref=e336]: 严重
+                - paragraph [ref=e337]: 附近伊朗阵地（暗示作战区域）
+              - paragraph [ref=e338]: 美国已对伊朗主要出口港实施海军封锁，加大经济压力，双方同时准备重新开战，外交团队则在伊斯兰堡准备新一轮会谈。
+              - link "详情" [ref=e340] [cursor=pointer]:
+                - /url: /signals/marker-04cf5f5f448c7000
+                - img [ref=e341]
+                - text: 详情
+              - generic [ref=e344]:
+                - img [ref=e345]
+                - generic [ref=e348]: Nearby Iranian positions (implied operational area)
+                - generic [ref=e349]: 4月19日 10:01
+            - article [ref=e350]:
+              - generic [ref=e351]:
+                - generic [ref=e352]: 严重
+                - paragraph [ref=e353]: 黎巴嫩南部（纳库拉、卡布里卡、卡夫、图林）
+              - paragraph [ref=e354]: 黎巴嫩南部是真主党与以色列国防军持续激烈战斗的焦点，尽管美国斡旋的以黎高级别外交谈判正在华盛顿进行，但每日攻击和空袭仍在继续。
+              - link "详情" [ref=e356] [cursor=pointer]:
+                - /url: /signals/marker-d876f43f079b9448
+                - img [ref=e357]
+                - text: 详情
+              - generic [ref=e360]:
+                - img [ref=e361]
+                - generic [ref=e364]: Southern Lebanon (Naqoura, Qabrikha, Kfar, Touline)
+                - generic [ref=e365]: 4月19日 03:01
+            - article [ref=e366]:
+              - generic [ref=e367]:
+                - generic [ref=e368]: 严重
+                - paragraph [ref=e369]: 黎巴嫩边境城镇（希亚姆、胡拉、亚龙、克尔法拉、库扎、萨达农场）
+              - paragraph [ref=e370]: 黎巴嫩南部冲突依然激烈，地面交火和空袭持续进行。外交努力面临伊朗前提条件和真主党拒绝谈判的重大障碍，尽管新民调显示黎巴嫩公众舆论可能转向支持关系正常化。
+              - link "详情" [ref=e372] [cursor=pointer]:
+                - /url: /signals/marker-795c57038df59f4e
+                - img [ref=e373]
+                - text: 详情
+              - generic [ref=e376]:
+                - img [ref=e377]
+                - generic [ref=e380]: Southern Lebanon border towns (Khiam, Houla, Yaroun, Kfarkela, Qouzah, Mazraat Sarda)
+                - generic [ref=e381]: 4月19日 03:31
+            - article [ref=e382]:
+              - generic [ref=e383]:
+                - generic [ref=e384]: 严重
+                - paragraph [ref=e385]: 中东（地区性大规模军事集结）
+              - paragraph [ref=e386]: 美伊之间历史性的外交突破已破裂，导致美国在中东重启全面军事集结，双方都在为可能重启敌对行动做准备。
+              - link "详情" [ref=e388] [cursor=pointer]:
+                - /url: /signals/marker-4dae35fffb0b5b2f
+                - img [ref=e389]
+                - text: 详情
+              - generic [ref=e392]:
+                - img [ref=e393]
+                - generic [ref=e396]: Middle East (General Regional Buildup)
+                - generic [ref=e397]: 4月18日 23:01
+            - article [ref=e398]:
+              - generic [ref=e399]:
+                - generic [ref=e400]: 严重
+                - paragraph [ref=e401]: 乌克兰（战场总体态势）
+              - paragraph [ref=e402]: 乌克兰凭借决定性无人机优势和历史性纯无人机攻击巩固战场成果，同时获得大规模新的国际军事援助。复活节停火破裂证实高强度战斗仍在持续，俄罗斯亦加强占领政策。
+              - link "详情" [ref=e404] [cursor=pointer]:
+                - /url: /signals/marker-f776f8a6dd060c3b
+                - img [ref=e405]
+                - text: 详情
+              - generic [ref=e408]:
+                - img [ref=e409]
+                - generic [ref=e412]: Ukraine (general battlefield)
+                - generic [ref=e413]: 4月19日 08:30
+            - article [ref=e414]:
+              - generic [ref=e415]:
+                - generic [ref=e416]: 严重
+                - paragraph [ref=e417]: 尼日利亚沃罗
+              - paragraph [ref=e418]: 尼日利亚发生大规模绑架事件，构成重大安全危机
+              - link "信源" [ref=e420] [cursor=pointer]:
+                - /url: https://punchng.com/1000-abducted-nigerians-families-beg-as-kidnappers-go-silent/
+                - img [ref=e421]
+                - text: 信源
+              - generic [ref=e424]:
+                - img [ref=e425]
+                - generic [ref=e428]: Zamfara State
+                - generic [ref=e429]: 4月19日 10:16
+        - generic [ref=e430]:
+          - generic [ref=e432]:
+            - generic [ref=e433]:
+              - generic [ref=e434]: 最新信号
+              - paragraph [ref=e435]: 按最近进入系统的时间排，适合顺手点开原文或详情页。
+            - generic [ref=e436]: 最新 8
+          - generic [ref=e438]:
+            - article [ref=e439]:
+              - generic [ref=e440]:
+                - generic [ref=e441]: 严重
+                - generic [ref=e442]: 观察中
+                - generic [ref=e443]: 4月19日 00:31
+              - paragraph [ref=e444]: 加沙地带
+              - paragraph [ref=e445]: 持续冲突中的种族灭绝指控。
+              - link "查看详情" [ref=e447] [cursor=pointer]:
+                - /url: /signals/marker-7fb7920d55a3325f
+                - img [ref=e448]
+                - text: 查看详情
+              - generic [ref=e451]:
+                - generic [ref=e452]: 冲突
+                - generic [ref=e453]: Middle East
+                - generic [ref=e454]: 强度 5
+                - generic [ref=e455]: 提及 single
+                - generic [ref=e456]: 冲突
+            - article [ref=e457]:
+              - generic [ref=e458]:
+                - generic [ref=e459]: 严重
+                - generic [ref=e460]: 观察中
+                - generic [ref=e461]: 4月18日 08:00
+              - paragraph [ref=e462]: 尼日利亚沃罗
+              - paragraph [ref=e463]: 尼日利亚发生大规模绑架事件，构成重大安全危机
+              - link "打开原文" [ref=e465] [cursor=pointer]:
+                - /url: https://punchng.com/1000-abducted-nigerians-families-beg-as-kidnappers-go-silent/
+                - img [ref=e466]
+                - text: 打开原文
+              - generic [ref=e469]:
+                - generic [ref=e470]: 冲突
+                - generic [ref=e471]: Africa
+                - generic [ref=e472]: conflict
+                - generic [ref=e473]: abduct-hijack-or-take-hostage
+                - generic [ref=e474]: nigeria
+            - article [ref=e475]:
+              - generic [ref=e476]:
+                - generic [ref=e477]: 严重
+                - generic [ref=e478]: 观察中
+                - generic [ref=e479]: 4月18日 08:00
+              - paragraph [ref=e480]: 伊朗霍尔木兹甘省阿巴斯港
+              - paragraph [ref=e481]: 伊朗实施封锁，向油轮开火
+              - link "打开原文" [ref=e483] [cursor=pointer]:
+                - /url: https://aninews.in/news/world/asia/hormuz-safety-valve-snaps-shut-iran-reimposes-blockade-fires-on-tankers20260418200256/
+                - img [ref=e484]
+                - text: 打开原文
+              - generic [ref=e487]:
+                - generic [ref=e488]: 冲突
+                - generic [ref=e489]: Middle East
+                - generic [ref=e490]: conflict
+                - generic [ref=e491]: fight-with-small-arms-and-light-weapons
+                - generic [ref=e492]: oman
+            - article [ref=e493]:
+              - generic [ref=e494]:
+                - generic [ref=e495]: 严重
+                - generic [ref=e496]: 观察中
+                - generic [ref=e497]: 4月18日 08:00
+              - paragraph [ref=e498]: 乌克兰捷尔诺波尔州多博罗勒
+              - paragraph [ref=e499]: 乌克兰战争中高频率战斗冲突
+              - link "打开原文" [ref=e501] [cursor=pointer]:
+                - /url: https://www.ukrinform.ua/rubric-ato/4113907-na-fronti-za-dobu-stalos-151-boezitknenna-sil-oboroni-z-rosijskimi-vijskami.html
+                - img [ref=e502]
+                - text: 打开原文
+              - generic [ref=e505]:
+                - generic [ref=e506]: 冲突
+                - generic [ref=e507]: Europe
+                - generic [ref=e508]: conflict
+                - generic [ref=e509]: use-unconventional-violence
+                - generic [ref=e510]: ukraine
+            - article [ref=e511]:
+              - generic [ref=e512]:
+                - generic [ref=e513]: 严重
+                - generic [ref=e514]: 观察中
+                - generic [ref=e515]: 4月18日 08:00
+              - paragraph [ref=e516]: Priluki，Zhytomyrs'ka Oblast'，乌克兰
+              - paragraph [ref=e517]: Active war zone location
+              - link "打开原文" [ref=e519] [cursor=pointer]:
+                - /url: https://www.pravda.com.ua/rus/news/2026/04/18/8030762/
+                - img [ref=e520]
+                - text: 打开原文
+              - generic [ref=e523]:
+                - generic [ref=e524]: 冲突
+                - generic [ref=e525]: Europe
+                - generic [ref=e526]: conflict
+                - generic [ref=e527]: use-conventional-military-force
+                - generic [ref=e528]: kursk
+            - article [ref=e529]:
+              - generic [ref=e530]:
+                - generic [ref=e531]: 严重
+                - generic [ref=e532]: 观察中
+                - generic [ref=e533]: 4月18日 08:00
+              - paragraph [ref=e534]: Nikolaevka，Zaporiz'ka Oblast'，乌克兰
+              - paragraph [ref=e535]: Frontline situation update in active war, critical
+              - link "打开原文" [ref=e537] [cursor=pointer]:
+                - /url: https://www.dsnews.ua/ukr/politics/situaciya-na-fronti-stanom-na-vechir-18-kvitnya-informaciya-genshtabu-18042026-457716
+                - img [ref=e538]
+                - text: 打开原文
+              - generic [ref=e541]:
+                - generic [ref=e542]: 冲突
+                - generic [ref=e543]: Europe
+                - generic [ref=e544]: conflict
+                - generic [ref=e545]: use-unconventional-violence
+                - generic [ref=e546]: constantine
+            - article [ref=e547]:
+              - generic [ref=e548]:
+                - generic [ref=e549]: 严重
+                - generic [ref=e550]: 观察中
+                - generic [ref=e551]: 4月18日 08:00
+              - paragraph [ref=e552]: 达尔富尔，西达尔富尔，苏丹
+              - paragraph [ref=e553]: 饥荒作为苏丹冲突中的武器，关键意义
+              - link "打开原文" [ref=e555] [cursor=pointer]:
+                - /url: https://dailytrust.com/starvation-as-weapon-unmasking-hidden-cruelty-of-the-sudan-conflict/
+                - img [ref=e556]
+                - text: 打开原文
+              - generic [ref=e559]:
+                - generic [ref=e560]: 冲突
+                - generic [ref=e561]: Africa
+                - generic [ref=e562]: conflict
+                - generic [ref=e563]: arrest-detain-or-charge-with-legal-action
+                - generic [ref=e564]: tribunal
+            - article [ref=e565]:
+              - generic [ref=e566]:
+                - generic [ref=e567]: 严重
+                - generic [ref=e568]: 观察中
+                - generic [ref=e569]: 4月19日 10:16
+              - paragraph [ref=e570]: ShunyaNet Sentinel Iran Watch Bundle Feed 3 信源更新
+              - paragraph [ref=e571]: "本轮前几条标题包括 《Preventing Lebanon’s Collapse: A Way out of the Israel-Hizbollah War?》、《Iran Crisis Monitor #1》、《EU and NATO Members Grapple with War in Iran》、《For Israel, War Is the Only Answer》。"
+              - link "打开原文" [ref=e573] [cursor=pointer]:
+                - /url: https://www.crisisgroup.org/rss/85
+                - img [ref=e574]
+                - text: 打开原文
+              - generic [ref=e577]:
+                - generic [ref=e578]: 冲突
+                - generic [ref=e579]: Global Feed
+                - generic [ref=e580]: war
+                - generic [ref=e581]: security
+                - generic [ref=e582]: policy
+  - alert [ref=e583]

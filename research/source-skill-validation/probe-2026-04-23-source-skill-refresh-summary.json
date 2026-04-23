@@ -1,0 +1,219 @@
+{
+  "date": "2026-04-23",
+  "repo_root": "C:\\Users\\16571\\Documents\\Codex\\2026-04-18-host-lighthouse-beijing-hostname-49-233\\world",
+  "completion_stage": "in_progress",
+  "high_value_total": 101,
+  "endpoint_covered": 24,
+  "site_covered": 77,
+  "uncovered": 0,
+  "high_value_site_only_names": [
+    "ak-rss-24h-brief",
+    "news-aggregation",
+    "blogwatcher",
+    "News Monitor Skill",
+    "aggregating-crypto-news",
+    "alpha-vantage",
+    "apilayer-marketstack",
+    "apilayer-mediastack",
+    "TrendRadar",
+    "newsnow",
+    "ShunyaNet Sentinel",
+    "alphaear-news",
+    "a-share-real-time-data",
+    "stock-data-collector",
+    "hk-ipo-research-assistant",
+    "dexter",
+    "arxiv-search-collector",
+    "topic-monitor",
+    "claude-scientific-alpha-vantage",
+    "U.S. Treasury Fiscal Data",
+    "Literature Search",
+    "arxiv-viewer",
+    "academic-research",
+    "10k-10q-earnings-report-summarizer",
+    "earnings-call-transcript-analyzer",
+    "macro-trend-beneficiary-finder",
+    "public-apis",
+    "awesome-ai-in-finance",
+    "market-sizing-analysis",
+    "binance-spot",
+    "notion-research-documentation",
+    "finance-news",
+    "academic-research-hub",
+    "rss-digest",
+    "arxiv-watcher",
+    "bbc-news",
+    "stock-analysis",
+    "fda-database",
+    "batch-research",
+    "reddit-fetch",
+    "exa-ai-search-automation",
+    "scrapingbee-automation",
+    "stormglass-io-automation",
+    "market-research-agent",
+    "goplaces",
+    "tavily",
+    "research",
+    "researchers-financial",
+    "finnhub-api",
+    "twelvedata-api",
+    "hedgefundmonitor",
+    "wrds",
+    "tushare",
+    "fmp-api",
+    "openinsider",
+    "quiver",
+    "cninfo-to-notebooklm",
+    "knowledgelm-nse",
+    "scientific-skills-fred-economic-data",
+    "finance-skills-yfinance-data",
+    "alphaear-search",
+    "alphaear-stock",
+    "alphaear-sentiment",
+    "octagon-finance-prediction-markets-analysis",
+    "octagon-finance-sec-10k-analysis",
+    "octagon-finance-sec-10q-analysis",
+    "octagon-finance-sec-8k-analysis",
+    "octagon-finance-sec-proxy-analysis",
+    "octagon-finance-earnings-call-analysis",
+    "octagon-finance-stock-quote",
+    "octagon-finance-analyst-estimates",
+    "octagon-finance-price-target-summary",
+    "open-skills-get-crypto-price",
+    "open-skills-free-weather-data",
+    "open-skills-web-search-api",
+    "competitive-intel",
+    "industry-research"
+  ],
+  "high_value_uncovered_names": [],
+  "skill_frontier_hosts": [
+    "fred.stlouisfed.org",
+    "www.tradesmart.com.hk",
+    "feeds.reuters.com",
+    "feeds.apnews.com",
+    "alfred.stlouisfed.org",
+    "geofred.stlouisfed.org",
+    "www.mckinsey.com",
+    "ft.10jqka.com.cn",
+    "openinsider.com",
+    "tavily.com"
+  ],
+  "connectivity_counts": {
+    "direct": 210,
+    "unstable": 74,
+    "blocked_or_unknown": 15
+  },
+  "hub_probe_ok_count": 73,
+  "hub_probe_error_count": 10,
+  "hub_scan_count": 75,
+  "hub_scan_hits": [
+    {
+      "platform_name": "ClawHub",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "ClawSkills",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "Coze Gallery",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "LobeHub Skills Marketplace",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "魔搭 ModelScope Studios",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "腾讯元器 Market",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "Claude SkillHub",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "SkillsMP",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "SKILLS.re",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "CodeAgentSkills",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "SkillHQ",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "Skillstore",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "SkillsZoo",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "SkillX",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "SkillsForge",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "AI Skills Marketplace",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "SkillsAI",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "Bogen Skills",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "SkillReg",
+      "status_code": null,
+      "theme_hits": {}
+    },
+    {
+      "platform_name": "SkillsGate",
+      "status_code": null,
+      "theme_hits": {}
+    }
+  ],
+  "outputs": {
+    "hub_probe": "C:\\Users\\16571\\Documents\\Codex\\2026-04-18-host-lighthouse-beijing-hostname-49-233\\world\\research\\source-skill-validation\\probe-2026-04-23-hub-index-health.json",
+    "hub_scan": "C:\\Users\\16571\\Documents\\Codex\\2026-04-18-host-lighthouse-beijing-hostname-49-233\\world\\research\\source-skill-validation\\probe-2026-04-23-hub-mounted-scan.json",
+    "source_connectivity": "C:\\Users\\16571\\Documents\\Codex\\2026-04-18-host-lighthouse-beijing-hostname-49-233\\world\\research\\source-skill-validation\\probe-2026-04-23-source-connectivity.json",
+    "source_coverage": "C:\\Users\\16571\\Documents\\Codex\\2026-04-18-host-lighthouse-beijing-hostname-49-233\\world\\research\\source-skill-validation\\probe-2026-04-23-source-coverage.json",
+    "registry": "C:\\Users\\16571\\Documents\\Codex\\2026-04-18-host-lighthouse-beijing-hostname-49-233\\world\\research\\source-link-registry.md",
+    "candidates": "C:\\Users\\16571\\Documents\\Codex\\2026-04-18-host-lighthouse-beijing-hostname-49-233\\world\\research\\source-skill-candidates.md"
+  }
+}

@@ -1,0 +1,110 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic:
+          - generic:
+            - img
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - img [ref=e8]
+            - text: 世界入口
+          - heading "世界脉络" [level=1] [ref=e11]
+          - paragraph [ref=e12]: 信源标点、连续观察与关联推演。
+          - paragraph [ref=e13]: 从这条入口进入主世界
+          - paragraph [ref=e14]: 先读当前入口说明，再沿着已有信源和近 30 天的区域记忆继续向前。
+          - generic [ref=e15]:
+            - generic [ref=e16]:
+              - generic [ref=e17]:
+                - paragraph [ref=e18]: 当前主链状态
+                - button "全量重跑图谱" [ref=e19]
+              - generic [ref=e20]:
+                - paragraph [ref=e21]: 题池：等待同步
+                - paragraph [ref=e22]: Embedding：等待同步
+                - paragraph [ref=e23]: Graphify：等待同步
+                - paragraph [ref=e24]: 信源健康：等待数据
+            - generic [ref=e25]:
+              - paragraph [ref=e26]: Skills 接入
+              - paragraph [ref=e27]: 当前还没有可公开展示的 Agent World 接入链接。
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: 这里保留主世界的整体视角，让信号先汇聚，再慢慢显出脉络。
+          - generic [ref=e31]: 主世界视图
+          - generic [ref=e32]: 当前信号 0
+          - generic [ref=e33]: 3D 地球
+          - button "收起脉络图" [ref=e34]
+          - button "刷新" [disabled]:
+            - img
+            - text: 刷新
+        - generic [ref=e35]:
+          - button "主世界 0" [ref=e36]
+          - button "冲突 0" [ref=e37]
+          - button "科技 0" [ref=e38]
+          - button "产能与供应链 0" [ref=e39]
+          - button "市场 0" [ref=e40]
+          - button "公共卫生 0" [ref=e41]
+          - button "弱信号 0" [ref=e42]
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - generic [ref=e45]: 统一标点
+            - generic [ref=e46]: "0"
+            - generic [ref=e47]: 0 个带地图坐标
+          - generic [ref=e48]:
+            - generic [ref=e49]: 待结算题
+            - generic [ref=e50]: "0"
+            - generic [ref=e51]: 0 条在观察期
+          - generic [ref=e52]:
+            - generic [ref=e53]: 热度均值
+            - generic [ref=e54]: 0%
+            - generic [ref=e55]: 等待数据
+          - generic [ref=e56]:
+            - generic [ref=e57]: 已结算题
+            - generic [ref=e58]: "0"
+            - generic [ref=e59]: 等待数据
+    - generic [ref=e60]:
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - img [ref=e65]
+          - text: 正在升温
+          - generic [ref=e67]: (0)
+        - paragraph [ref=e68]: 这里只按升温排序，不再拆高关注和普通，方便直接顺着世界脉络往下看。
+      - generic [ref=e72]:
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - generic [ref=e76]:
+              - heading "世界视图" [level=2] [ref=e77]
+              - paragraph [ref=e78]: 地球、图谱和市场共用同一批事件焦点，鼠标停留即可查看上下文。
+            - generic [ref=e79]: 最近更新 --
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - tablist [ref=e83]:
+                - tab "地图模式" [selected] [ref=e84]
+                - tab "图谱模式" [ref=e85]
+                - tab "市场" [ref=e86]
+              - generic [ref=e87]:
+                - button "只看今天" [ref=e88]
+                - button "近 30 天渐淡" [ref=e89]
+            - tabpanel "地图模式" [ref=e90]:
+              - generic [ref=e92]:
+                - generic [ref=e93]: 脉络按近 30 天保留；地球会围绕当前焦点缓慢巡航，点位当前是“只看今天”。手动点中某个点后，会多停留一会儿再继续移动。
+                - generic [ref=e94]: 自动巡航
+        - generic [ref=e95]:
+          - generic [ref=e97]:
+            - img [ref=e98]
+            - text: 演绎预测
+          - generic [ref=e104]:
+            - generic [ref=e108]:
+              - generic [ref=e109]: 正在同步世界状态、题池和图谱，这里先不展示全 0 占位；通常几秒后会补齐。
+              - tablist [ref=e111]:
+                - tab "待结算" [selected] [ref=e112]
+                - tab "已结算" [ref=e113]
+                - tab "观察期" [ref=e114]
+              - generic [ref=e115]: 这轮场景下还没有可展示的外部预测问题。
+            - generic [ref=e116]: 题目默认裁成 7 天待结算窗口和 30 天观察期窗口。
+      - generic [ref=e117]:
+        - generic [ref=e119]:
+          - generic [ref=e120]:
+            - generic [ref=e121]: 最新信号
+            - paragraph [ref=e122]: 右侧只放最新进入统一信源系统的监测条目，方便直接点开原文。
+          - generic [ref=e123]: 最新 0
+        - generic [ref=e129]: 最新信号还在同步中，稍后这里会按时间和价值露出逐条信源。

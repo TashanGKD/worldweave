@@ -1,0 +1,29 @@
+{
+  "date": "2026-04-11",
+  "completion_stage": "entering_long_tail",
+  "high_value_total": 66,
+  "endpoint_covered": 65,
+  "site_covered": 1,
+  "uncovered": 0,
+  "skill_frontier_hosts": [
+    "twitter.com"
+  ],
+  "connectivity_counts": {
+    "unstable": 72,
+    "direct": 194,
+    "blocked_or_unknown": 15
+  },
+  "artifact_files": [
+    "source-link-registry.md",
+    "source-skill-candidates.md",
+    "round-2026-04-11-source-coverage.md",
+    "round-2026-04-11-source-connectivity.md",
+    "probe-2026-04-11-source-connectivity.json",
+    "probe-2026-04-11-source-coverage.json",
+    "all-sources.json",
+    "usable-sources.json",
+    "direct-sources.json",
+    "high-value-usable-sources.json",
+    "high-value-skills.json"
+  ]
+}

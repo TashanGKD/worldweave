@@ -1,0 +1,575 @@
+{
+  "markdown": "C:\\Users\\16571\\Documents\\Codex\\2026-04-18-host-lighthouse-beijing-hostname-49-233\\world\\research\\skill-aggregator-index.md",
+  "total_urls": 81,
+  "ok_count": 48,
+  "error_count": 33,
+  "results": [
+    {
+      "url": "https://www.clawhub.com/skills",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://clawskills.sh/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "clawskills.sh — Curated OpenClaw Skill Discovery"
+    },
+    {
+      "url": "https://www.coze.cn/gallery",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "AI 模版库 - Coze 扣子"
+    },
+    {
+      "url": "https://lobehub.com/skills",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://modelscope.cn/studios",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "ModelScope - 创空间列表页"
+    },
+    {
+      "url": "https://yuanqi.tencent.com/market",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html",
+      "title": "腾讯元器"
+    },
+    {
+      "url": "https://claudeskillhub.com/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Claude Skills Marketplace"
+    },
+    {
+      "url": "https://skillsmp.com/about",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skills.re/skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Browse Registry | AI Agent Skills Registry"
+    },
+    {
+      "url": "https://codeagentskills.com/en",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Agent Skills - AI Agent Skills Marketplace | Claude Code & Cursor Skills | Agent Skills - AI Agent Marketplace"
+    },
+    {
+      "url": "https://skillhq.dev/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "The Marketplace for Claude Code & AI Skills"
+    },
+    {
+      "url": "https://skillstore.io/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html",
+      "title": "Skillstore - AI Skills Marketplace for Claude, Codex & Claude Code"
+    },
+    {
+      "url": "https://www.skillszoo.com/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skillx.one/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skillsforge.dev/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "SkillsForge"
+    },
+    {
+      "url": "https://www.skills-marketplace.com/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skillsauth.com/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 429: Too Many Requests",
+      "title": ""
+    },
+    {
+      "url": "https://www.bogen.ai/skills/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skillreg.dev/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skillsgate.ai/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html",
+      "title": "SkillsGate — The open marketplace for AI agent skills"
+    },
+    {
+      "url": "https://skillscan.dev/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://agentskillshub.dev/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Agent Skills Hub - The Secure Marketplace for AI Agents"
+    },
+    {
+      "url": "https://skillgate.dev/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://www.openagentskill.com/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://llmskills.org/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skills.lc/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Skills.lc - Discover and Share AI Agent Skills"
+    },
+    {
+      "url": "https://agentskillsrepo.com/",
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [Errno 11001] getaddrinfo failed>",
+      "title": ""
+    },
+    {
+      "url": "https://skills.pub/en",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Claude Skills - Online Marketplace"
+    },
+    {
+      "url": "https://agent-skills.club/",
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [Errno 11001] getaddrinfo failed>",
+      "title": ""
+    },
+    {
+      "url": "https://agentpowers.ai/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skillery.dev/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Skillery - The Agent Skills Marketplace"
+    },
+    {
+      "url": "https://www.agent-skills.cc/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://agentskillsindex.com/en",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Home - AgentSkillsIndex"
+    },
+    {
+      "url": "https://mcpmarket.com/tools/skills",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skillkit.io/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "SkillKit - Discover Claude Code Skills | SkillKit"
+    },
+    {
+      "url": "https://agent-skills.md/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Find awesome Agent Skills"
+    },
+    {
+      "url": "https://www.agentskills.in/marketplace",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skillhub.club/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://awesomeskills.net/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Awesome Skills Directory for Claude Code, Codex & MCP Servers"
+    },
+    {
+      "url": "https://awesomeskills.dev/",
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
+      "title": ""
+    },
+    {
+      "url": "https://agentskill.space/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://agentskills.me/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Discover Agent Skills - Agent Skills"
+    },
+    {
+      "url": "https://dmgrok.github.io/agent_skills_directory/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "skills - The package manager for AI agent skills"
+    },
+    {
+      "url": "https://agentskillsdb.com/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://useclawstart.com/skills-hub.html",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Skills Hub - ClawStart | 中文技能推荐与安装目录"
+    },
+    {
+      "url": "https://claudeskills.info/zh/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Claude Skills 市场 - 发现和下载 Claude 技能"
+    },
+    {
+      "url": "https://skills.302.ai/",
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1016)>",
+      "title": ""
+    },
+    {
+      "url": "https://clskills.in/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://skills-hub.ai/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "skills-hub.ai — 2,000+ Free AI Skills | One Command Setup for Claude Code, Cursor & More"
+    },
+    {
+      "url": "https://terminalskills.io/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Terminal Skills | Marketplace for AI Agent Skills"
+    },
+    {
+      "url": "https://clawskills.io/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "ClawSkills — Curated Skills Registry"
+    },
+    {
+      "url": "https://aiagentbase.app/skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Claude Skills Marketplace | AiAgentBase | Ai Agent Base"
+    },
+    {
+      "url": "https://www.absolutelyskilled.pro/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://www.skillsbento.com/",
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
+      "title": ""
+    },
+    {
+      "url": "https://skillshop.sh/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "SkillShop.sh"
+    },
+    {
+      "url": "https://aiagentskills.net/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Claude Skills Marketplace - Discover AI Agents Skills"
+    },
+    {
+      "url": "https://skill.cowagent.com/",
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [SSL: TLSV1_UNRECOGNIZED_NAME] tlsv1 unrecognized name (_ssl.c:1016)>",
+      "title": ""
+    },
+    {
+      "url": "https://skillsbot.net/",
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
+      "title": ""
+    },
+    {
+      "url": "https://agent-skill.co/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://github.com/anthropics/skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - anthropics/skills: Public repository for Agent Skills · GitHub"
+    },
+    {
+      "url": "https://github.com/openai/skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - openai/skills: Skills Catalog for Codex · GitHub"
+    },
+    {
+      "url": "https://github.com/VoltAgent/awesome-openclaw-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - VoltAgent/awesome-openclaw-skills: The awesome collection of OpenClaw skills. 5,400+ skills filtered and categorized from the official OpenClaw Skills Registry.🦞 · GitHub"
+    },
+    {
+      "url": "https://github.com/sundial-org/awesome-openclaw-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - sundial-org/awesome-openclaw-skills: Top OpenClaw skills, with the most popular and useful ones. · GitHub"
+    },
+    {
+      "url": "https://github.com/numman-ali/n-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - numman-ali/n-skills: Curated plugin marketplace for AI agents - works with Claude Code, Codex, and openskills · GitHub"
+    },
+    {
+      "url": "https://github.com/heilcheng/awesome-agent-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - heilcheng/awesome-agent-skills: Tutorials, Guides and Agent Skills Directories · GitHub"
+    },
+    {
+      "url": "https://github.com/sickn33/antigravity-awesome-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - sickn33/antigravity-awesome-skills: Installable GitHub library of 1,400+ agentic skills for Claude Code, Cursor, Codex CLI, Gemini CLI, Antigravity, and more. Includes installer CLI, bundles, workflows, and official/community skill collections. · GitHub"
+    },
+    {
+      "url": "https://github.com/skillmatic-ai/awesome-agent-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - skillmatic-ai/awesome-agent-skills: The definitive resource for Agent Skills - modular capabilities revolutionizing AI agent architecture · GitHub"
+    },
+    {
+      "url": "https://github.com/littleben/awesomeAgentskills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - littleben/awesomeAgentskills: A curated collection of skills for Claude Code and other AI agents | 精选的 Claude Code 和其他 AI 智能体技能集合 · GitHub"
+    },
+    {
+      "url": "https://github.com/BehiSecc/awesome-claude-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - BehiSecc/awesome-claude-skills: A curated list of Claude Skills. · GitHub"
+    },
+    {
+      "url": "https://github.com/ComposioHQ/awesome-claude-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - ComposioHQ/awesome-claude-skills: A curated list of awesome Claude Skills, resources, and tools for customizing Claude AI workflows · GitHub"
+    },
+    {
+      "url": "https://github.com/travisvn/awesome-claude-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - travisvn/awesome-claude-skills: A curated list of awesome Claude Skills, resources, and tools for customizing Claude AI workflows — particularly Claude Code · GitHub"
+    },
+    {
+      "url": "https://github.com/VoltAgent/awesome-agent-skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - VoltAgent/awesome-agent-skills: A curated collection of 1000+ agent skills from official dev teams and the community, compatible with Claude Code, Codex, Gemini CLI, Cursor, and more. · GitHub"
+    },
+    {
+      "url": "https://github.com/MoizIbnYousaf/Ai-Agent-Skills",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - MoizIbnYousaf/Ai-Agent-Skills: my curated agent skills library · GitHub"
+    },
+    {
+      "url": "https://awesome-copilot.github.com/learning-hub/what-are-agents-skills-instructions/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "What are Agents, Skills, and Instructions | Awesome GitHub Copilot"
+    },
+    {
+      "url": "https://claudeskills360.com/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Claude Code Skills & Templates — 2,350+ Skills | Claude Skills 360"
+    },
+    {
+      "url": "https://www.skill-cn.com/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Skill Hub 中国 - 实战 Skill 案例与可复用方案库"
+    },
+    {
+      "url": "https://agentskills.io/",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://www.agentskills.in/docs/marketplace",
+      "status": null,
+      "ok": false,
+      "error": "HTTP Error 403: Forbidden",
+      "title": ""
+    },
+    {
+      "url": "https://www.datawhale.cn/",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html",
+      "title": "Datawhale-学用 AI,从此开始"
+    },
+    {
+      "url": "https://skill.cn/",
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
+      "title": ""
+    },
+    {
+      "url": "https://github.com/dmgrok/agent_skills_directory",
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - dmgrok/agent_skills_directory: Intelligent skill discovery for AI agents. Find quality-validated skills that match your project with smart recommendations, maintenance tracking, and security scanning. · GitHub"
+    }
+  ]
+}

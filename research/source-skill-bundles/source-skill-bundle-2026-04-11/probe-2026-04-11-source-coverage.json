@@ -1,0 +1,195 @@
+{
+  "date": "2026-04-11",
+  "completion_stage": "entering_long_tail",
+  "high_value_total": 66,
+  "endpoint_covered": 65,
+  "site_covered": 1,
+  "uncovered": 0,
+  "new_urls_vs_previous": 181,
+  "new_hosts_vs_previous": 71,
+  "high_signal_frontier": [
+    {
+      "host": "twitter.com",
+      "mention_count": 13,
+      "sample_files": [
+        "research/source-skill-validation/clskills-community-apify-market-research.html",
+        "research/source-skill-validation/clskills-community-deep-research.html",
+        "research/source-skill-validation/clskills-community-finance.html",
+        "research/source-skill-validation/clskills-community-financial-analyst.html",
+        "research/source-skill-validation/clskills-community-market-sizing-analysis.html"
+      ]
+    },
+    {
+      "host": "eia.gov",
+      "mention_count": 3,
+      "sample_files": [
+        "research/worldmonitor-upstream/SELF_HOSTING.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/DOCUMENTATION.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "webcams.windy.com",
+      "mention_count": 3,
+      "sample_files": [
+        "research/worldmonitor-upstream/index.html",
+        "research/worldmonitor-upstream/src-tauri/tauri.conf.json",
+        "research/worldmonitor-upstream/vercel.json"
+      ]
+    },
+    {
+      "host": "wingbits.com",
+      "mention_count": 3,
+      "sample_files": [
+        "research/worldmonitor-upstream/README.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/DOCUMENTATION.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "acleddata.com",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/SELF_HOSTING.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/DOCUMENTATION.md"
+      ]
+    },
+    {
+      "host": "aisstream.io",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/SELF_HOSTING.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/DOCUMENTATION.md"
+      ]
+    },
+    {
+      "host": "api.acleddata.com",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "api.unhcr.org",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "data.wingbits.com",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "hacker-news.firebaseio.com",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "hapi.humdata.org",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "msi.gs.mil",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "openrouter.ai",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/SELF_HOSTING.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "pay.google.com",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/index.html",
+        "research/worldmonitor-upstream/vercel.json"
+      ]
+    },
+    {
+      "host": "pizzint.watch",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "promedmail.org",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/health-variant-full.md",
+        "research/worldmonitor-upstream/todos/058-pending-p3-promed-feed-dead-code-commented-out.md"
+      ]
+    },
+    {
+      "host": "public.tableau.com",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/data/gamma-irradiators-raw.json",
+        "research/worldmonitor-upstream/data/gamma-irradiators.json"
+      ]
+    },
+    {
+      "host": "soa.smext.faa.gov",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md",
+        "research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md"
+      ]
+    },
+    {
+      "host": "someone.ceo",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/pro-test/index.html",
+        "research/worldmonitor-upstream/public/pro/index.html"
+      ]
+    },
+    {
+      "host": "who.int",
+      "mention_count": 2,
+      "sample_files": [
+        "research/worldmonitor-upstream/docs/health-variant-full.md",
+        "research/worldmonitor-upstream/todos/056-pending-p3-stable-hash-unnecessary-disease-seed.md"
+      ]
+    }
+  ],
+  "skill_frontier": [
+    {
+      "host": "twitter.com",
+      "mention_count": 13,
+      "sample_files": [
+        "research/source-skill-validation/clskills-community-apify-market-research.html",
+        "research/source-skill-validation/clskills-community-deep-research.html",
+        "research/source-skill-validation/clskills-community-finance.html",
+        "research/source-skill-validation/clskills-community-financial-analyst.html",
+        "research/source-skill-validation/clskills-community-market-sizing-analysis.html"
+      ]
+    }
+  ],
+  "high_value_uncovered_names": [],
+  "high_value_site_only_names": [
+    "vnpy_ifind"
+  ]
+}

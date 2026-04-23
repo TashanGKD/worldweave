@@ -1,0 +1,304 @@
+# 信源链接提取与可连通性实测
+
+更新时间：2026-04-11
+说明：以下结果基于当前环境直接发起 HTTP/HTTPS 请求，可作为当前网络下的中国互联网可达性代理实测。
+
+## 判定方法
+
+- 使用 Python `urllib` 直接发起真实 `GET` 请求，不靠人工猜测。
+- `200-399` 记为 `direct`，代表当前环境下可直接连通。
+- `4xx/5xx` 记为 `unstable`，代表站点可达，但该入口可能鉴权、限流、样例参数无效或策略受限。
+- 超时、DNS 失败、TLS/SSL 异常、连接重置等记为 `blocked_or_unknown`。
+- 这是一份“当前网络环境代理实测”，能说明当前出口下能否打通，不等于对全国所有运营商和时段做绝对保证。
+
+## 汇总
+
+- `direct`: 194
+- `unstable`: 72
+- `blocked_or_unknown`: 15
+
+## 提取表
+
+| skill | source_name | source_url | source_type | connectivity | status_code | elapsed_ms | extracted_from | note |
+|---|---|---|---|---:|---:|---:|---|---|
+| last30days-skill | ScrapeCreators Reddit API | https://api.scrapecreators.com/v1/reddit | api | unstable | 404 | 1423.7 | research/_tmp_last30days/scripts/lib/reddit.py:33 | Reddit/TikTok/Instagram 聚合抓取入口之一。 |
+| last30days-skill | Reddit public search JSON | https://www.reddit.com/search.json?q=openai&sort=relevance&t=month&limit=1 | webpage-json | direct | 200 | 1148.2 | research/_tmp_last30days/scripts/lib/reddit_public.py:7-8 | 无登录公开 JSON 路径。 |
+| last30days-skill | X | https://x.com/ | webpage | direct | 200 | 1239.7 | research/_tmp_last30days/scripts/lib/bird_x.py:409 | 热点社交源，国内可达性通常敏感。 |
+| last30days-skill | Bluesky public search API | https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=openai&limit=1 | api | unstable | 403 | 850.4 | research/_tmp_last30days/scripts/lib/bluesky.py:15-16 | 公开搜索接口。 |
+| last30days-skill | Polymarket public search API | https://gamma-api.polymarket.com/markets?limit=1 | api | direct | 200 | 797.1 | research/_tmp_last30days/scripts/lib/polymarket.py:18 | 预测市场事件搜索。 |
+| last30days-skill | Truth Social search API | https://truthsocial.com/api/v2/search?q=openai | api | unstable | 403 | 787.4 | research/_tmp_last30days/scripts/lib/truthsocial.py:14 | Truth Social 搜索接口。 |
+| last30days-skill | Hacker News item page | https://news.ycombinator.com/item?id=1 | webpage | direct | 200 | 1466.9 | research/_tmp_last30days/scripts/lib/hackernews.py:179 | 技术社区讨论入口。 |
+| last30days-skill | YouTube | https://www.youtube.com/watch?v=dQw4w9WgXcQ | webpage | direct | 200 | 1111.8 | research/_tmp_last30days/scripts/lib/youtube_yt.py:283 | 公开视频页面。 |
+| last30days-skill | TikTok | https://www.tiktok.com/ | webpage | direct | 200 | 3036.0 | research/_tmp_last30days/scripts/lib/tiktok.py:188 | 短视频平台入口。 |
+| last30days-skill | Instagram | https://www.instagram.com/ | webpage | direct | 200 | 985.9 | research/_tmp_last30days/scripts/lib/instagram.py:210 | 短视频 / 社交平台入口。 |
+| Scientify | arXiv API | https://export.arxiv.org/api/query?search_query=all:llm&start=0&max_results=1 | api | direct | 200 | 1379.1 | research/_tmp_scientify/src/tools/arxiv-search.ts:4 | 科研文献搜索 API。 |
+| Scientify | OpenAlex API | https://api.openalex.org/works?search=llm&per-page=1 | api | direct | 200 | 2352.9 | research/_tmp_scientify/src/tools/openalex-search.ts:4 | 学术元数据公开 API。 |
+| Scientify | Unpaywall API | https://api.unpaywall.org/v2/10.1038/nature12373?email=research@openclaw.ai | api | direct | 200 | 1414.2 | research/_tmp_scientify/skills/paper-download/SKILL.md:1-6 | 开放获取论文定位接口。 |
+| Scientify | arXiv abstract page | https://arxiv.org/abs/2301.12345 | webpage | direct | 200 | 830.8 | research/source-skill-validation/clskills-hugging-face-paper-publisher.md | 论文摘要页。 |
+| news-aggregation | Reuters World RSS | https://feeds.reuters.com/Reuters/worldNews | rss | blocked_or_unknown |  | 11494.9 | research/source-skill-validation/skills-hub-news-aggregation-2.html | 国际新闻 RSS。 |
+| news-aggregation | AP Top News RSS | https://feeds.apnews.com/apnews/topnews | rss | blocked_or_unknown |  | 768.4 | research/source-skill-validation/skills-hub-news-aggregation-2.html | 国际新闻 RSS。 |
+| news-aggregation | BBC World RSS | http://feeds.bbci.co.uk/news/world/rss.xml | rss | direct | 200 | 1193.1 | research/source-skill-validation/skills-hub-news-aggregation-2.html | 国际新闻 RSS。 |
+| news-aggregation | Al Jazeera RSS | https://www.aljazeera.com/xml/rss/all.xml | rss | direct | 200 | 1500.8 | research/source-skill-validation/skills-hub-news-aggregation-2.html | 国际新闻 RSS。 |
+| news-aggregation | Guardian World RSS | https://www.theguardian.com/world/rss | rss | direct | 200 | 1183.5 | research/source-skill-validation/skills-hub-news-aggregation-2.html | 国际新闻 RSS。 |
+| news-aggregation | NPR News RSS | https://feeds.npr.org/1001/rss.xml | rss | direct | 200 | 2311.7 | research/source-skill-validation/skills-hub-news-aggregation-2.html | 国际新闻 RSS。 |
+| news-aggregation | Google News RSS | https://news.google.com/rss/search?q=world | rss | direct | 200 | 2877.6 | research/source-skill-validation/skills-hub-news-aggregation-2.html | 聚合 RSS。 |
+| news-aggregation | Bing News RSS | https://www.bing.com/news/search?q=world&format=RSS | rss | direct | 200 | 2130.6 | research/source-skill-validation/skills-hub-news-aggregation-2.html | 聚合 RSS。 |
+| news-aggregation | HNRSS | https://hnrss.org/frontpage | rss | direct | 200 | 2267.2 | research/source-skill-validation/skills-hub-news-aggregation-2.html | Hacker News RSS 镜像。 |
+| news-aggregation | Reddit News RSS | https://www.reddit.com/r/news/.rss | rss | direct | 200 | 2791.9 | research/source-skill-validation/skills-hub-news-aggregation-2.html | 社区新闻 RSS。 |
+| daily-news-report | Hacker News | https://news.ycombinator.com/ | webpage | direct | 200 | 1658.4 | research/source-skill-validation/clskills-daily-news-report raw md | daily-news-report raw md 已抽到。 |
+| daily-news-report | Hugging Face Papers | https://huggingface.co/papers | webpage | direct | 200 | 2586.8 | research/source-skill-validation/clskills-daily-news-report raw md | daily-news-report raw md 已抽到。 |
+| xvary-stock-research | SEC company_tickers | https://www.sec.gov/files/company_tickers.json | api-json | unstable | 403 | 1277.4 | research/source-skill-candidates.md:65,160 | EDGAR 公司索引。 |
+| xvary-stock-research | SEC companyfacts | https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json | api-json | direct | 200 | 1400.2 | research/source-skill-candidates.md:65,160 | EDGAR XBRL companyfacts 示例。 |
+| xvary-stock-research | SEC submissions | https://data.sec.gov/submissions/CIK0000320193.json | api-json | direct | 200 | 1030.0 | research/source-skill-candidates.md:65,160 | EDGAR submissions 示例。 |
+| xvary-stock-research | Yahoo Finance | https://finance.yahoo.com/quote/AAPL | webpage | direct | 200 | 3125.2 | research/source-skill-candidates.md:65,160 | 美股行情入口。 |
+| xvary-stock-research | Finviz | https://finviz.com/quote.ashx?t=AAPL | webpage | direct | 200 | 1206.9 | research/source-skill-candidates.md:65,160 | 股票看板页。 |
+| xvary-stock-research | Stooq | https://stooq.com/q/?s=aapl.us | webpage | direct | 200 | 1640.4 | research/source-skill-candidates.md:65,160 | 行情 fallback。 |
+| researchers-financial | SEC EDGAR Search | https://www.sec.gov/edgar/search/ | webpage | unstable | 403 | 786.7 | research/source-skill-candidates.md:91,186 | 金融调查 skill 明确点名的监管披露入口。 |
+| researchers-financial | WSJ Markets | https://www.wsj.com/market-data | webpage | direct | 200 | 1455.8 | research/source-skill-candidates.md:91,186 | 金融新闻层 canonical 入口。 |
+| researchers-financial | Financial Times Markets | https://www.ft.com/markets | webpage | unstable | 403 | 1007.5 | research/source-skill-candidates.md:91,186 | 金融新闻层 canonical 入口。 |
+| researchers-financial | Bloomberg Markets | https://www.bloomberg.com/markets | webpage | unstable | 403 | 1388.4 | research/source-skill-candidates.md:91,186 | 金融新闻层 canonical 入口。 |
+| finnhub-api | Finnhub API Docs | https://finnhub.io/docs/api | api-docs | direct | 200 | 1420.6 | research/source-skill-candidates.md:42,187 | 根据 skill 点名的上游服务补充官方 API 文档入口。 |
+| finnhub-api | Finnhub Quote API | https://finnhub.io/api/v1/quote?symbol=AAPL | api | unstable | 401 | 1035.7 | research/source-skill-validation/round-2026-04-10-seventeenth-pass.md | 按 skill 覆盖的实时行情能力映射到 Finnhub quote canonical endpoint。 |
+| finnhub-api | Finnhub Stock Candle API | https://finnhub.io/api/v1/stock/candle?symbol=AAPL&resolution=D&from=1704067200&to=1706745600 | api | unstable | 401 | 1048.3 | research/source-skill-validation/round-2026-04-10-seventeenth-pass.md | 按 skill 覆盖的历史行情能力映射到 Finnhub OHLCV canonical endpoint。 |
+| finnhub-api | Finnhub Company News API | https://finnhub.io/api/v1/company-news?symbol=AAPL&from=2026-03-01&to=2026-03-31 | api | unstable | 401 | 1296.5 | research/source-skill-validation/round-2026-04-10-seventeenth-pass.md | 按 skill 覆盖的 market news 能力映射到 Finnhub 公司新闻 endpoint。 |
+| finnhub-api | Finnhub Earnings Calendar API | https://finnhub.io/api/v1/calendar/earnings?from=2026-04-01&to=2026-04-30 | api | unstable | 401 | 1068.3 | research/source-skill-validation/round-2026-04-10-seventeenth-pass.md | 按 skill 覆盖的 earnings calendar 能力映射到 Finnhub 事件日历 endpoint。 |
+| twelvedata-api | Twelve Data API Docs | https://twelvedata.com/docs | api-docs | direct | 200 | 3275.2 | research/source-skill-candidates.md:43,188 | 根据 skill 点名的上游服务补充官方 API 文档入口。 |
+| twelvedata-api | Twelve Data Quote API | https://api.twelvedata.com/quote?symbol=AAPL&apikey=demo | api | direct | 200 | 1284.0 | twelvedata.com/docs | 按 skill 覆盖的实时报价能力映射到 Twelve Data quote endpoint。 |
+| twelvedata-api | Twelve Data Time Series API | https://api.twelvedata.com/time_series?symbol=AAPL&interval=1day&outputsize=5&apikey=demo | api | direct | 200 | 1566.6 | twelvedata.com/docs | 按 skill 覆盖的 time series 能力映射到 Twelve Data time_series endpoint。 |
+| twelvedata-api | Twelve Data Earnings API | https://api.twelvedata.com/earnings?symbol=AAPL&apikey=demo | api | direct | 200 | 1027.9 | twelvedata.com/docs | 按 skill 覆盖的 earnings 能力映射到 Twelve Data earnings endpoint。 |
+| twelvedata-api | Twelve Data Earnings Calendar API | https://api.twelvedata.com/earnings_calendar?start_date=2026-04-01&end_date=2026-04-07&apikey=demo | api | direct | 200 | 1028.9 | twelvedata.com/docs | 按 skill 覆盖的 earnings calendar 能力映射到 Twelve Data 事件日历 endpoint。 |
+| hedgefundmonitor | OFR Hedge Fund Monitor | https://www.financialresearch.gov/hedge-fund-monitor/ | webpage | direct | 200 | 1370.2 | research/source-skill-candidates.md:44,189 | 官方对冲基金监测入口。 |
+| hedgefundmonitor | CFTC Financial Traders | https://www.cftc.gov/MarketReports/CommitmentsofTraders/FinancialTraders/index.htm | webpage | unstable | 404 | 2084.0 | research/source-skill-candidates.md:44,189 | CFTC Traders in Financial Futures 入口。 |
+| hedgefundmonitor | FRB SCOOS | https://www.federalreserve.gov/data/scoos.htm | webpage | direct | 200 | 1194.8 | research/source-skill-candidates.md:44,189 | 纽约联储/美联储融资与授信调查入口。 |
+| wrds | WRDS | https://wrds-www.wharton.upenn.edu/ | webpage | direct | 200 | 1812.9 | research/source-skill-candidates.md:45,190 | Wharton WRDS 官方入口。 |
+| openinsider | OpenInsider | http://openinsider.com/ | webpage | direct | 200 | 707.3 | research/source-skill-candidates.md:48,193 | Form 4 再包装入口。 |
+| quiver | Quiver Quantitative | https://www.quiverquant.com/ | webpage | direct | 200 | 1100.0 | research/source-skill-candidates.md:49,194 | 另类金融数据入口。 |
+| fmp-api | Financial Modeling Prep Docs | https://site.financialmodelingprep.com/developer/docs | api-docs | direct | 200 | 1116.4 | research/source-skill-candidates.md:47,192 | FMP 官方开发文档入口。 |
+| fmp-api | FMP Quote API | https://financialmodelingprep.com/stable/quote?symbol=AAPL | api | unstable | 401 | 1949.0 | https://site.financialmodelingprep.com/developer/docs | FMP 文档明确给出的实时 quote endpoint。 |
+| fmp-api | FMP Quote Short API | https://financialmodelingprep.com/stable/quote-short?symbol=AAPL | api | unstable | 401 | 1678.6 | https://site.financialmodelingprep.com/developer/docs | FMP 文档明确给出的轻量 quote endpoint。 |
+| fmp-api | FMP Search Symbol API | https://financialmodelingprep.com/stable/search-symbol?query=AAPL | api | unstable | 401 | 1808.6 | https://site.financialmodelingprep.com/developer/docs | FMP 文档明确给出的股票代码检索 endpoint。 |
+| fmp-api | FMP Profile API | https://financialmodelingprep.com/stable/profile?symbol=AAPL | api | unstable | 401 | 1831.3 | https://site.financialmodelingprep.com/developer/docs | FMP 文档明确给出的公司 profile endpoint。 |
+| fmp-api | FMP Earnings Transcript List API | https://financialmodelingprep.com/stable/earnings-transcript-list | api | unstable | 401 | 1883.6 | https://site.financialmodelingprep.com/developer/docs | FMP 文档明确给出的 earnings transcript list endpoint。 |
+| cninfo-to-notebooklm | CNINFO | https://www.cninfo.com.cn/ | webpage | direct | 200 | 2234.4 | research/source-skill-candidates.md:50,195 | 巨潮资讯主站。 |
+| knowledgelm-nse | NSE India | https://www.nseindia.com/ | webpage | unstable | 403 | 1691.4 | research/source-skill-candidates.md:51,196 | 印度披露入口。 |
+| scientific-skills-fred-economic-data | FRED API search sample | https://api.stlouisfed.org/fred/series/search?search_text=gdp&api_key=abcdefghijklmnopqrstuvwxyz123456&file_type=json | api | unstable | 400 | 1718.6 | research/source-skill-candidates.md:92 | 用无效 key 样例探测 API 连通性，400 也代表链路可达。 |
+| scientific-skills-fred-economic-data | FRED Homepage | https://fred.stlouisfed.org/ | webpage | blocked_or_unknown |  | 18798.5 | research/source-skill-validation/skills-hub-fred.html | 技能说明中明确列出的 FRED 主站。 |
+| scientific-skills-fred-economic-data | FRED API Docs | https://fred.stlouisfed.org/docs/api/fred/ | docs | blocked_or_unknown |  | 19218.9 | research/source-skill-validation/skills-hub-fred.html | 技能说明中明确列出的 FRED API 文档。 |
+| scientific-skills-fred-economic-data | ALFRED Vintage Data | https://alfred.stlouisfed.org/ | webpage | blocked_or_unknown |  | 18767.7 | research/source-skill-validation/skills-hub-fred.html | 技能说明中明确列出的 ALFRED 实时修订数据入口。 |
+| scientific-skills-fred-economic-data | GeoFRED Maps | https://geofred.stlouisfed.org/ | webpage | blocked_or_unknown |  | 20027.1 | research/source-skill-validation/skills-hub-fred.html | 技能说明中明确列出的 GeoFRED 地理经济数据入口。 |
+| scientific-skills-fred-economic-data | FRED Release Calendar | https://fred.stlouisfed.org/releases/calendar | webpage | blocked_or_unknown |  | 18452.7 | research/source-skill-validation/skills-hub-fred.html | 技能说明中对应的 release calendar 入口。 |
+| octagon-finance-prediction-markets-analysis | Kalshi Markets | https://kalshi.com/markets | webpage | unstable | 404 | 859.9 | research/source-skill-candidates.md:97,202 | Octagon 明确点名的预测市场入口。 |
+| octagon-finance-sec-10k-analysis | SEC 10-K filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=10-K&owner=exclude&count=40 | webpage | unstable | 403 | 851.5 | research/source-skill-candidates.md:98,203 | 按 form type 直达 10-K 检索页。 |
+| octagon-finance-sec-10q-analysis | SEC 10-Q filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=10-Q&owner=exclude&count=40 | webpage | unstable | 403 | 1565.8 | research/source-skill-candidates.md:99,204 | 按 form type 直达 10-Q 检索页。 |
+| octagon-finance-sec-8k-analysis | SEC 8-K filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=8-K&owner=exclude&count=40 | webpage | unstable | 403 | 1066.4 | research/source-skill-candidates.md:100,205 | 按 form type 直达 8-K 检索页。 |
+| octagon-finance-sec-proxy-analysis | SEC DEF 14A filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=DEF%2014A&owner=exclude&count=40 | webpage | unstable | 403 | 807.8 | research/source-skill-candidates.md:101,206 | 按 form type 直达 DEF 14A 检索页。 |
+| EdgarTools AI Skill | SEC Form 4 filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=4&owner=exclude&count=40 | webpage | unstable | 403 | 950.8 | research/source-skill-validation/skills-hub-edgartools.html | 技能说明明确覆盖 insider trading（Form 4）后的直达检索页。 |
+| EdgarTools AI Skill | SEC 13F-HR filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=13F-HR&owner=exclude&count=40 | webpage | unstable | 403 | 867.0 | research/source-skill-validation/skills-hub-edgartools.html | 技能说明明确覆盖 institutional holdings（13F）后的直达检索页。 |
+| octagon-finance-price-target-summary | StreetInsider | https://www.streetinsider.com/ | webpage | unstable | 403 | 927.6 | research/source-skill-candidates.md:105,210 | 卖方目标价与研报新闻聚合入口。 |
+| octagon-finance-price-target-summary | TheFly | https://thefly.com/ | webpage | direct | 200 | 3748.7 | research/source-skill-candidates.md:105,210 | 卖方新闻与目标价入口。 |
+| octagon-finance-price-target-summary | Benzinga | https://www.benzinga.com/ | webpage | direct | 200 | 1790.0 | research/source-skill-candidates.md:105,210 | 金融新闻与分析师目标价入口。 |
+| U.S. Treasury Fiscal Data | Treasury Fiscal Data site | https://fiscaldata.treasury.gov/ | webpage | direct | 200 | 2086.8 | research/source-skill-candidates.md:31 | 财政部公开数据入口站点。 |
+| alpha-vantage | Alpha Vantage demo API | https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=demo | api | direct | 200 | 986.7 | research/source-skill-validation/clskills-alpha-vantage.md:16,34,42 | demo key 示例请求。 |
+| open-skills-get-crypto-price | CoinGecko ping API | https://api.coingecko.com/api/v3/ping | api | direct | 200 | 1019.9 | research/source-skill-candidates.md:106 | 公开 ping 接口。 |
+| open-skills-get-crypto-price | Binance ping API | https://api.binance.com/api/v3/ping | api | direct | 200 | 833.0 | research/source-skill-candidates.md:106 | 公开 ping 接口。 |
+| open-skills-get-crypto-price | Coinbase spot API | https://api.coinbase.com/v2/prices/spot?currency=USD | api | direct | 200 | 2040.1 | research/source-skill-candidates.md:106 | 公开 spot 价格接口。 |
+| open-skills-free-weather-data | Open-Meteo forecast API | https://api.open-meteo.com/v1/forecast?latitude=39.9&longitude=116.4&hourly=temperature_2m&forecast_days=1 | api | direct | 200 | 1555.8 | research/source-skill-candidates.md:107 | 公开天气接口。 |
+| open-skills-free-weather-data | wttr.in | https://wttr.in/?format=3 | api | direct | 200 | 1472.5 | research/source-skill-candidates.md:107 | 轻量天气文本接口。 |
+| hk-ipo-research-assistant | HKEX | https://www.hkex.com.hk/ | webpage | direct | 200 | 2838.4 | research/source-skill-candidates.md:112,137 | 港交所主站。 |
+| hk-ipo-research-assistant | AAStocks | https://www.aastocks.com/ | webpage | direct | 200 | 1645.0 | research/source-skill-candidates.md:112,137 | 港股行情站。 |
+| hk-ipo-research-assistant | Futu HK | https://www.futuhk.com/en | webpage | direct | 200 | 1996.9 | research/source-skill-candidates.md:112,137 | 港股券商站。 |
+| hk-ipo-research-assistant | ETNet | https://www.etnet.com.hk/www/eng/stocks/ | webpage | direct | 200 | 910.5 | research/source-skill-candidates.md:112,137 | 港股资讯站。 |
+| hk-ipo-research-assistant | Jisilu | https://www.jisilu.cn/ | webpage | direct | 200 | 681.9 | research/source-skill-candidates.md:112,137 | 可转债 / 打新社区站。 |
+| hk-ipo-research-assistant | AiPO | https://aipo.myiqdii.com/ | webpage | direct | 200 | 1225.0 | research/source-skill-candidates.md:112,137 | 港股 IPO 资讯站。 |
+| stock-data-collector | AkShare Docs | https://akshare.akfamily.xyz/ | docs | direct | 200 | 895.4 | research/source-skill-candidates.md:111,140 | A 股与港股历史数据脚本常用数据源封装文档。 |
+| hk-ipo-research-assistant | TradeSmart | https://www.tradesmart.com.hk/en/ | webpage | blocked_or_unknown |  | 11629.5 | research/source-skill-candidates.md:112,141 | 港股券商与打新信息入口。 |
+| hk-ipo-research-assistant | Tencent Quote API | https://qt.gtimg.cn/q=hk00700 | api-text | direct | 200 | 649.9 | research/source-skill-candidates.md:112,141 | 港股行情文本接口样例。 |
+| pywencai | iWenCai | https://www.iwencai.com/ | webpage | direct | 200 | 2987.5 | research/source-skill-candidates.md:25,148 | 同花顺问财主站。 |
+| qstock | EastMoney | https://quote.eastmoney.com/ | webpage | direct | 200 | 615.0 | research/source-skill-candidates.md:26,149 | 东方财富行情主站。 |
+| qstock | Sina Finance | https://finance.sina.com.cn/ | webpage | direct | 200 | 583.7 | research/source-skill-candidates.md:26,149 | 新浪财经主站。 |
+| qstock | 10jqka | https://www.10jqka.com.cn/ | webpage | direct | 200 | 614.7 | research/source-skill-candidates.md:26,149 | 同花顺门户主站。 |
+| tushare | Tushare | https://tushare.pro/ | webpage | direct | 200 | 918.4 | research/source-skill-candidates.md:46,187 | 中国市场数据平台。 |
+| tushare | Tushare API Root | http://api.tushare.pro/ | api | direct | 200 | 129.2 | research/source-skill-validation/round-2026-04-10-nineteenth-pass.md | 按 skill 覆盖的标准 API 接入层映射到 Tushare 主 API 入口。 |
+| tushare | Tushare Docs | https://tushare.pro/document/2 | docs | direct | 200 | 509.3 | research/source-skill-validation/round-2026-04-10-nineteenth-pass.md | Tushare 官方文档入口。 |
+| tsrs-mcp-server | KaiPanLa | https://www.kaipanla.com/ | webpage | direct | 200 | 760.2 | research/source-skill-candidates.md:28,147 | 开盘啦题材与热点主站。 |
+| tsrs-mcp-server | KaiPanLa Theme Board | https://www.kaipanla.com/theme/index | webpage | direct | 200 | 612.8 | research/source-skill-candidates.md:28,147 | 根据 skill 的概念题材描述补出的开盘啦题材页入口。 |
+| qstock | EastMoney Moneyflow Rank | https://data.eastmoney.com/zjlx/list.html | webpage | direct | 200 | 557.7 | research/source-skill-candidates.md:26,149 | 根据 qstock/tsrs 提到的资金流维度补出的东方财富资金流排行页。 |
+| pywencai | iWenCai Unified Search | https://www.iwencai.com/unifiedwap/result?w=%E6%B6%A8%E5%81%9C | webpage | direct | 200 | 538.3 | research/source-skill-candidates.md:25,148 | 按问财检索能力补出的统一搜索结果页入口。 |
+| qstock | 10jqka Hot Stock Rank | https://data.10jqka.com.cn/rank/hotstock/ | webpage | unstable | 404 | 964.6 | research/source-skill-candidates.md:26,149 | 根据同花顺热榜/排行能力补出的热股排行页入口。 |
+| alphaear-news | Weibo | https://weibo.com/ | webpage | direct | 200 | 976.9 | research/source-skill-candidates.md:55,136 | 中文热点社媒入口。 |
+| alphaear-news | CLS | https://www.cls.cn/ | webpage | direct | 200 | 628.7 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | 财联社新闻入口。 |
+| alphaear-news | Xueqiu | https://xueqiu.com/ | webpage | direct | 200 | 540.4 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | 雪球热榜入口。 |
+| alphaear-news | Baidu Hot | https://top.baidu.com/board?tab=realtime | webpage | direct | 200 | 618.3 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | 百度热搜榜入口。 |
+| alphaear-news | Toutiao | https://www.toutiao.com/ | webpage | direct | 200 | 663.4 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | 今日头条入口。 |
+| alphaear-news | Douyin Hot | https://www.douyin.com/hot | webpage | direct | 200 | 700.4 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | 抖音热榜入口。 |
+| alphaear-news | ThePaper | https://www.thepaper.cn/ | webpage | direct | 200 | 832.2 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | 澎湃新闻入口。 |
+| alphaear-news | 36Kr | https://36kr.com/ | webpage | direct | 200 | 658.0 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | 36氪入口。 |
+| alphaear-news | ITHome | https://www.ithome.com/ | webpage | direct | 200 | 669.1 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | IT 之家入口。 |
+| alphaear-news | V2EX | https://www.v2ex.com/ | webpage | direct | 200 | 1074.9 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | V2EX 社区入口。 |
+| alphaear-news | Juejin | https://juejin.cn/ | webpage | direct | 200 | 1180.5 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-news/references/sources.md | 掘金社区入口。 |
+| alphaear-search | Jina Search | https://s.jina.ai/ | api | direct | 200 | 1379.8 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-search/scripts/search_tools.py | Jina Search API 基础入口。 |
+| alphaear-search | Jina Reader | https://r.jina.ai/ | api | direct | 200 | 1030.6 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-search/scripts/content_extractor.py | Jina Reader 内容抽取入口。 |
+| alphaear-search | DuckDuckGo Search | https://duckduckgo.com/?q=finance | webpage | direct | 200 | 1457.7 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-search/scripts/search_tools.py | DDG 搜索入口（工具调用的上游搜索引擎之一）。 |
+| alphaear-search | Baidu Search | https://www.baidu.com/s?wd=finance | webpage | direct | 200 | 1015.8 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-search/scripts/search_tools.py | 百度搜索入口（工具调用的上游搜索引擎之一）。 |
+| finance-skills-yfinance-data | Yahoo Finance Quote | https://finance.yahoo.com/quote/AAPL | webpage | direct | 200 | 3125.2 | research/source-skill-validation/skills-hub-yfinance.html | 技能说明中对应的 current price / quote 数据落点。 |
+| finance-skills-yfinance-data | Yahoo Finance History | https://finance.yahoo.com/quote/AAPL/history | webpage | direct | 200 | 3285.7 | research/source-skill-validation/skills-hub-yfinance.html | 技能说明中对应的 historical OHLCV / chart data 页面。 |
+| finance-skills-yfinance-data | Yahoo Finance Options | https://finance.yahoo.com/quote/AAPL/options | webpage | direct | 200 | 3603.8 | research/source-skill-validation/skills-hub-yfinance.html | 技能说明中对应的 options chain 页面。 |
+| finance-skills-yfinance-data | Yahoo Finance Earnings Calendar | https://finance.yahoo.com/calendar/earnings | webpage | direct | 200 | 1400.8 | research/source-skill-validation/skills-hub-yfinance.html | 技能说明中对应的 earnings / event calendar 页面。 |
+| alphaear-stock | EastMoney Kline API | https://push2his.eastmoney.com/api/qt/stock/kline/get | api | direct | 200 | 504.6 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-stock/scripts/stock_tools.py | 东方财富 K 线直连接口。 |
+| alphaear-stock | EastMoney Stock List API | https://push2.eastmoney.com/api/qt/clist/get | api | direct | 200 | 525.8 | github.com/RKiding/Awesome-finance-skills/skills/alphaear-stock/scripts/stock_tools.py | 东方财富股票列表直连接口。 |
+| alphaear-news | Zhihu | https://www.zhihu.com/ | webpage | direct | 200 | 1084.2 | research/source-skill-candidates.md:55,136 | 中文问答社区入口。 |
+| alphaear-news | WallstreetCN | https://wallstreetcn.com/ | webpage | direct | 200 | 543.1 | research/source-skill-candidates.md:55,136 | 中文财经新闻入口。 |
+| alpha-vantage | Alpha Vantage Time Series Daily | https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo | api | direct | 200 | 968.3 | research/source-skill-validation/clskills-alpha-vantage.md | 按 Alpha Vantage skill 中的时间序列能力生成的 daily endpoint。 |
+| alpha-vantage | Alpha Vantage Treasury Yield | https://www.alphavantage.co/query?function=TREASURY_YIELD&interval=monthly&maturity=10year&apikey=demo | api | direct | 200 | 952.4 | research/source-skill-validation/clskills-alpha-vantage.md | 按 Alpha Vantage skill 中的宏观利率能力生成的 treasury yield endpoint。 |
+| alpha-vantage | Alpha Vantage CPI | https://www.alphavantage.co/query?function=CPI&interval=monthly&apikey=demo | api | direct | 200 | 984.9 | research/source-skill-validation/clskills-alpha-vantage.md | 按 Alpha Vantage skill 中的 CPI 宏观指标能力生成的 endpoint。 |
+| alpha-vantage | Alpha Vantage Real GDP | https://www.alphavantage.co/query?function=REAL_GDP&interval=quarterly&apikey=demo | api | direct | 200 | 978.9 | research/source-skill-validation/clskills-alpha-vantage.md | 按 Alpha Vantage skill 中的 GDP 宏观指标能力生成的 endpoint。 |
+| alpha-vantage | Alpha Vantage News Sentiment | https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=AAPL&apikey=demo | api | direct | 200 | 958.2 | research/source-skill-validation/clskills-alpha-vantage.md | 按 Alpha Vantage skill 中的 news sentiment 能力生成的 endpoint。 |
+| U.S. Treasury Fiscal Data | Treasury Debt To The Penny API | https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?sort=-record_date&page[size]=1 | api | direct | 200 | 2208.3 | https://fiscaldata.treasury.gov/api-documentation/ | 财政部文档明确给出的 Debt to the Penny API 示例。 |
+| U.S. Treasury Fiscal Data | Treasury Avg Interest Rates API | https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates?sort=-record_date&page[size]=1 | api | direct | 200 | 2056.1 | https://fiscaldata.treasury.gov/api-documentation/ | 财政部文档明确给出的 Average Interest Rates API 示例。 |
+| U.S. Treasury Fiscal Data | Treasury Rates Of Exchange API | https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/rates_of_exchange?fields=country_currency_desc,exchange_rate,record_date&filter=record_date:gte:2015-01-01 | api | direct | 200 | 2040.9 | https://fiscaldata.treasury.gov/api-documentation/ | 财政部文档明确给出的 Rates of Exchange API 示例。 |
+| competitive-intel | Crunchbase | https://www.crunchbase.com/ | webpage | direct | 200 | 3922.6 | research/source-skill-candidates.md:109,214 | competitive-intel 明确点名的公司融资与组织信息来源。 |
+| competitive-intel | TechCrunch | https://techcrunch.com/ | webpage | direct | 200 | 815.0 | research/source-skill-candidates.md:109,214 | competitive-intel 明确点名的科技新闻与创业公司动态来源。 |
+| competitive-intel | G2 | https://www.g2.com/ | webpage | unstable | 403 | 1056.2 | research/source-skill-candidates.md:109,214 | competitive-intel 明确点名的软件评价与客户反馈来源。 |
+| competitive-intel | Capterra | https://www.capterra.com/ | webpage | unstable | 403 | 863.8 | research/source-skill-candidates.md:109,214 | competitive-intel 明确点名的软件目录与评价来源。 |
+| competitive-intel | LinkedIn | https://www.linkedin.com/ | webpage | direct | 200 | 1501.8 | research/source-skill-candidates.md:109,214 | competitive-intel 与 market-sizing-analysis 都点名的组织、招聘与人员动态来源。 |
+| competitive-intel | Indeed | https://www.indeed.com/ | webpage | unstable | 403 | 849.9 | research/source-skill-candidates.md:109,214 | competitive-intel 明确点名的招聘与岗位变化来源。 |
+| competitive-intel | Facebook Ads Library | https://www.facebook.com/ads/library/ | webpage | unstable | 403 | 795.8 | research/source-skill-candidates.md:109,214 | competitive-intel 明确点名的广告投放变化来源。 |
+| competitive-intel | Google Ads Transparency Center | https://adstransparency.google.com/ | webpage | direct | 200 | 2046.6 | research/source-skill-candidates.md:109,214 | competitive-intel 明确点名的 Google 广告透明度来源。 |
+| apify-market-research | Google Maps | https://www.google.com/maps | webpage | direct | 200 | 1951.8 | research/source-skill-candidates.md:67,162 | apify-market-research 明确点名的地理密度与门店分布来源。 |
+| apify-market-research | Google Trends | https://trends.google.com/ | webpage | direct | 200 | 1817.1 | research/source-skill-candidates.md:67,162 | apify-market-research 明确点名的区域兴趣与搜索热度来源。 |
+| apify-market-research | Facebook Marketplace | https://www.facebook.com/marketplace/ | webpage | unstable | 400 | 899.7 | research/source-skill-candidates.md:67,162 | apify-market-research 明确点名的供给与价格观察来源。 |
+| apify-market-research | Booking | https://www.booking.com/ | webpage | direct | 202 | 803.2 | research/source-skill-candidates.md:67,162 | apify-market-research 明确点名的住宿与价格信号来源。 |
+| apify-market-research | Tripadvisor | https://www.tripadvisor.com/ | webpage | unstable | 403 | 1002.0 | research/source-skill-candidates.md:67,162 | apify-market-research 明确点名的消费评论与景点热度来源。 |
+| market-sizing-analysis | Gartner | https://www.gartner.com/ | webpage | unstable | 403 | 917.7 | research/source-skill-candidates.md:68,163 | market-sizing-analysis 明确点名的行业研究报告来源。 |
+| market-sizing-analysis | Forrester | https://www.forrester.com/ | webpage | direct | 200 | 3821.9 | research/source-skill-candidates.md:68,163 | market-sizing-analysis 明确点名的行业研究报告来源。 |
+| market-sizing-analysis | IDC | https://www.idc.com/ | webpage | direct | 200 | 915.5 | research/source-skill-candidates.md:68,163 | market-sizing-analysis 明确点名的行业研究报告来源。 |
+| market-sizing-analysis | McKinsey | https://www.mckinsey.com/ | webpage | blocked_or_unknown |  | 18687.6 | research/source-skill-candidates.md:68,163 | market-sizing-analysis 明确点名的咨询与行业研究来源。 |
+| market-sizing-analysis | Statista | https://www.statista.com/ | webpage | direct | 200 | 3949.1 | research/source-skill-candidates.md:68,163 | market-sizing-analysis 明确点名的市场规模与统计数据来源。 |
+| market-sizing-analysis | CB Insights | https://www.cbinsights.com/ | webpage | direct | 200 | 2523.5 | research/source-skill-candidates.md:68,163 | market-sizing-analysis 明确点名的行业研究与投融资来源。 |
+| market-sizing-analysis | PitchBook | https://pitchbook.com/ | webpage | unstable | 403 | 1132.8 | research/source-skill-candidates.md:68,163 | market-sizing-analysis 与 WRDS 都点名的私募与投融资研究来源。 |
+| market-sizing-analysis | Grand View Research | https://www.grandviewresearch.com/ | webpage | direct | 200 | 1449.9 | research/source-skill-candidates.md:68,163 | market-sizing-analysis 明确点名的行业研究报告来源。 |
+| market-sizing-analysis | ZoomInfo | https://www.zoominfo.com/ | webpage | unstable | 403 | 828.5 | research/source-skill-validation/clskills-market-sizing-analysis.md:183 | market-sizing-analysis 明确点名的行业数据库来源。 |
+| octagon-finance-prediction-markets-analysis | Kalshi | https://kalshi.com/markets/ | webpage | unstable | 404 | 2007.5 | research/source-skill-candidates.md:97,202 | octagon prediction markets skill 明确围绕 Kalshi 市场与历史结果做分析。 |
+| alphaear-news | WallstreetCN Live | https://wallstreetcn.com/live/global | webpage | direct | 200 | 399.7 | research/source-skill-candidates.md:55,136 | alphaear-news 明确点名的中文金融快讯与全球市场动态来源。 |
+| alphaear-news | Weibo Hot Search | https://s.weibo.com/top/summary | webpage | direct | 200 | 761.2 | research/source-skill-candidates.md:55,136 | alphaear-news 明确点名的中文社媒热点来源。 |
+| alphaear-news | Zhihu Hot List | https://www.zhihu.com/hot | webpage | unstable | 403 | 436.3 | research/source-skill-candidates.md:55,136 | alphaear-news 明确点名的中文问答社区热点来源。 |
+| alphaear-news | Polymarket Markets API | https://gamma-api.polymarket.com/markets?limit=10 | api | direct | 200 | 742.9 | research/source-skill-candidates.md:55,136 | alphaear-news 详情提到的预测市场数据入口，复用 Polymarket 公开市场 API。 |
+| cninfo-to-notebooklm | CNINFO Homepage | http://www.cninfo.com.cn/ | webpage | direct | 200 | 300.4 | research/source-skill-candidates.md:50,195 | cninfo-to-notebooklm 对应的巨潮资讯官网入口。 |
+| cninfo-to-notebooklm | CNINFO Fulltext Search | http://www.cninfo.com.cn/new/fulltextSearch?notautosubmit=&keyWord=%E5%AE%81%E5%BE%B7%E6%97%B6%E4%BB%A3 | webpage | direct | 200 | 214.9 | research/source-skill-candidates.md:50,195 | cninfo-to-notebooklm 对应的公告全文搜索入口。 |
+| cninfo-to-notebooklm | CNINFO Notice List | http://www.cninfo.com.cn/new/commonUrl?url=disclosure/list/notice | webpage | direct | 200 | 187.9 | research/source-skill-candidates.md:50,195 | cninfo-to-notebooklm 对应的公告列表入口。 |
+| hk-ipo-research-assistant | HKEX News | https://www.hkexnews.hk/index.htm | webpage | direct | 200 | 867.2 | research/source-skill-candidates.md:112,141 | hk-ipo-research-assistant 明确点名的 HKEX 披露入口。 |
+| hk-ipo-research-assistant | AAStocks IPO | https://www.aastocks.com/en/stocks/analysis/ipo/allotment.aspx | webpage | direct | 200 | 1688.6 | research/source-skill-candidates.md:112,141 | hk-ipo-research-assistant 明确点名的 AAStocks 新股配售观察入口。 |
+| hk-ipo-research-assistant | Futu HK IPO | https://www.futunn.com/en/stock/new-listings/hk | webpage | direct | 200 | 1017.2 | research/source-skill-candidates.md:112,141 | hk-ipo-research-assistant 明确点名的富途港股新股入口。 |
+| hk-ipo-research-assistant | TradeSmart IPO | https://www.tradesmart.com.hk/en/ipo | webpage | blocked_or_unknown |  | 11435.2 | research/source-skill-candidates.md:112,141 | hk-ipo-research-assistant 明确点名的耀才/TradeSmart 新股入口。 |
+| hk-ipo-research-assistant | Jisilu New Stock | https://www.jisilu.cn/data/new_stock/ | webpage | direct | 200 | 382.1 | research/source-skill-candidates.md:112,141 | hk-ipo-research-assistant 明确点名的集思录新股数据入口。 |
+| hk-ipo-research-assistant | ETNet IPO | https://www.etnet.com.hk/www/eng/stocks/ipo/news.php | webpage | unstable | 404 | 670.3 | research/source-skill-candidates.md:112,141 | hk-ipo-research-assistant 明确点名的 ETNet 新股新闻入口。 |
+| hk-ipo-research-assistant | Tencent Quote API | https://qt.gtimg.cn/q=s_hk00981 | api-text | direct | 200 | 448.0 | research/source-skill-candidates.md:112,141 | hk-ipo-research-assistant bundled readme 点名的腾讯行情接口示例。 |
+| hk-ipo-research-assistant | Sina Quote API | https://hq.sinajs.cn/list=hk00981 | api-text | unstable | 403 | 410.6 | research/source-skill-candidates.md:112,141 | hk-ipo-research-assistant bundled readme 点名的新浪行情接口示例。 |
+| open-skills-get-crypto-price | CoinGecko Simple Price API | https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd | api | direct | 200 | 649.7 | research/source-skill-candidates.md:106,211 | open-skills-get-crypto-price 详情明确给出的 CoinGecko 现价接口。 |
+| open-skills-get-crypto-price | CoinGecko Market Chart API | https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=7 | api | direct | 200 | 905.0 | research/source-skill-candidates.md:106,211 | open-skills-get-crypto-price 详情明确给出的 CoinGecko 历史曲线接口。 |
+| open-skills-get-crypto-price | Binance Ticker Price API | https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT | api | direct | 200 | 925.4 | research/source-skill-candidates.md:106,211 | open-skills-get-crypto-price 详情明确给出的 Binance ticker 接口。 |
+| open-skills-get-crypto-price | Binance Klines API | https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=5 | api | direct | 200 | 719.3 | research/source-skill-candidates.md:106,211 | open-skills-get-crypto-price 详情明确给出的 Binance K 线接口。 |
+| open-skills-get-crypto-price | Coinbase Spot Price API | https://api.coinbase.com/v2/prices/BTC-USD/spot | api | direct | 200 | 971.4 | research/source-skill-candidates.md:106,211 | open-skills-get-crypto-price 详情明确给出的 Coinbase 现价接口。 |
+| open-skills-get-crypto-price | Coinbase Exchange Candles API | https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=86400 | api | direct | 200 | 952.6 | research/source-skill-candidates.md:106,211 | open-skills-get-crypto-price 详情明确给出的 Coinbase K 线接口。 |
+| open-skills-free-weather-data | Open-Meteo Forecast API | https://api.open-meteo.com/v1/forecast?latitude=25.28&longitude=55.30&hourly=temperature_2m,wind_speed_10m | api | direct | 200 | 1691.2 | research/source-skill-candidates.md:107,212 | open-skills-free-weather-data 详情明确给出的 Open-Meteo forecast 接口。 |
+| open-skills-free-weather-data | Open-Meteo Archive API | https://archive-api.open-meteo.com/v1/archive?latitude=25.28&longitude=55.30&start_date=2026-04-01&end_date=2026-04-02&daily=temperature_2m_max,temperature_2m_min | api | direct | 200 | 1349.7 | research/source-skill-candidates.md:107,212 | open-skills-free-weather-data 详情明确给出的 Open-Meteo archive 接口。 |
+| open-skills-free-weather-data | wttr.in JSON | https://wttr.in/Tehran?format=j1 | api | direct | 200 | 1262.7 | research/source-skill-candidates.md:107,212 | open-skills-free-weather-data 详情明确给出的 wttr.in JSON 接口。 |
+| open-skills-web-search-api | SearX Space Instances JSON | https://searx.space/data/instances.json | api-json | direct | 200 | 1553.5 | research/source-skill-candidates.md:108,213 | open-skills-web-search-api 详情明确给出的公开实例列表。 |
+| 集思谱 Skill | Giiisp Homepage | https://www.giiisp.com/ | webpage | direct | 200 | 1450.4 | research/source-skill-candidates.md:23,215 | 集思谱官网主入口，可作为文献/专利/预印本入口基址。 |
+| 集思谱 Skill | Giiisp Login | https://www.giiisp.com/login | webpage | direct | 200 | 379.5 | research/source-skill-candidates.md:23,215 | 集思谱站内登录入口，可证明服务面存在与站内工作流入口。 |
+| 集思谱 Skill | Giiisp Filestore arXiv PDF | https://filestore.giiisp.com/arxiv/2025/01/06/2302.11617v2.pdf | webpage | direct | 200 | 848.9 | turn2search5 / research/source-skill-candidates.md:23,215 | 集思谱 filestore 暴露出的 arXiv 预印本镜像文件样例。 |
+| vnpy_ifind | iFinD Homepage | http://ft.10jqka.com.cn/ | webpage | blocked_or_unknown |  | 5084.4 | research/source-skill-candidates.md:27,150 | vnpy_ifind README 点名的同花顺 iFinD 官方入口。 |
+| vnpy_ifind | iFinD Service Index | https://ft.10jqka.com.cn/thsft/iFindService/f9Phone/index/index | webpage | direct | 200 | 452.1 | research/source-skill-candidates.md:27,150 | 同花顺 iFinD 服务页入口样例。 |
+| vnpy_ifind | iFinD Disclaimer | https://ft.10jqka.com.cn/thsft/iFindService/f9Phone/index/exceptions | webpage | direct | 200 | 460.3 | turn1search11 / research/source-skill-candidates.md:27,150 | 同花顺 iFinD 条款页，证明终端服务链路存在。 |
+| financial-data-fetcher | Yahoo Finance Chart API | https://query1.finance.yahoo.com/v8/finance/chart/AAPL?interval=1d&range=5d | api-json | direct | 200 | 808.0 | skills-rank.com + playbooks.com financial-data-fetcher detail | financial-data-fetcher 证据页明确点名 yfinance / Yahoo Finance 数据链路。 |
+| financial-data-fetcher | Alpaca Bars API | https://data.alpaca.markets/v2/stocks/AAPL/bars?timeframe=1Day&limit=1 | api-json | unstable | 401 | 1417.1 | skills-rank.com + playbooks.com financial-data-fetcher detail | financial-data-fetcher 证据页明确点名 alpaca-trade-api 的行情接口家族。 |
+| financial-data-fetcher | Alpaca Latest Trade API | https://api.alpaca.markets/v2/stocks/AAPL/trades/latest | api-json | unstable | 401 | 1307.8 | skills-rank.com + playbooks.com financial-data-fetcher detail | financial-data-fetcher 证据页明确点名 alpaca-trade-api 的最新成交接口家族。 |
+| earnings-call-transcript-analyzer | Seeking Alpha Earnings Call Transcripts | https://seekingalpha.com/earnings/earnings-call-transcripts | webpage | direct | 200 | 1167.8 | research/source-skill-candidates.md:63,158 | Claude SkillHub 页面明确把 Seeking Alpha 视作 transcript 来源之一。 |
+| earnings-call-transcript-analyzer | Motley Fool Earnings Call Transcripts | https://www.fool.com/earnings-call-transcripts/ | webpage | direct | 200 | 1664.7 | research/source-skill-candidates.md:63,158 | 财报电话会 transcript 常用公开聚合入口之一。 |
+| earnings-call-transcript-analyzer | Nasdaq Earnings Hub | https://www.nasdaq.com/market-activity/earnings | webpage | direct | 200 | 3183.7 | research/source-skill-candidates.md:63,158 | 财报季与业绩事件入口，可作为 transcript 跟踪前置索引。 |
+| zai-cli | Z.AI Homepage | https://z.ai/ | webpage | direct | 200 | 2335.5 | research/source-skill-candidates.md:87,182 | zai-cli 对应的 Z.AI 主站。 |
+| zai-cli | Z.AI API Landing | https://z.ai/api | webpage | direct | 200 | 1167.7 | research/source-skill-candidates.md:87,182 | zai-cli 对应的 API 入口页。 |
+| zai-cli | Z.AI API Key Page | https://z.ai/manage-apikey/apikey-list | webpage | direct | 200 | 942.0 | n-skills zai-cli advanced.md | zai-cli 说明文档明确给出的 API key 管理入口。 |
+| zai-cli | Z.AI Docs | https://docs.z.ai/ | docs | direct | 200 | 2452.8 | n-skills zai-cli advanced.md | zai-cli 对应的官方文档域。 |
+| fda-database | openFDA Drug Event API | https://api.fda.gov/drug/event.json?limit=1 | api | direct | 200 | 4123.6 | research/source-skill-candidates.md:216 | fda-database 对应的 openFDA 公共不良事件接口。 |
+| exa-ai-search-automation | Exa Search API | https://api.exa.ai/search | api | unstable | 404 | 856.5 | research/source-skill-candidates.md:217 | exa-ai-search-automation 对应的 Exa 搜索接口入口。 |
+| stormglass-io-automation | Stormglass Weather Point API | https://api.stormglass.io/v2/weather/point?lat=25.28&lng=55.30&params=waveHeight | api | unstable | 403 | 2200.7 | research/source-skill-candidates.md:218 | stormglass-io-automation 对应的海洋天气点位接口。 |
+| goplaces | Google Places Text Search Docs | https://developers.google.com/maps/documentation/places/web-service/text-search | webpage | direct | 200 | 1923.3 | research/source-skill-candidates.md:220 | goplaces 对应的 Google Places 文本检索文档入口。 |
+| tavily | Tavily Search API | https://api.tavily.com/search | api | unstable | 401 | 1302.6 | research/source-skill-candidates.md:221 | tavily 对应的搜索接口入口。 |
+| a-share-real-time-data | Tencent A-share Quote API | https://qt.gtimg.cn/q=s_sh000001 | api-text | direct | 200 | 508.6 | research/source-skill-candidates.md:223 | a-share-real-time-data 对应的腾讯 A 股实时行情接口样例。 |
+| a-share-real-time-data | Sina A-share Quote API | https://hq.sinajs.cn/list=sh000001 | api-text | unstable | 403 | 390.4 | research/source-skill-candidates.md:223 | a-share-real-time-data 对应的新浪 A 股实时行情接口样例。 |
+| fda-database | openFDA Drug Label API | https://api.fda.gov/drug/label.json?limit=1 | api | direct | 200 | 1408.7 | research/source-skill-candidates.md:216 | fda-database 对应的 openFDA 标签接口。 |
+| fda-database | openFDA Device Event API | https://api.fda.gov/device/event.json?limit=1 | api | direct | 200 | 4256.5 | research/source-skill-candidates.md:216 | fda-database 对应的 openFDA 医疗器械事件接口。 |
+| pywencai | iWenCai Unified Search Earnings Growth | https://www.iwencai.com/unifiedwap/result?w=%E4%B8%9A%E7%BB%A9%E9%A2%84%E5%A2%9E | webpage | direct | 200 | 888.5 | research/source-skill-candidates.md:25,148 | 问财围绕业绩预增的统一检索入口样例。 |
+| pywencai | iWenCai Unified Search Moneyflow | https://www.iwencai.com/unifiedwap/result?w=%E8%B5%84%E9%87%91%E6%B5%81%E5%90%91 | webpage | direct | 200 | 404.3 | research/source-skill-candidates.md:25,148 | 问财围绕资金流向的统一检索入口样例。 |
+| tsrs-mcp-server | TuShare Docs | https://www.tushare.pro/document/2?doc_id=170 | docs | direct | 200 | 1485.9 | research/source-skill-candidates.md:28,147 | tsrs-mcp-server 详情点名的 TuShare 文档入口。 |
+| tsrs-mcp-server | EastMoney Moneyflow Board | https://data.eastmoney.com/zjlx/detail.html | webpage | direct | 200 | 448.4 | research/source-skill-candidates.md:28,147 | tsrs-mcp-server 详情点名的资金流页面入口。 |
+| daily-news-report | One Useful Thing | https://www.oneusefulthing.org/ | webpage | direct | 200 | 732.3 | research/source-skill-candidates.md:38,130 | daily-news-report 明确点名的博客源。 |
+| daily-news-report | Paul Graham Essays | https://paulgraham.com/articles.html | webpage | direct | 200 | 3003.4 | research/source-skill-candidates.md:38,130 | daily-news-report 明确点名的 Paul Graham essays 入口。 |
+| EdgarTools AI Skill | SEC 10-K filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=10-K&owner=exclude&count=40 | webpage | unstable | 403 | 851.5 | research/source-skill-validation/skills-hub-edgartools.html | EdgarTools AI Skill 明确覆盖 10-K 披露后的直达检索页。 |
+| EdgarTools AI Skill | SEC 10-Q filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=10-Q&owner=exclude&count=40 | webpage | unstable | 403 | 1565.8 | research/source-skill-validation/skills-hub-edgartools.html | EdgarTools AI Skill 明确覆盖 10-Q 披露后的直达检索页。 |
+| EdgarTools AI Skill | SEC 8-K filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=8-K&owner=exclude&count=40 | webpage | unstable | 403 | 1066.4 | research/source-skill-validation/skills-hub-edgartools.html | EdgarTools AI Skill 明确覆盖 8-K 事件披露后的直达检索页。 |
+| EdgarTools AI Skill | SEC DEF 14A filings | https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=DEF%2014A&owner=exclude&count=40 | webpage | unstable | 403 | 807.8 | research/source-skill-validation/skills-hub-edgartools.html | EdgarTools AI Skill 明确覆盖 DEF 14A 委托书披露后的直达检索页。 |
+| openinsider | OpenInsider Latest Insider Trading | http://openinsider.com/latest-insider-trading | webpage | blocked_or_unknown |  | 5016.3 | research/source-skill-candidates.md:48,193 | OpenInsider 最近内幕交易列表入口。 |
+| openinsider | OpenInsider Top Insider Purchases | http://openinsider.com/top-insider-purchases-of-the-week | webpage | direct | 200 | 719.0 | research/source-skill-candidates.md:48,193 | OpenInsider 每周高净买入入口。 |
+| openinsider | OpenInsider Charts | http://openinsider.com/charts | webpage | direct | 200 | 675.4 | research/source-skill-candidates.md:48,193 | OpenInsider 图表页入口。 |
+| quiver | Quiver Congress Trading | https://www.quiverquant.com/congresstrading/ | webpage | direct | 200 | 2132.6 | research/source-skill-candidates.md:49,194 | Quiver 国会议员交易入口。 |
+| quiver | Quiver Insider Trading | https://www.quiverquant.com/insiders/ | webpage | direct | 200 | 827.3 | research/source-skill-candidates.md:49,194 | Quiver insider transactions 入口。 |
+| knowledgelm-nse | NSE Quote Equity API | https://www.nseindia.com/api/quote-equity?symbol=RELIANCE | api-json | direct | 200 | 1654.4 | turn3 targeted urllib probe / research/source-skill-candidates.md:51,196 | knowledgelm-nse 对应的 NSE 股票详情 API。 |
+| knowledgelm-nse | NSE Corporate Announcements API | https://www.nseindia.com/api/corporate-announcements?index=equities | api-json | direct | 200 | 2442.5 | research/source-skill-candidates.md:51,196 | knowledgelm-nse 对应的 NSE 公司公告 API。 |
+| knowledgelm-nse | NSE PIT Filings API | https://www.nseindia.com/api/corporates-pit?index=equities&symbol=RELIANCE | api-json | direct | 200 | 21370.0 | research/source-skill-candidates.md:51,196 | knowledgelm-nse 对应的 NSE insider / PIT 披露 API。 |
+| knowledgelm-nse | NSE Event Calendar API | https://www.nseindia.com/api/event-calendar?index=equities | api-json | direct | 200 | 21820.6 | research/source-skill-candidates.md:51,196 | knowledgelm-nse 对应的 NSE 事件日历 API。 |
+| scientific-skills-fred-economic-data | FRED Series API | https://api.stlouisfed.org/fred/series?series_id=CPIAUCSL&file_type=json | api-json | unstable | 500 | 1289.6 | turn3 targeted urllib probe / research/source-skill-candidates.md:92 | FRED series 元数据 API 样例；无 key 返回 400 也代表链路可达。 |
+| scientific-skills-fred-economic-data | FRED Observations API | https://api.stlouisfed.org/fred/series/observations?series_id=CPIAUCSL&file_type=json | api-json | unstable | 400 | 1017.9 | turn3 targeted urllib probe / research/source-skill-candidates.md:92 | FRED observations API 样例；无 key 返回 400 也代表链路可达。 |
+| scientific-skills-fred-economic-data | FRED Releases API | https://api.stlouisfed.org/fred/releases?file_type=json | api-json | unstable | 400 | 1119.9 | turn3 targeted urllib probe / research/source-skill-candidates.md:92 | FRED releases API 样例；无 key 返回 400 也代表链路可达。 |
+| stock-data-collector | AkShare Stock Docs | https://akshare.akfamily.xyz/data/stock/stock.html | docs | direct | 200 | 751.1 | research/source-skill-candidates.md:113,140 | stock-data-collector 对应的 AkShare 股票数据文档入口。 |
+| stock-data-collector | Yahoo Finance HK Chart API | https://query1.finance.yahoo.com/v8/finance/chart/0700.HK?interval=1d&range=5d | api-json | direct | 200 | 1013.5 | research/source-skill-candidates.md:113,140 | stock-data-collector 对应的 Yahoo Finance 港股历史行情接口样例。 |
+| exa-ai-search-automation | Exa Docs Search Reference | https://docs.exa.ai/reference/search | docs | direct | 200 | 1934.2 | research/source-skill-candidates.md:217 | Exa Search API 文档页。 |
+| exa-ai-search-automation | Exa Homepage | https://exa.ai/ | webpage | direct | 200 | 1790.3 | research/source-skill-candidates.md:217 | Exa 主站。 |
+| stormglass-io-automation | Stormglass Docs | https://docs.stormglass.io/ | docs | direct | 200 | 1390.8 | research/source-skill-candidates.md:218 | Stormglass 官方文档站。 |
+| stormglass-io-automation | Stormglass Tide Extremes API | https://api.stormglass.io/v2/tide/extremes/point?lat=25.28&lng=55.30 | api-json | unstable | 403 | 1308.4 | research/source-skill-candidates.md:218 | Stormglass 潮汐极值接口样例。 |
+| goplaces | Google Places Nearby Search Docs | https://developers.google.com/maps/documentation/places/web-service/nearby-search | docs | direct | 200 | 1185.2 | research/source-skill-candidates.md:220 | Google Places 附近搜索文档入口。 |
+| goplaces | Google Places Details Docs | https://developers.google.com/maps/documentation/places/web-service/details | docs | direct | 200 | 2614.5 | research/source-skill-candidates.md:220 | Google Places 详情文档入口。 |
+| tavily | Tavily Extract API | https://api.tavily.com/extract | api | unstable | 401 | 1391.9 | research/source-skill-candidates.md:221 | Tavily content extraction 接口入口。 |
+| tavily | Tavily Homepage | https://tavily.com/ | webpage | blocked_or_unknown |  | 5540.4 | research/source-skill-candidates.md:221 | Tavily 主站。 |
+| wrds | WRDS Get Data | https://wrds-www.wharton.upenn.edu/pages/get-data/ | webpage | direct | 200 | 2849.3 | research/source-skill-candidates.md:45,190 | WRDS 数据入口页。 |
+| wrds | WRDS Support | https://wrds-www.wharton.upenn.edu/pages/support/ | webpage | direct | 200 | 2789.5 | research/source-skill-candidates.md:45,190 | WRDS 支持页，可作为机构数据库访问链路补充。 |
+| wrds | WRDS About | https://wrds-www.wharton.upenn.edu/pages/about/ | webpage | direct | 200 | 1457.6 | turn4 targeted probe / research/source-skill-candidates.md:45,190 | WRDS 关于页，可作为机构数据库官方信息入口补充。 |
+| hedgefundmonitor | OFR Homepage | https://www.financialresearch.gov/ | webpage | direct | 200 | 1508.5 | turn4 targeted probe / research/source-skill-candidates.md:44,189 | OFR 官方主页。 |
+| hedgefundmonitor | OFR Data | https://www.financialresearch.gov/data/ | webpage | direct | 200 | 2158.4 | turn4 targeted probe / research/source-skill-candidates.md:44,189 | OFR 数据入口页。 |
+| hedgefundmonitor | OFR Short-Term Funding Monitor | https://www.financialresearch.gov/short-term-funding-monitor/ | webpage | direct | 200 | 1667.5 | turn4 targeted probe / research/source-skill-candidates.md:44,189 | OFR 监测体系中的短期融资入口页，可作为 Hedge Fund Monitor 周边监测链路补充。 |
+| hugging-face-paper-publisher | Hugging Face Models | https://huggingface.co/models | webpage | direct | 200 | 1157.2 | research/source-skill-candidates.md:216 | Hugging Face Hub 模型目录入口。 |
+| hugging-face-paper-publisher | Hugging Face Datasets | https://huggingface.co/datasets | webpage | direct | 200 | 1084.2 | research/source-skill-candidates.md:216 | Hugging Face Hub 数据集目录入口。 |
+| hugging-face-paper-publisher | Hugging Face Spaces | https://huggingface.co/spaces | webpage | direct | 200 | 975.0 | research/source-skill-candidates.md:216 | Hugging Face Hub Spaces 目录入口。 |
+| open-skills-web-search-api | SearX Space Homepage | https://searx.space/ | webpage | direct | 200 | 1165.8 | research/source-skill-candidates.md:108,213 | SearX 实例索引主站。 |
+| open-skills-web-search-api | SearXNG Docs | https://docs.searxng.org/ | docs | direct | 200 | 1630.3 | research/source-skill-candidates.md:108,213 | SearXNG 官方文档站。 |
+| worldmonitor-upstream | USGS Earthquake GeoJSON Feed | https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson | api-json | direct | 200 | 1498.5 | research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md | 本地 upstream 代码文档点名的 USGS 地震公开 feed。 |
+| worldmonitor-upstream | EIA Electricity Overview API | https://api.eia.gov/v2/electricity/retail-sales/data/?frequency=monthly&data[0]=price&length=1 | api | unstable | 403 | 1858.6 | research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md | 本地 upstream 代码文档点名的 EIA 开放数据接口。 |
+| worldmonitor-upstream | NASA FIRMS Area API Docs | https://firms.modaps.eosdis.nasa.gov/api/area/ | webpage | direct | 200 | 1769.8 | research/worldmonitor-upstream/src/services/settings-constants.ts | 本地 upstream 代码配置里点名的 NASA FIRMS 区域 API 入口。 |
+| worldmonitor-upstream | World Bank Indicator API | https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=1 | api-json | direct | 200 | 1098.0 | research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md | 本地 upstream 代码文档点名的 World Bank 指标 API。 |
+| worldmonitor-upstream | GDELT Doc API | https://api.gdeltproject.org/api/v2/doc/doc?query=shipping&mode=artlist&maxrecords=1&format=json | api-json | direct | 200 | 13277.4 | research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md | 本地 upstream 代码文档点名的 GDELT 文档检索 API。 |
+| worldmonitor-upstream | OpenAQ Locations API | https://api.openaq.org/v3/locations?limit=1 | api-json | unstable | 401 | 1169.7 | research/worldmonitor-upstream/docs/climate-variant-full.md | 本地 upstream 代码文档点名的 OpenAQ 空气质量 API。 |
+| worldmonitor-upstream | OpenSky Network API Docs | https://opensky-network.org/apidoc/index.html | webpage | unstable | 404 | 1595.9 | research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md | 本地 upstream 代码文档点名的 OpenSky API 文档。 |
+| worldmonitor-upstream | ACLED Developer Portal | https://developer.acleddata.com/ | webpage | unstable | 526 | 1518.7 | research/worldmonitor-upstream/src/services/settings-constants.ts | 本地 upstream 代码配置点名的 ACLED 开发者入口。 |
+| worldmonitor-upstream | UCDP GED API | https://ucdpapi.pcr.uu.se/api/gedevents/25.1?pagesize=1 | api-json | unstable | 401 | 1411.9 | research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md | 本地 upstream 代码文档点名的 UCDP 冲突事件 API。 |
+| alpha-vantage | Auto alphavantage.co Support | https://www.alphavantage.co/support/#api-key | webpage | direct | 200 | 2110.9 | research/source-skill-validation/clskills-alpha-vantage.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| alpha-vantage | Auto alphavantage.co Query | https://www.alphavantage.co/query | api | direct | 200 | 805.9 | research/source-skill-validation/clskills-alpha-vantage.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| hugging-face-paper-publisher | Auto arxiv.org Submit | https://arxiv.org/help/submit | webpage | direct | 200 | 3287.4 | research/source-skill-validation/clskills-hugging-face-paper-publisher.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| fred | Auto api.stlouisfed.org Fred | https://api.stlouisfed.org/fred | webpage | unstable | 404 | 1685.7 | research/source-skill-validation/skills-hub-fred.html | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| fred | Auto fred.stlouisfed.org Legal | https://fred.stlouisfed.org/legal/ | webpage | blocked_or_unknown |  | 18861.4 | research/source-skill-validation/skills-hub-fred.html | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| usfiscaldata | Auto api.fiscaldata.treasury.gov Fiscal Service | https://api.fiscaldata.treasury.gov/services/api/fiscal_service | api | unstable | 404 | 1938.8 | research/source-skill-validation/skills-hub-usfiscaldata.html | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| SELF_HOSTING | Auto finnhub.io | https://finnhub.io | webpage | direct | 200 | 979.2 | research/worldmonitor-upstream/SELF_HOSTING.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| SELF_HOSTING | Auto fred.stlouisfed.org Api Key.Html | https://fred.stlouisfed.org/docs/api/api_key.html | api | blocked_or_unknown |  | 18554.1 | research/worldmonitor-upstream/SELF_HOSTING.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| climate-variant-full | Auto theguardian.com Rss | https://www.theguardian.com/environment/climate-crisis/rss | rss | direct | 200 | 1201.4 | research/worldmonitor-upstream/docs/climate-variant-full.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| API_REFERENCE | Auto finnhub.io Quote | https://finnhub.io/api/v1/quote | api | unstable | 401 | 918.2 | research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| API_REFERENCE | Auto query1.finance.yahoo.com Chart | https://query1.finance.yahoo.com/v8/finance/chart/ | webpage | unstable | 404 | 799.4 | research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| API_REFERENCE | Auto api.coingecko.com Markets | https://api.coingecko.com/api/v3/coins/markets | api | unstable | 422 | 930.7 | research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| API_REFERENCE | Auto api.stlouisfed.org Observations | https://api.stlouisfed.org/fred/series/observations | webpage | unstable | 400 | 916.1 | research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| API_REFERENCE | Auto export.arxiv.org Query | https://export.arxiv.org/api/query | api | unstable | 400 | 1238.9 | research/worldmonitor-upstream/docs/Docs_To_Review/API_REFERENCE.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| DOCUMENTATION | Auto finnhub.io | https://finnhub.io/ | webpage | direct | 200 | 1482.1 | research/worldmonitor-upstream/docs/Docs_To_Review/DOCUMENTATION.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| DOCUMENTATION | Auto finance.yahoo.com | https://finance.yahoo.com/ | webpage | direct | 200 | 2097.6 | research/worldmonitor-upstream/docs/Docs_To_Review/DOCUMENTATION.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| EXTERNAL_APIS | Auto finnhub.io Register | https://finnhub.io/register | webpage | direct | 200 | 1091.4 | research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| EXTERNAL_APIS | Auto finnhub.io V1 | https://finnhub.io/api/v1/ | api | unstable | 401 | 995.6 | research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| EXTERNAL_APIS | Auto api.coingecko.com V3 | https://api.coingecko.com/api/v3/ | api | unstable | 404 | 1336.0 | research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| EXTERNAL_APIS | Auto api.stlouisfed.org Fred | https://api.stlouisfed.org/fred/ | webpage | unstable | 404 | 1070.3 | research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |
+| EXTERNAL_APIS | Auto export.arxiv.org Api | https://export.arxiv.org/api/ | api | unstable | 429 | 1529.1 | research/worldmonitor-upstream/docs/Docs_To_Review/EXTERNAL_APIS.md | 从本地研究快照自动抽取，等待后续人工补充语义命名。 |

@@ -1,0 +1,706 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - paragraph [ref=e10]: 世界总览
+            - heading "世界脉络" [level=1] [ref=e11]
+            - paragraph [ref=e12]: 这里把实时信号、地球落点、题池和信源状态放在同一张看板里。
+          - generic [ref=e13]:
+            - generic [ref=e14]: 3D 地球
+            - generic [ref=e15]: 主世界
+            - generic [ref=e16]: 最近更新 4月20日 00:07
+            - button "刷新" [ref=e17]:
+              - img
+              - text: 刷新
+        - generic [ref=e18]:
+          - generic [ref=e20]:
+            - generic [ref=e21]:
+              - generic [ref=e22]:
+                - generic [ref=e23]:
+                  - img [ref=e24]
+                  - text: 信源 Skill
+                - paragraph [ref=e27]: 把这个地址交给接入方即可。先用它查近 30 天信源，系统会顺手把这轮判断带去校准题池，再把经验带回后续回答。
+              - generic [ref=e28]:
+                - link "打开" [ref=e29] [cursor=pointer]:
+                  - /url: http://127.0.0.1:5000/api/v1/openclaw/skill.md
+                - button "复制" [ref=e30]
+            - code [ref=e32]: http://127.0.0.1:5000/api/v1/openclaw/skill.md
+            - generic [ref=e33]:
+              - generic [ref=e34]:
+                - generic [ref=e35]: 30 天信源
+                - generic [ref=e36]: 持续校准
+                - generic [ref=e37]: 模型回看
+              - paragraph [ref=e38]: 每次查完信源，系统都会顺手把这轮判断带去校准题池，再把经验带回后续回答。
+          - generic [ref=e40]:
+            - generic [ref=e41]:
+              - generic [ref=e42]:
+                - paragraph [ref=e43]: 信源情况
+                - paragraph [ref=e44]: 最近轮询 4月11日 18:13，监测池 207 条，高质量 135 条，优先接入 132 条。
+                - paragraph [ref=e45]: 最近一轮变动 72 条，临时降权 4 条，待补位 12 条。
+              - link "查看细节" [ref=e46] [cursor=pointer]:
+                - /url: /api/v1/world/source-knowledge/status?scene=global
+            - generic [ref=e47]:
+              - generic [ref=e48]:
+                - generic [ref=e49]:
+                  - paragraph [ref=e50]: SkillHub 入口总表
+                  - generic [ref=e51]: 4月10日 11:12
+                - paragraph [ref=e52]: 持续扩表
+                - paragraph [ref=e53]: "最近两轮新增主要集中在 `SkillsMP`、`SKILLS.re`、`Skillstore`、`Sk…"
+              - generic [ref=e54]:
+                - generic [ref=e55]:
+                  - paragraph [ref=e56]: 信源 skill 挂载
+                  - generic [ref=e57]: 4月14日 07:19
+                - paragraph [ref=e58]: 已扫 73 个 hub，产出 90 条。
+                - paragraph [ref=e59]: 当前有 18 个 hub 真正落出信源条目。
+              - generic [ref=e60]:
+                - generic [ref=e61]:
+                  - paragraph [ref=e62]: 运行层状态
+                  - generic [ref=e63]: 72 变动
+                - paragraph [ref=e64]: 冷却 4 条，待补位 12 条。
+                - paragraph [ref=e65]: 运行失败 12 条。
+              - generic [ref=e66]:
+                - generic [ref=e67]:
+                  - paragraph [ref=e68]: 融合情况
+                  - generic [ref=e69]: 769 条
+                - paragraph [ref=e70]: 当前全部信号里，World Monitor API 120 条，MiniMax 打标 80 条，公众号 46 条，其中 44 条已经走完统一打标。
+                - paragraph [ref=e71]: 主流信号以 World Monitor API 为底，MiniMax 做统一打标和对齐；公众号内容也进入同一套标签链，当前覆盖率 96%。
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - button "主世界 769" [ref=e74]
+          - button "冲突 229" [ref=e75]
+          - button "科技 48" [ref=e76]
+          - button "产能与供应链 7" [ref=e77]
+          - button "市场 29" [ref=e78]
+          - button "公共卫生 31" [ref=e79]
+          - button "弱信号 0" [ref=e80]
+        - generic [ref=e81]:
+          - generic [ref=e82]: 推荐信源包
+          - generic "适合作为主世界与弱信号的 curated RSS 基底" [ref=e83]: ShunyaNet Sentinel World Core Bundle · 39
+    - generic [ref=e84]:
+      - generic [ref=e85]:
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - img [ref=e89]
+            - text: 实时信息
+          - paragraph [ref=e91]: 这里看今天最有变化的线索，先看升温，再看新进。
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - generic [ref=e94]: 升温线 8
+            - generic [ref=e95]: 最新信号 8
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - generic [ref=e98]:
+                - paragraph [ref=e99]: 正在升温
+                - generic [ref=e100]: 前 4 条
+              - article [ref=e101]:
+                - generic [ref=e102]:
+                  - generic [ref=e103]: 严重
+                  - paragraph [ref=e104]: 加沙地带
+                - paragraph [ref=e105]: 持续冲突中的种族灭绝指控。
+                - generic [ref=e106]:
+                  - img [ref=e107]
+                  - generic [ref=e110]: Gaza Strip
+                  - generic [ref=e111]: 4月20日 00:01
+              - article [ref=e112]:
+                - generic [ref=e113]:
+                  - generic [ref=e114]: 严重
+                  - paragraph [ref=e115]: 霍尔木兹海峡（伊朗海岸线）
+                - paragraph [ref=e116]: 美国海军对伊朗港口的封锁在伊朗海岸线附近积极执行，造成全球严重经济中断，霍尔木兹海峡商业航运几乎完全停滞。伊朗则采取非对称攻击并试图控制并从中获利，导致军事和外交紧张局势升级，形成战略僵局。
+                - generic [ref=e117]:
+                  - img [ref=e118]
+                  - generic [ref=e121]: Strait of Hormuz (Iranian coastline)
+                  - generic [ref=e122]: 4月20日 00:01
+              - article [ref=e123]:
+                - generic [ref=e124]:
+                  - generic [ref=e125]: 严重
+                  - paragraph [ref=e126]: 附近伊朗阵地（暗示作战区域）
+                - paragraph [ref=e127]: 美国已对伊朗主要出口港实施海军封锁，加大经济压力，双方同时准备重新开战，外交团队则在伊斯兰堡准备新一轮会谈。
+                - generic [ref=e128]:
+                  - img [ref=e129]
+                  - generic [ref=e132]: Nearby Iranian positions (implied operational area)
+                  - generic [ref=e133]: 4月20日 00:01
+              - article [ref=e134]:
+                - generic [ref=e135]:
+                  - generic [ref=e136]: 严重
+                  - paragraph [ref=e137]: 黎巴嫩南部（纳库拉、卡布里卡、卡夫、图林）
+                - paragraph [ref=e138]: 黎巴嫩南部是真主党与以色列国防军持续激烈战斗的焦点，尽管美国斡旋的以黎高级别外交谈判正在华盛顿进行，但每日攻击和空袭仍在继续。
+                - generic [ref=e139]:
+                  - img [ref=e140]
+                  - generic [ref=e143]: Southern Lebanon (Naqoura, Qabrikha, Kfar, Touline)
+                  - generic [ref=e144]: 4月19日 23:01
+            - generic [ref=e145]:
+              - generic [ref=e146]:
+                - paragraph [ref=e147]: 最新信号
+                - generic [ref=e148]: 按进入时间排序
+              - article [ref=e149]:
+                - generic [ref=e150]:
+                  - generic [ref=e151]: 严重
+                  - generic [ref=e152]: 待核实
+                  - generic [ref=e153]: 4月19日 08:00
+                - paragraph [ref=e154]: 康斯坦丁诺夫卡，敖德萨州，乌克兰
+                - paragraph [ref=e155]: 乌克兰战区的机械化攻击
+                - link "打开原文" [ref=e157] [cursor=pointer]:
+                  - /url: https://zn.ua/ukr/war/rosijani-druhij-den-pospil-masovano-shturmujut-chasiv-jar-chi-majut-voni-uspikh-.html
+                  - img [ref=e158]
+                  - text: 打开原文
+                - generic [ref=e161]:
+                  - generic [ref=e162]: 冲突
+                  - generic [ref=e163]: 欧洲
+                  - generic [ref=e164]: 严重
+                  - generic [ref=e165]: 落点
+              - article [ref=e166]:
+                - generic [ref=e167]:
+                  - generic [ref=e168]: 严重
+                  - generic [ref=e169]: 待核实
+                  - generic [ref=e170]: 4月19日 08:00
+                - paragraph [ref=e171]: 乌克兰扎波罗热州旧乌克兰卡
+                - paragraph [ref=e172]: 俄罗斯袭击乌克兰基础设施
+                - link "打开原文" [ref=e174] [cursor=pointer]:
+                  - /url: https://www.dailykos.com/stories/2026/4/18/800022734/community/ukraine-invasion-day-1515-ru-struck-residential-and-industrial-infrastructure-in-kharkiv-sumy-and-zaporizhzhia-cities-and-poltava-and-odesa-oblasts/
+                  - img [ref=e175]
+                  - text: 打开原文
+                - generic [ref=e178]:
+                  - generic [ref=e179]: 冲突
+                  - generic [ref=e180]: 欧洲
+                  - generic [ref=e181]: 严重
+                  - generic [ref=e182]: 落点
+              - article [ref=e183]:
+                - generic [ref=e184]:
+                  - generic [ref=e185]: 严重
+                  - generic [ref=e186]: 待核实
+                  - generic [ref=e187]: 4月19日 08:00
+                - paragraph [ref=e188]: 以色列本古里安
+                - paragraph [ref=e189]: 战争报道活跃
+                - link "打开原文" [ref=e191] [cursor=pointer]:
+                  - /url: https://www.newsru.co.il/israel/19apr2026/d926.html
+                  - img [ref=e192]
+                  - text: 打开原文
+                - generic [ref=e195]:
+                  - generic [ref=e196]: 冲突
+                  - generic [ref=e197]: 中东
+                  - generic [ref=e198]: 严重
+                  - generic [ref=e199]: 落点
+              - article [ref=e200]:
+                - generic [ref=e201]:
+                  - generic [ref=e202]: 严重
+                  - generic [ref=e203]: 待核实
+                  - generic [ref=e204]: 4月19日 08:00
+                - paragraph [ref=e205]: Novyny，Volyns'ka Oblast'，乌克兰
+                - paragraph [ref=e206]: Update on Russia-Ukraine war (day 1515)
+                - link "打开原文" [ref=e208] [cursor=pointer]:
+                  - /url: https://politicaldog101.com/2026/04/ukrainerussia-day-1515-kyiv-terrorist-shooting-lousy-russian-economy/
+                  - img [ref=e209]
+                  - text: 打开原文
+                - generic [ref=e212]:
+                  - generic [ref=e213]: 冲突
+                  - generic [ref=e214]: 欧洲
+                  - generic [ref=e215]: 严重
+                  - generic [ref=e216]: 落点
+              - article [ref=e217]:
+                - generic [ref=e218]:
+                  - generic [ref=e219]: 严重
+                  - generic [ref=e220]: 待核实
+                  - generic [ref=e221]: 4月19日 08:00
+                - paragraph [ref=e222]: Bandar Abbas，Hormozgan，伊朗
+                - paragraph [ref=e223]: Iran blockades Strait of Hormuz and fires on tankers
+                - link "打开原文" [ref=e225] [cursor=pointer]:
+                  - /url: https://www.sentinelassam.com/topheadlines/iran-reimposes-strait-of-hormuz-blockade-fires-on-tankers
+                  - img [ref=e226]
+                  - text: 打开原文
+                - generic [ref=e229]:
+                  - generic [ref=e230]: 冲突
+                  - generic [ref=e231]: 中东
+                  - generic [ref=e232]: 严重
+                  - generic [ref=e233]: 落点
+              - article [ref=e234]:
+                - generic [ref=e235]:
+                  - generic [ref=e236]: 严重
+                  - generic [ref=e237]: 待核实
+                  - generic [ref=e238]: 4月19日 18:00
+                - paragraph [ref=e239]: 内瓦提姆空军基地
+                - paragraph [ref=e240]: 内瓦提姆空军基地是美国-以色列军事物流和高层外交的重点，美国货运航班激增，阿根廷进行支持性国事访问此同时欧洲对以色列的政治压力也在升级。
+                - link "查看详情" [ref=e242] [cursor=pointer]:
+                  - /url: /signals/marker-4132dd01a47304ce
+                  - img [ref=e243]
+                  - text: 查看详情
+                - generic [ref=e246]:
+                  - generic [ref=e247]: 主世界
+                  - generic [ref=e248]: 中东
+                  - generic [ref=e249]: 强度 4
+                  - generic [ref=e250]: 提及 5-plus
+              - article [ref=e251]:
+                - generic [ref=e252]:
+                  - generic [ref=e253]: 严重
+                  - generic [ref=e254]: 待核实
+                  - generic [ref=e255]: 4月19日 14:31
+                - paragraph [ref=e256]: 哈尔克岛
+                - paragraph [ref=e257]: 美国拒绝了一项夺取哈尔克岛的计划，因为领导层严重担忧美军将极易受到伊朗防御系统的攻击。美军飞机被击落是一个重要的前车之鉴，说明了重大伤亡的风险。
+                - link "查看详情" [ref=e259] [cursor=pointer]:
+                  - /url: /signals/marker-b9b7f0abf48c0bd6
+                  - img [ref=e260]
+                  - text: 查看详情
+                - generic [ref=e263]:
+                  - generic [ref=e264]: 冲突
+                  - generic [ref=e265]: 中东
+                  - generic [ref=e266]: 强度 4
+                  - generic [ref=e267]: 单点提及
+              - article [ref=e268]:
+                - generic [ref=e269]:
+                  - generic [ref=e270]: 严重
+                  - generic [ref=e271]: 待核实
+                  - generic [ref=e272]: 4月20日 00:06
+                - paragraph [ref=e273]: ShunyaNet Sentinel Iran Watch Bundle Feed 3 信源更新
+                - paragraph [ref=e274]: "本轮前几条标题包括 《Preventing Lebanon’s Collapse: A Way out of the Israel-Hizbollah War?》、《Iran Crisis …"
+                - link "打开原文" [ref=e276] [cursor=pointer]:
+                  - /url: https://www.crisisgroup.org/rss/85
+                  - img [ref=e277]
+                  - text: 打开原文
+                - generic [ref=e280]:
+                  - generic [ref=e281]: 冲突
+                  - generic [ref=e282]: Global Feed
+      - generic [ref=e284]:
+        - generic [ref=e285]:
+          - generic [ref=e286]:
+            - heading "3D 地球时间地图" [level=2] [ref=e287]
+            - paragraph [ref=e288]: 把焦点放回地图，正在发生的事会先落到这颗地球上。
+          - generic [ref=e289]: 最近更新 4月20日 00:07
+        - generic [ref=e290]:
+          - generic [ref=e291]:
+            - generic [ref=e292]: 世界视图
+            - generic [ref=e293]: 4月20日 01:44
+          - generic [ref=e295]:
+            - paragraph [ref=e296]: ShunyaNet Sentinel Iran Watch Bundle Feed 16 信源更新
+            - paragraph [ref=e297]: 本轮前几条标题包括 《Allies fear a rushed US-Iran framework deal could backfire, leaving technical deadlock - analysis》…
+        - generic [ref=e298]:
+          - generic [ref=e299]:
+            - button "只看今天" [ref=e300]
+            - button "近 30 天渐淡" [ref=e301]
+          - generic [ref=e302]: 752 个已落点信号
+        - generic [ref=e304]:
+          - generic [ref=e305]: 点中某个信号后，地球会短暂停留，方便对照左右两侧的信息。
+          - generic [ref=e306]: 自动巡航
+      - generic [ref=e307]:
+        - generic [ref=e309]:
+          - generic [ref=e310]:
+            - generic [ref=e311]:
+              - img [ref=e312]
+              - text: 当前新评测问题
+            - paragraph [ref=e318]: 这里先看题池摘要，完整判断和复盘都在详情页里。
+            - paragraph [ref=e319]: 最近 30 天窗口里有 57 道题在持续跟踪，另有 17 道已经结算。
+            - paragraph [ref=e320]: 30 天窗口 · Polymarket 28 · Manifold 23 · Metaculus 19
+          - link "看模型表现" [ref=e321] [cursor=pointer]:
+            - /url: /livebench/evaluation
+            - text: 看模型表现
+            - img [ref=e322]
+        - generic [ref=e324]:
+          - generic [ref=e325]:
+            - paragraph [ref=e326]: 模型表现概括
+            - paragraph [ref=e327]: 目前先看测试线，17 道题的平均预测误差是 0.059。
+            - paragraph [ref=e328]: 正式实盘成绩还在积累；测试线命中率 94%，覆盖 100%，其中 17 道来自自动补票或历史回填。
+            - paragraph [ref=e329]: Polymarket 28 题，Manifold 23 题，Metaculus 19 题，内部题 4 题。当前有 2 只测试虾，每 30 分钟补一轮；已结算但缺历史票时，会按结算前信源回填。
+            - generic [ref=e330]:
+              - generic [ref=e331]:
+                - paragraph [ref=e332]: 测试线误差
+                - paragraph [ref=e333]: "0.059"
+              - generic [ref=e334]:
+                - paragraph [ref=e335]: 测试线命中
+                - paragraph [ref=e336]: 94%
+              - generic [ref=e337]:
+                - paragraph [ref=e338]: 正式计分
+                - paragraph [ref=e339]: 0 / 17
+              - generic [ref=e340]:
+                - paragraph [ref=e341]: 已结算 / 活跃
+                - paragraph [ref=e342]: 17 / 57
+              - generic [ref=e343]:
+                - paragraph [ref=e344]: 自动补票
+                - paragraph [ref=e345]: 2 只 / 30 分钟
+            - generic [ref=e346]:
+              - paragraph [ref=e347]: 同步状态
+              - generic [ref=e348]:
+                - paragraph [ref=e349]: Metaculus 直连 19 题
+                - paragraph [ref=e350]: Metaforecast GraphQL 已直连，扫描 1600 条后筛到相关候选 28 题（Polymarket 28 题）；直连入池：Ma…
+                - paragraph [ref=e351]: Qwen3-Embedding-8B 正在为最近 30 天逐条信源提供向量召回；信源知识向量库已接管 623 条近 30 天信源 ANN 召回…
+          - generic [ref=e352]:
+            - button "当前题池 (18)" [ref=e353]
+            - button "已结算复盘 (12)" [ref=e354]
+          - generic:
+            - link "待结算 升级风险 中东 在 2026年4月 之前，美国 attack Iran 会发生吗？ 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e355] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A41690
+              - generic [ref=e356]:
+                - generic [ref=e357]: 待结算
+                - generic [ref=e358]: 升级风险
+                - generic [ref=e359]: 中东
+              - paragraph [ref=e360]: 在 2026年4月 之前，美国 attack Iran 会发生吗？
+              - generic [ref=e361]:
+                - paragraph [ref=e362]: 主持人判断
+                - paragraph [ref=e363]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e364]:
+                - generic [ref=e365]: 总票偏向 不是
+                - generic [ref=e366]: 见分晓 4月1日 08:00
+                - generic [ref=e367]: 参与虾 2/2
+                - generic [ref=e368]: 本轮已齐票
+              - paragraph [ref=e369]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e370]:
+                - generic [ref=e371]: Metaculus
+                - generic [ref=e372]:
+                  - text: 查看详情
+                  - img [ref=e373]
+            - link "待结算 升级风险 中东 到 2026年3月26日 时，Metaculus 社区对“在 2026年5月 之前，美国和伊朗达成停火 会发生吗？”的预测概率会高于 22.00% 吗？ 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 见分晓 3月26日 23:55 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e375] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42703
+              - generic [ref=e376]:
+                - generic [ref=e377]: 待结算
+                - generic [ref=e378]: 升级风险
+                - generic [ref=e379]: 中东
+              - paragraph [ref=e380]: 到 2026年3月26日 时，Metaculus 社区对“在 2026年5月 之前，美国和伊朗达成停火 会发生吗？”的预测概率会高于 22.00% 吗？
+              - generic [ref=e381]:
+                - paragraph [ref=e382]: 主持人判断
+                - paragraph [ref=e383]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e384]:
+                - generic [ref=e385]: 总票偏向 不是
+                - generic [ref=e386]: 见分晓 3月26日 23:55
+                - generic [ref=e387]: 参与虾 2/2
+                - generic [ref=e388]: 本轮已齐票
+              - paragraph [ref=e389]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e390]:
+                - generic [ref=e391]: Metaculus
+                - generic [ref=e392]:
+                  - text: 查看详情
+                  - img [ref=e393]
+            - link "待结算 升级风险 中东 到 2026年3月27日 时，Metaculus 社区对“在 2027 之前，美国 conduct a ground invasion of Iran 会发生吗？”的预测概率… 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 见分晓 3月27日 22:37 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e395] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42713
+              - generic [ref=e396]:
+                - generic [ref=e397]: 待结算
+                - generic [ref=e398]: 升级风险
+                - generic [ref=e399]: 中东
+              - paragraph [ref=e400]: 到 2026年3月27日 时，Metaculus 社区对“在 2027 之前，美国 conduct a ground invasion of Iran 会发生吗？”的预测概率…
+              - generic [ref=e401]:
+                - paragraph [ref=e402]: 主持人判断
+                - paragraph [ref=e403]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e404]:
+                - generic [ref=e405]: 总票偏向 不是
+                - generic [ref=e406]: 见分晓 3月27日 22:37
+                - generic [ref=e407]: 参与虾 2/2
+                - generic [ref=e408]: 本轮已齐票
+              - paragraph [ref=e409]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e410]:
+                - generic [ref=e411]: Metaculus
+                - generic [ref=e412]:
+                  - text: 查看详情
+                  - img [ref=e413]
+            - link "待结算 升级风险 中东 到 2026年4月9日 时，Metaculus 社区对“在 2026年5月 之前，美国和伊朗达成停火 会发生吗？”的预测概率会高于 15.00% 吗？ 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 见分晓 4月9日 15:29 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e415] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42994
+              - generic [ref=e416]:
+                - generic [ref=e417]: 待结算
+                - generic [ref=e418]: 升级风险
+                - generic [ref=e419]: 中东
+              - paragraph [ref=e420]: 到 2026年4月9日 时，Metaculus 社区对“在 2026年5月 之前，美国和伊朗达成停火 会发生吗？”的预测概率会高于 15.00% 吗？
+              - generic [ref=e421]:
+                - paragraph [ref=e422]: 主持人判断
+                - paragraph [ref=e423]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e424]:
+                - generic [ref=e425]: 总票偏向 不是
+                - generic [ref=e426]: 见分晓 4月9日 15:29
+                - generic [ref=e427]: 参与虾 2/2
+                - generic [ref=e428]: 本轮已齐票
+              - paragraph [ref=e429]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e430]:
+                - generic [ref=e431]: Metaculus
+                - generic [ref=e432]:
+                  - text: 查看详情
+                  - img [ref=e433]
+            - link "待结算 升级风险 中东 到 2026年4月11日 时，Metaculus 社区对“在 2026年5月 之前，美国会对伊朗发动地面入侵吗？”的预测概率会高于 58.00% 吗？ 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 见分晓 4月11日 09:50 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e435] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42998
+              - generic [ref=e436]:
+                - generic [ref=e437]: 待结算
+                - generic [ref=e438]: 升级风险
+                - generic [ref=e439]: 中东
+              - paragraph [ref=e440]: 到 2026年4月11日 时，Metaculus 社区对“在 2026年5月 之前，美国会对伊朗发动地面入侵吗？”的预测概率会高于 58.00% 吗？
+              - generic [ref=e441]:
+                - paragraph [ref=e442]: 主持人判断
+                - paragraph [ref=e443]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e444]:
+                - generic [ref=e445]: 总票偏向 不是
+                - generic [ref=e446]: 见分晓 4月11日 09:50
+                - generic [ref=e447]: 参与虾 2/2
+                - generic [ref=e448]: 本轮已齐票
+              - paragraph [ref=e449]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e450]:
+                - generic [ref=e451]: Metaculus
+                - generic [ref=e452]:
+                  - text: 查看详情
+                  - img [ref=e453]
+            - link "待结算 升级风险 中东 到 2026年4月9日 时，Metaculus 社区对“在 2027 之前，美国 conduct a ground invasion of Iran 会发生吗？”的预测概率会… 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 见分晓 4月9日 14:52 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e455] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A43000
+              - generic [ref=e456]:
+                - generic [ref=e457]: 待结算
+                - generic [ref=e458]: 升级风险
+                - generic [ref=e459]: 中东
+              - paragraph [ref=e460]: 到 2026年4月9日 时，Metaculus 社区对“在 2027 之前，美国 conduct a ground invasion of Iran 会发生吗？”的预测概率会…
+              - generic [ref=e461]:
+                - paragraph [ref=e462]: 主持人判断
+                - paragraph [ref=e463]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e464]:
+                - generic [ref=e465]: 总票偏向 不是
+                - generic [ref=e466]: 见分晓 4月9日 14:52
+                - generic [ref=e467]: 参与虾 2/2
+                - generic [ref=e468]: 本轮已齐票
+              - paragraph [ref=e469]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e470]:
+                - generic [ref=e471]: Metaculus
+                - generic [ref=e472]:
+                  - text: 查看详情
+                  - img [ref=e473]
+            - link "待结算 前沿 AI 北美 到 4月21日 时，谷歌 Gemini 会成为美国 Apple App Store 免费榜第一吗？ 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 566。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e475] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006371
+              - generic [ref=e476]:
+                - generic [ref=e477]: 待结算
+                - generic [ref=e478]: 前沿 AI
+                - generic [ref=e479]: 北美
+              - paragraph [ref=e480]: 到 4月21日 时，谷歌 Gemini 会成为美国 Apple App Store 免费榜第一吗？
+              - generic [ref=e481]:
+                - paragraph [ref=e482]: 主持人判断
+                - paragraph [ref=e483]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 566。
+              - generic [ref=e484]:
+                - generic [ref=e485]: 总票偏向 不是
+                - generic [ref=e486]: 见分晓 4月1日 08:00
+                - generic [ref=e487]: 参与虾 2/2
+                - generic [ref=e488]: 本轮已齐票
+              - paragraph [ref=e489]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e490]:
+                - generic [ref=e491]: Polymarket
+                - generic [ref=e492]:
+                  - text: 查看详情
+                  - img [ref=e493]
+            - link "待结算 前沿 AI 北美 到 4月21日 时，Claude by Anthropic 会成为美国 Apple App Store 免费榜第一吗？ 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 701。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e495] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006372
+              - generic [ref=e496]:
+                - generic [ref=e497]: 待结算
+                - generic [ref=e498]: 前沿 AI
+                - generic [ref=e499]: 北美
+              - paragraph [ref=e500]: 到 4月21日 时，Claude by Anthropic 会成为美国 Apple App Store 免费榜第一吗？
+              - generic [ref=e501]:
+                - paragraph [ref=e502]: 主持人判断
+                - paragraph [ref=e503]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 701。
+              - generic [ref=e504]:
+                - generic [ref=e505]: 总票偏向 不是
+                - generic [ref=e506]: 见分晓 4月1日 08:00
+                - generic [ref=e507]: 参与虾 2/2
+                - generic [ref=e508]: 本轮已齐票
+              - paragraph [ref=e509]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e510]:
+                - generic [ref=e511]: Polymarket
+                - generic [ref=e512]:
+                  - text: 查看详情
+                  - img [ref=e513]
+            - link "待结算 前沿 AI 北美 到 4月21日 时，Threads 会成为美国 Apple App Store 免费榜第一吗？ 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 667。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e515] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006375
+              - generic [ref=e516]:
+                - generic [ref=e517]: 待结算
+                - generic [ref=e518]: 前沿 AI
+                - generic [ref=e519]: 北美
+              - paragraph [ref=e520]: 到 4月21日 时，Threads 会成为美国 Apple App Store 免费榜第一吗？
+              - generic [ref=e521]:
+                - paragraph [ref=e522]: 主持人判断
+                - paragraph [ref=e523]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 667。
+              - generic [ref=e524]:
+                - generic [ref=e525]: 总票偏向 不是
+                - generic [ref=e526]: 见分晓 4月1日 08:00
+                - generic [ref=e527]: 参与虾 2/2
+                - generic [ref=e528]: 本轮已齐票
+              - paragraph [ref=e529]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e530]:
+                - generic [ref=e531]: Polymarket
+                - generic [ref=e532]:
+                  - text: 查看详情
+                  - img [ref=e533]
+            - 'link "待结算 前沿 AI 北美 Will 谷歌 Gemini be #2 Free App in the US Apple App Store on April 21。 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 249。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e535] [cursor=pointer]':
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006419
+              - generic [ref=e536]:
+                - generic [ref=e537]: 待结算
+                - generic [ref=e538]: 前沿 AI
+                - generic [ref=e539]: 北美
+              - paragraph [ref=e540]: "Will 谷歌 Gemini be #2 Free App in the US Apple App Store on April 21。"
+              - generic [ref=e541]:
+                - paragraph [ref=e542]: 主持人判断
+                - paragraph [ref=e543]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 249。
+              - generic [ref=e544]:
+                - generic [ref=e545]: 总票偏向 不是
+                - generic [ref=e546]: 见分晓 4月1日 08:00
+                - generic [ref=e547]: 参与虾 2/2
+                - generic [ref=e548]: 本轮已齐票
+              - paragraph [ref=e549]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e550]:
+                - generic [ref=e551]: Polymarket
+                - generic [ref=e552]:
+                  - text: 查看详情
+                  - img [ref=e553]
+            - 'link "待结算 前沿 AI 北美 Will Meta AI - Assistant & Glasses be #2 Free App in the US Apple App Store on April 21。 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 258。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e555] [cursor=pointer]':
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006422
+              - generic [ref=e556]:
+                - generic [ref=e557]: 待结算
+                - generic [ref=e558]: 前沿 AI
+                - generic [ref=e559]: 北美
+              - paragraph [ref=e560]: "Will Meta AI - Assistant & Glasses be #2 Free App in the US Apple App Store on April 21。"
+              - generic [ref=e561]:
+                - paragraph [ref=e562]: 主持人判断
+                - paragraph [ref=e563]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 258。
+              - generic [ref=e564]:
+                - generic [ref=e565]: 总票偏向 不是
+                - generic [ref=e566]: 见分晓 4月1日 08:00
+                - generic [ref=e567]: 参与虾 2/2
+                - generic [ref=e568]: 本轮已齐票
+              - paragraph [ref=e569]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e570]:
+                - generic [ref=e571]: Polymarket
+                - generic [ref=e572]:
+                  - text: 查看详情
+                  - img [ref=e573]
+            - 'link "待结算 前沿 AI 北美 Will Netflix Game Controller be #2 Free App in the US Apple App Store on April 21。 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 341。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e575] [cursor=pointer]':
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006426
+              - generic [ref=e576]:
+                - generic [ref=e577]: 待结算
+                - generic [ref=e578]: 前沿 AI
+                - generic [ref=e579]: 北美
+              - paragraph [ref=e580]: "Will Netflix Game Controller be #2 Free App in the US Apple App Store on April 21。"
+              - generic [ref=e581]:
+                - paragraph [ref=e582]: 主持人判断
+                - paragraph [ref=e583]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 341。
+              - generic [ref=e584]:
+                - generic [ref=e585]: 总票偏向 不是
+                - generic [ref=e586]: 见分晓 4月1日 08:00
+                - generic [ref=e587]: 参与虾 2/2
+                - generic [ref=e588]: 本轮已齐票
+              - paragraph [ref=e589]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e590]:
+                - generic [ref=e591]: Polymarket
+                - generic [ref=e592]:
+                  - text: 查看详情
+                  - img [ref=e593]
+            - 'link "待结算 前沿 AI 北美 Will HotSchedules be #1 Paid App in the US Apple App Store on April 21。 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 1127。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e595] [cursor=pointer]':
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006462
+              - generic [ref=e596]:
+                - generic [ref=e597]: 待结算
+                - generic [ref=e598]: 前沿 AI
+                - generic [ref=e599]: 北美
+              - paragraph [ref=e600]: "Will HotSchedules be #1 Paid App in the US Apple App Store on April 21。"
+              - generic [ref=e601]:
+                - paragraph [ref=e602]: 主持人判断
+                - paragraph [ref=e603]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 1127。
+              - generic [ref=e604]:
+                - generic [ref=e605]: 总票偏向 不是
+                - generic [ref=e606]: 见分晓 4月1日 08:00
+                - generic [ref=e607]: 参与虾 2/2
+                - generic [ref=e608]: 本轮已齐票
+              - paragraph [ref=e609]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e610]:
+                - generic [ref=e611]: Polymarket
+                - generic [ref=e612]:
+                  - text: 查看详情
+                  - img [ref=e613]
+            - 'link "待结算 前沿 AI 北美 Will DualShot Recorder be #1 Paid App in the US Apple App Store on April 21。 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 793。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e615] [cursor=pointer]':
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006463
+              - generic [ref=e616]:
+                - generic [ref=e617]: 待结算
+                - generic [ref=e618]: 前沿 AI
+                - generic [ref=e619]: 北美
+              - paragraph [ref=e620]: "Will DualShot Recorder be #1 Paid App in the US Apple App Store on April 21。"
+              - generic [ref=e621]:
+                - paragraph [ref=e622]: 主持人判断
+                - paragraph [ref=e623]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 793。
+              - generic [ref=e624]:
+                - generic [ref=e625]: 总票偏向 不是
+                - generic [ref=e626]: 见分晓 4月1日 08:00
+                - generic [ref=e627]: 参与虾 2/2
+                - generic [ref=e628]: 本轮已齐票
+              - paragraph [ref=e629]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e630]:
+                - generic [ref=e631]: Polymarket
+                - generic [ref=e632]:
+                  - text: 查看详情
+                  - img [ref=e633]
+            - 'link "待结算 前沿 AI 北美 Will Ye said be #1 Paid App in the US Apple App Store on April 21。 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 908。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e635] [cursor=pointer]':
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2006466
+              - generic [ref=e636]:
+                - generic [ref=e637]: 待结算
+                - generic [ref=e638]: 前沿 AI
+                - generic [ref=e639]: 北美
+              - paragraph [ref=e640]: "Will Ye said be #1 Paid App in the US Apple App Store on April 21。"
+              - generic [ref=e641]:
+                - paragraph [ref=e642]: 主持人判断
+                - paragraph [ref=e643]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 908。
+              - generic [ref=e644]:
+                - generic [ref=e645]: 总票偏向 不是
+                - generic [ref=e646]: 见分晓 4月1日 08:00
+                - generic [ref=e647]: 参与虾 2/2
+                - generic [ref=e648]: 本轮已齐票
+              - paragraph [ref=e649]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e650]:
+                - generic [ref=e651]: Polymarket
+                - generic [ref=e652]:
+                  - text: 查看详情
+                  - img [ref=e653]
+            - link "待结算 前沿 AI 全球 在 2026年4月1日 时，any 谷歌 Gemini model会登上 LMSYS (LM Arena) 榜首吗？ 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 见分晓 4月1日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e655] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42318
+              - generic [ref=e656]:
+                - generic [ref=e657]: 待结算
+                - generic [ref=e658]: 前沿 AI
+                - generic [ref=e659]: 全球
+              - paragraph [ref=e660]: 在 2026年4月1日 时，any 谷歌 Gemini model会登上 LMSYS (LM Arena) 榜首吗？
+              - generic [ref=e661]:
+                - paragraph [ref=e662]: 主持人判断
+                - paragraph [ref=e663]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e664]:
+                - generic [ref=e665]: 总票偏向 不是
+                - generic [ref=e666]: 见分晓 4月1日 08:00
+                - generic [ref=e667]: 参与虾 2/2
+                - generic [ref=e668]: 本轮已齐票
+              - paragraph [ref=e669]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e670]:
+                - generic [ref=e671]: Metaculus
+                - generic [ref=e672]:
+                  - text: 查看详情
+                  - img [ref=e673]
+            - link "待结算 前沿 AI 北美 到 2026年3月28日 时，Metaculus 社区对“这道题在问：Will an AI model reach a 3 hour time horizon with 80… 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 见分晓 3月29日 06:40 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e675] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42675
+              - generic [ref=e676]:
+                - generic [ref=e677]: 待结算
+                - generic [ref=e678]: 前沿 AI
+                - generic [ref=e679]: 北美
+              - paragraph [ref=e680]: 到 2026年3月28日 时，Metaculus 社区对“这道题在问：Will an AI model reach a 3 hour time horizon with 80…
+              - generic [ref=e681]:
+                - paragraph [ref=e682]: 主持人判断
+                - paragraph [ref=e683]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e684]:
+                - generic [ref=e685]: 总票偏向 不是
+                - generic [ref=e686]: 见分晓 3月29日 06:40
+                - generic [ref=e687]: 参与虾 2/2
+                - generic [ref=e688]: 本轮已齐票
+              - paragraph [ref=e689]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e690]:
+                - generic [ref=e691]: Metaculus
+                - generic [ref=e692]:
+                  - text: 查看详情
+                  - img [ref=e693]
+            - link "待结算 航运 中东 到 2026年4月9日 时，Metaculus 社区对“在 2026年4月27日 之前，霍尔木兹海峡的航运流量会恢复到正常水平吗？”的预测概率会高于 11.00% 吗？ 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 见分晓 4月9日 11:46 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e695] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42971
+              - generic [ref=e696]:
+                - generic [ref=e697]: 待结算
+                - generic [ref=e698]: 航运
+                - generic [ref=e699]: 中东
+              - paragraph [ref=e700]: 到 2026年4月9日 时，Metaculus 社区对“在 2026年4月27日 之前，霍尔木兹海峡的航运流量会恢复到正常水平吗？”的预测概率会高于 11.00% 吗？
+              - generic [ref=e701]:
+                - paragraph [ref=e702]: 主持人判断
+                - paragraph [ref=e703]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e704]:
+                - generic [ref=e705]: 总票偏向 不是
+                - generic [ref=e706]: 见分晓 4月9日 11:46
+                - generic [ref=e707]: 参与虾 2/2
+                - generic [ref=e708]: 本轮已齐票
+              - paragraph [ref=e709]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e710]:
+                - generic [ref=e711]: Metaculus
+                - generic [ref=e712]:
+                  - text: 查看详情
+                  - img [ref=e713]

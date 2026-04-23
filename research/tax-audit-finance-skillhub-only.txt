@@ -1,0 +1,83 @@
+Tax / Audit / Finance Sources (SkillHub-only)
+Generated: 2026-04-13
+Scope: Only sources extracted from SkillHub-related materials.
+
+EdgarTools AI Skill (regulatory filings) [unstable]
+- SEC Form 4 filings
+  https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=4&owner=exclude&count=40
+  extracted_from: research/source-skill-validation/skills-hub-edgartools.html
+- SEC 13F-HR filings
+  https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=13F-HR&owner=exclude&count=40
+  extracted_from: research/source-skill-validation/skills-hub-edgartools.html
+- SEC 10-K filings
+  https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=10-K&owner=exclude&count=40
+  extracted_from: research/source-skill-validation/skills-hub-edgartools.html
+- SEC 10-Q filings
+  https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=10-Q&owner=exclude&count=40
+  extracted_from: research/source-skill-validation/skills-hub-edgartools.html
+- SEC 8-K filings
+  https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=8-K&owner=exclude&count=40
+  extracted_from: research/source-skill-validation/skills-hub-edgartools.html
+- SEC DEF 14A filings
+  https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=AAPL&type=DEF%2014A&owner=exclude&count=40
+  extracted_from: research/source-skill-validation/skills-hub-edgartools.html
+
+Alpha Vantage (macro + market indicators) [direct]
+- GLOBAL_QUOTE
+  https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=demo
+  extracted_from: research/source-skill-validation/clskills-alpha-vantage.md
+- TIME_SERIES_DAILY
+  https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo
+  extracted_from: research/source-skill-validation/clskills-alpha-vantage.md
+- TREASURY_YIELD
+  https://www.alphavantage.co/query?function=TREASURY_YIELD&interval=monthly&maturity=10year&apikey=demo
+  extracted_from: research/source-skill-validation/clskills-alpha-vantage.md
+- CPI
+  https://www.alphavantage.co/query?function=CPI&interval=monthly&apikey=demo
+  extracted_from: research/source-skill-validation/clskills-alpha-vantage.md
+- REAL_GDP
+  https://www.alphavantage.co/query?function=REAL_GDP&interval=quarterly&apikey=demo
+  extracted_from: research/source-skill-validation/clskills-alpha-vantage.md
+- NEWS_SENTIMENT
+  https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=AAPL&apikey=demo
+  extracted_from: research/source-skill-validation/clskills-alpha-vantage.md
+
+Finance Skills - Yahoo Finance (market data pages) [direct]
+- Quote
+  https://finance.yahoo.com/quote/AAPL
+  extracted_from: research/source-skill-validation/skills-hub-yfinance.html
+- History
+  https://finance.yahoo.com/quote/AAPL/history
+  extracted_from: research/source-skill-validation/skills-hub-yfinance.html
+- Options
+  https://finance.yahoo.com/quote/AAPL/options
+  extracted_from: research/source-skill-validation/skills-hub-yfinance.html
+- Earnings Calendar
+  https://finance.yahoo.com/calendar/earnings
+  extracted_from: research/source-skill-validation/skills-hub-yfinance.html
+
+Alphaear Stock (China A-share market data) [direct]
+- EastMoney Kline API
+  https://push2his.eastmoney.com/api/qt/stock/kline/get
+  extracted_from: github.com/RKiding/Awesome-finance-skills/skills/alphaear-stock/scripts/stock_tools.py
+- EastMoney Stock List API
+  https://push2.eastmoney.com/api/qt/clist/get
+  extracted_from: github.com/RKiding/Awesome-finance-skills/skills/alphaear-stock/scripts/stock_tools.py
+
+Alphaear Search (finance discovery) [direct]
+- DuckDuckGo Search
+  https://duckduckgo.com/?q=finance
+  extracted_from: github.com/RKiding/Awesome-finance-skills/skills/alphaear-search/scripts/search_tools.py
+- Baidu Search
+  https://www.baidu.com/s?wd=finance
+  extracted_from: github.com/RKiding/Awesome-finance-skills/skills/alphaear-search/scripts/search_tools.py
+
+US Fiscal Data (Treasury Fiscal Service entry) [unstable]
+- Fiscal Service API root
+  https://api.fiscaldata.treasury.gov/services/api/fiscal_service
+  extracted_from: research/source-skill-validation/skills-hub-usfiscaldata.html
+
+Market Sizing Analysis (industry data) [unstable]
+- ZoomInfo
+  https://www.zoominfo.com/
+  extracted_from: research/source-skill-validation/clskills-market-sizing-analysis.md:183

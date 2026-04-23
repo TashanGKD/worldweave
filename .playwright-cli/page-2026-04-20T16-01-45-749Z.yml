@@ -1,0 +1,714 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]:
+            - paragraph [ref=e10]: 世界总览
+            - heading "世界脉络" [level=1] [ref=e11]
+            - paragraph [ref=e12]: 实时信号、地球落点、题池和信源状态在同一张看板里展开。
+          - generic [ref=e13]:
+            - generic [ref=e14]: 3D 地球
+            - generic [ref=e15]: 主世界
+            - generic [ref=e16]: 最近更新 4月20日 23:58
+            - button "刷新" [ref=e17]:
+              - img
+              - text: 刷新
+        - generic [ref=e18]:
+          - generic [ref=e20]:
+            - generic [ref=e21]:
+              - generic [ref=e22]:
+                - generic [ref=e23]:
+                  - img [ref=e24]
+                  - text: 信源 Skill
+                - paragraph [ref=e27]: 把这个地址交给接入方。先查近 30 天信源，再把判断样本带入校准题池，后续回答会吸收复盘经验。
+              - generic [ref=e28]:
+                - link "打开" [ref=e29] [cursor=pointer]:
+                  - /url: http://127.0.0.1:5000/api/v1/openclaw/skill.md
+                - button "复制" [ref=e30]
+            - code [ref=e32]: http://127.0.0.1:5000/api/v1/openclaw/skill.md
+            - generic [ref=e33]:
+              - generic [ref=e34]:
+                - generic [ref=e35]: 30 天信源
+                - generic [ref=e36]: 持续校准
+                - generic [ref=e37]: 模型回看
+              - paragraph [ref=e38]: 信源查询会沉淀为判断样本，并进入校准题池做持续复盘。
+          - generic [ref=e40]:
+            - generic [ref=e41]:
+              - generic [ref=e42]:
+                - paragraph [ref=e43]: 信源情况
+                - paragraph [ref=e44]: 最近轮询 4月11日 18:13，监测池 207 条，高质量 135 条，优先接入 132 条。
+                - paragraph [ref=e45]: 最近一轮变动 72 条，临时降权 0 条，待补位 12 条。
+              - link "查看细节" [ref=e46] [cursor=pointer]:
+                - /url: /source-knowledge
+            - generic [ref=e47]:
+              - generic [ref=e48]:
+                - generic [ref=e49]:
+                  - paragraph [ref=e50]: SkillHub 入口总表
+                  - generic [ref=e51]: 4月10日 11:12
+                - paragraph [ref=e52]: 持续扩表
+                - paragraph [ref=e53]: "最近两轮新增主要集中在 `SkillsMP`、`SKILLS.re`、`Skillstore`、`Sk…"
+              - generic [ref=e54]:
+                - generic [ref=e55]:
+                  - paragraph [ref=e56]: 信源挂载
+                  - generic [ref=e57]: 4月14日 07:19
+                - paragraph [ref=e58]: 已扫 73 个 hub，产出 90 条。
+                - paragraph [ref=e59]: 当前有 18 个 hub 真正落出信源条目。
+              - generic [ref=e60]:
+                - generic [ref=e61]:
+                  - paragraph [ref=e62]: GitHub 仓库发现
+                  - generic [ref=e63]: TrendRadar
+                - paragraph [ref=e64]: 本地沉淀 11 个仓库，候选 48 条。
+                - paragraph [ref=e65]: GitHub 仓库发现层已落地，TrendRadar / newsnow 可作为热点与 RSS 聚合样例。
+              - generic [ref=e66]:
+                - generic [ref=e67]:
+                  - paragraph [ref=e68]: 运行状态
+                  - generic [ref=e69]: 72 变动
+                - paragraph [ref=e70]: 冷却 0 条，待补位 12 条。
+                - paragraph [ref=e71]: 运行失败 0 条。
+              - generic [ref=e72]:
+                - generic [ref=e73]:
+                  - paragraph [ref=e74]: 信号融合
+                  - generic [ref=e75]: 822 条
+                - paragraph [ref=e76]: 当前全部信号里，World Monitor API 121 条，MiniMax 打标 58 条，公众号 40 条，其中 19 条已经走完统一打标。
+                - paragraph [ref=e77]: 主流信号以 World Monitor API 为底，MiniMax 做统一打标和对齐；公众号内容也进入同一套标签链，当前覆盖率 48%。
+      - generic [ref=e78]:
+        - generic [ref=e79]:
+          - button "主世界 825" [ref=e80]
+          - button "冲突 276" [ref=e81]
+          - button "科技 39" [ref=e82]
+          - button "产能与供应链 6" [ref=e83]
+          - button "市场 27" [ref=e84]
+          - button "公共卫生 29" [ref=e85]
+          - button "弱信号 0" [ref=e86]
+        - generic [ref=e87]:
+          - generic [ref=e88]: 推荐包
+          - generic "适合作为主世界与弱信号的 curated RSS 基底" [ref=e89]: ShunyaNet Sentinel World Core Bundle · 39
+    - generic [ref=e90]:
+      - generic [ref=e91]:
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - img [ref=e95]
+            - text: 实时信息
+          - paragraph [ref=e97]: 今天最有变化的线索：先看升温，再看新进。
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - generic [ref=e100]: 升温线 8
+            - generic [ref=e101]: 最新信号 8
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - paragraph [ref=e105]: 正在升温
+                - generic [ref=e106]: 前 4 条
+              - article [ref=e107]:
+                - generic [ref=e108]:
+                  - generic [ref=e109]: 严重
+                  - paragraph [ref=e110]: 霍尔木兹海峡（伊朗海岸线）
+                - paragraph [ref=e111]: 美国海军对伊朗港口的封锁在伊朗海岸线附近积极执行，造成全球严重经济中断，霍尔木兹海峡商业航运几乎完全停滞。伊朗则采取非对称攻击并试图控制并从中获利，导致军事和外交紧张局势升级，形成战略僵局。
+                - generic [ref=e112]:
+                  - img [ref=e113]
+                  - generic [ref=e116]: 霍尔木兹海峡 (伊朗沿岸)
+                  - generic [ref=e117]: 4月20日 23:46
+              - article [ref=e118]:
+                - generic [ref=e119]:
+                  - generic [ref=e120]: 严重
+                  - paragraph [ref=e121]: 伊朗政权政府中心（未指明地点）
+                - paragraph [ref=e122]: 伊朗政权在德黑兰面临持续的军事压力，国际外交环境深度矛盾，同时内部挑战加剧，美伊停火谈判存在根本分歧导致陷入僵局，而中国的军事支持带来了新的复杂因素。
+                - generic [ref=e123]:
+                  - img [ref=e124]
+                  - generic [ref=e127]: 伊朗政府中心 (未指明地点)
+                  - generic [ref=e128]: 4月20日 19:45
+              - article [ref=e129]:
+                - generic [ref=e130]:
+                  - generic [ref=e131]: 严重
+                  - paragraph [ref=e132]: 附近伊朗阵地（暗示作战区域）
+                - paragraph [ref=e133]: 美国已对伊朗主要出口港实施海军封锁，加大经济压力，双方同时准备重新开战，外交团队则在伊斯兰堡准备新一轮会谈。
+                - generic [ref=e134]:
+                  - img [ref=e135]
+                  - generic [ref=e138]: 周边伊朗据点 (相关行动区域)
+                  - generic [ref=e139]: 4月20日 23:31
+              - article [ref=e140]:
+                - generic [ref=e141]:
+                  - generic [ref=e142]: 严重
+                  - paragraph [ref=e143]: 黎巴嫩南部（纳库拉、卡布里卡、卡夫、图林）
+                - paragraph [ref=e144]: 黎巴嫩南部是真主党与以色列国防军持续激烈战斗的焦点，尽管美国斡旋的以黎高级别外交谈判正在华盛顿进行，但每日攻击和空袭仍在继续。
+                - generic [ref=e145]:
+                  - img [ref=e146]
+                  - generic [ref=e149]: Southern Lebanon (Naqoura, Qabrikha, Kfar, Touline)
+                  - generic [ref=e150]: 4月20日 13:15
+            - generic [ref=e151]:
+              - generic [ref=e152]:
+                - paragraph [ref=e153]: 最新信号
+                - generic [ref=e154]: 按进入时间排序
+              - article [ref=e155]:
+                - generic [ref=e156]:
+                  - generic [ref=e157]: 严重
+                  - generic [ref=e158]: 待核实
+                  - generic [ref=e159]: 4月20日 17:31
+                - paragraph [ref=e160]: 日本东北部海岸
+                - paragraph [ref=e161]: 强烈地震引发海啸，已抵达沿岸地区
+                - link "查看详情" [ref=e163] [cursor=pointer]:
+                  - /url: /signals/marker-ad2950ab14dbd18d
+                  - img [ref=e164]
+                  - text: 查看详情
+                - generic [ref=e167]:
+                  - generic [ref=e168]: 主世界
+                  - generic [ref=e169]: 亚洲
+                  - generic [ref=e170]: 强度 5
+                  - generic [ref=e171]: 单点提及
+              - article [ref=e172]:
+                - generic [ref=e173]:
+                  - generic [ref=e174]: 严重
+                  - generic [ref=e175]: 待核实
+                  - generic [ref=e176]: 4月20日 17:01
+                - paragraph [ref=e177]: 日本岩手县八户港
+                - paragraph [ref=e178]: 离岸大地震引发海啸，影响日本东北部地区。
+                - link "查看详情" [ref=e180] [cursor=pointer]:
+                  - /url: /signals/marker-c3bfcffbbf917cc9
+                  - img [ref=e181]
+                  - text: 查看详情
+                - generic [ref=e184]:
+                  - generic [ref=e185]: 主世界
+                  - generic [ref=e186]: 亚洲
+                  - generic [ref=e187]: 强度 5
+                  - generic [ref=e188]: 单点提及
+              - article [ref=e189]:
+                - generic [ref=e190]:
+                  - generic [ref=e191]: 严重
+                  - generic [ref=e192]: 待核实
+                  - generic [ref=e193]: 4月20日 15:31
+                - paragraph [ref=e194]: 阿曼海
+                - paragraph [ref=e195]: 美国军方拦截并扣押了一艘伊朗商船。
+                - link "查看详情" [ref=e197] [cursor=pointer]:
+                  - /url: /signals/marker-8638540630c103ff
+                  - img [ref=e198]
+                  - text: 查看详情
+                - generic [ref=e201]:
+                  - generic [ref=e202]: 冲突
+                  - generic [ref=e203]: International Waters
+                  - generic [ref=e204]: 强度 5
+                  - generic [ref=e205]: 单点提及
+              - article [ref=e206]:
+                - generic [ref=e207]:
+                  - generic [ref=e208]: 严重
+                  - generic [ref=e209]: 待核实
+                  - generic [ref=e210]: 4月20日 08:00
+                - paragraph [ref=e211]: 库尔利夫卡，乌克兰切尔尼戈夫州
+                - paragraph [ref=e212]: 乌克兰前线报告166次战斗冲突，为重要战事更新。
+                - link "打开原文" [ref=e214] [cursor=pointer]:
+                  - /url: https://en.interfax.com.ua/news/general/1160560.html
+                  - img [ref=e215]
+                  - text: 打开原文
+                - generic [ref=e218]:
+                  - generic [ref=e219]: 冲突
+                  - generic [ref=e220]: 欧洲
+                  - generic [ref=e221]: 严重
+                  - generic [ref=e222]: 落点
+              - article [ref=e223]:
+                - generic [ref=e224]:
+                  - generic [ref=e225]: 严重
+                  - generic [ref=e226]: 待核实
+                  - generic [ref=e227]: 4月20日 08:00
+                - paragraph [ref=e228]: 乌克兰 · 冲突强度又往上拱了一格
+                - paragraph [ref=e229]: 乌克兰 这边的冲突线先记成一笔续写。先把地理锚点按住，再看它是不是会往航运、能源或政策层面外溢。这一笔声量起得不低，适合先压住。
+                - link "打开原文" [ref=e231] [cursor=pointer]:
+                  - /url: https://zn.ua/ukr/war/pislja-zatishshja-rosijani-rozpochali-masovani-mekhanizovani-shturmi-v-chasovomu-jaru-.html
+                  - img [ref=e232]
+                  - text: 打开原文
+                - generic [ref=e235]:
+                  - generic [ref=e236]: 冲突
+                  - generic [ref=e237]: 欧洲
+                  - generic [ref=e238]: 严重
+                  - generic [ref=e239]: 落点
+              - article [ref=e240]:
+                - generic [ref=e241]:
+                  - generic [ref=e242]: 严重
+                  - generic [ref=e243]: 待核实
+                  - generic [ref=e244]: 4月20日 08:00
+                - paragraph [ref=e245]: 伊朗库尔德斯坦省格什姆岛
+                - paragraph [ref=e246]: 美国海军在霍尔木兹海峡对伊朗船只采取行动
+                - link "打开原文" [ref=e248] [cursor=pointer]:
+                  - /url: https://www.skynews.com.au/world-news/global-affairs/us-navy-destroyer-blows-a-hole-through-iranian-cargo-ship-that-tried-to-break-hormuz-blockade-donald-trump-says/news-story/fcfbfc97cc19659b8a3e7bec8063fc64?nk=2db031f93aef25dace71f4d620da2746-1776659482
+                  - img [ref=e249]
+                  - text: 打开原文
+                - generic [ref=e252]:
+                  - generic [ref=e253]: 冲突
+                  - generic [ref=e254]: 中东
+                  - generic [ref=e255]: 严重
+                  - generic [ref=e256]: 落点
+              - article [ref=e257]:
+                - generic [ref=e258]:
+                  - generic [ref=e259]: 严重
+                  - generic [ref=e260]: 待核实
+                  - generic [ref=e261]: 4月20日 08:00
+                - paragraph [ref=e262]: 乌克兰 · 冲突强度又往上拱了一格
+                - paragraph [ref=e263]: 乌克兰 这边的冲突线先记成一笔续写。先把地理锚点按住，再看它是不是会往航运、能源或政策层面外溢。这一笔声量起得不低，适合先压住。
+                - link "打开原文" [ref=e265] [cursor=pointer]:
+                  - /url: https://www.unian.ua/war/viyna-v-ukrajini-v-zsu-rozkrili-plani-rf-bilya-gulyaypolya-13355151.html
+                  - img [ref=e266]
+                  - text: 打开原文
+                - generic [ref=e269]:
+                  - generic [ref=e270]: 冲突
+                  - generic [ref=e271]: 欧洲
+                  - generic [ref=e272]: 严重
+                  - generic [ref=e273]: 落点
+              - article [ref=e274]:
+                - generic [ref=e275]:
+                  - generic [ref=e276]: 严重
+                  - generic [ref=e277]: 待核实
+                  - generic [ref=e278]: 4月20日 08:00
+                - paragraph [ref=e279]: 乌克兰卢甘斯克州瓦尔瓦里夫卡
+                - paragraph [ref=e280]: 对战争活跃区防御设施的打击，关键军事行动
+                - link "打开原文" [ref=e282] [cursor=pointer]:
+                  - /url: https://www.dailykos.com/stories/2026/4/19/800023742/community/1516/
+                  - img [ref=e283]
+                  - text: 打开原文
+                - generic [ref=e286]:
+                  - generic [ref=e287]: 冲突
+                  - generic [ref=e288]: 欧洲
+                  - generic [ref=e289]: 严重
+                  - generic [ref=e290]: 落点
+      - generic [ref=e292]:
+        - generic [ref=e293]:
+          - generic [ref=e294]:
+            - heading "3D 地球时间地图" [level=2] [ref=e295]
+            - paragraph [ref=e296]: 把焦点放回地图，正在发生的事会先落到这颗地球上。
+          - generic [ref=e297]: 最近更新 4月20日 23:58
+        - generic [ref=e298]:
+          - generic [ref=e299]:
+            - generic [ref=e300]: 世界视图
+            - generic [ref=e301]: 4月21日 00:24
+          - generic [ref=e303]:
+            - paragraph [ref=e304]: 冲突 · 航运这条线又绷紧了一点
+            - paragraph [ref=e305]: 冲突 这边的航运线先记成一笔续写。先把绕航、保险和港口口风记在一起，看看它会不会从一枚点慢慢长成一段线。它未必最显眼，但这条线现在值得先补一笔。
+        - generic [ref=e306]:
+          - generic [ref=e307]:
+            - button "只看今天" [ref=e308]
+            - button "近 30 天渐淡" [ref=e309]
+          - generic [ref=e310]: 804 个已落点信号
+        - generic [ref=e312]:
+          - generic [ref=e313]: 点中某个信号后，地球会短暂停留，方便对照左右两侧的信息。
+          - generic [ref=e314]: 自动巡航
+      - generic [ref=e315]:
+        - generic [ref=e317]:
+          - generic [ref=e318]:
+            - generic [ref=e319]:
+              - img [ref=e320]
+              - text: 当前新评测问题
+            - paragraph [ref=e326]: 这里先看题池摘要，完整判断和复盘都在详情页里。
+            - paragraph [ref=e327]: 最近 30 天窗口里有 57 道题在跟踪，已核票 29 道，另有 18 道到期待核票。
+            - paragraph [ref=e328]: 30 天窗口 · Manifold 48 · Polymarket 25 · Metaculus 13
+          - link "看模型表现" [ref=e329] [cursor=pointer]:
+            - /url: /livebench/evaluation
+            - text: 看模型表现
+            - img [ref=e330]
+        - generic [ref=e332]:
+          - generic [ref=e333]:
+            - paragraph [ref=e334]: 模型表现概括
+            - paragraph [ref=e335]: 正式成绩已覆盖 29 道题，平均预测误差是 0.074。
+            - paragraph [ref=e336]: 正式计分覆盖 100%，测试线覆盖 100%，当前还有 57 道活跃题在跑。
+            - paragraph [ref=e337]: Manifold 48 题，Polymarket 25 题，Metaculus 13 题。测试虾每 30 分钟补一轮；官方结果回写后，再按结算前信源生成复盘成绩。
+            - generic [ref=e338]:
+              - generic [ref=e339]:
+                - paragraph [ref=e340]: 测试线误差
+                - paragraph [ref=e341]: "0.074"
+              - generic [ref=e342]:
+                - paragraph [ref=e343]: 测试线命中
+                - paragraph [ref=e344]: 90%
+              - generic [ref=e345]:
+                - paragraph [ref=e346]: 正式计分
+                - paragraph [ref=e347]: 29 / 29
+              - generic [ref=e348]:
+                - paragraph [ref=e349]: 已结算 / 活跃
+                - paragraph [ref=e350]: 29 / 57
+              - generic [ref=e351]:
+                - paragraph [ref=e352]: 自动补票
+                - paragraph [ref=e353]: 2 只 / 30 分钟
+            - generic [ref=e354]:
+              - paragraph [ref=e355]: 同步状态
+              - generic [ref=e356]:
+                - paragraph [ref=e357]: Metaculus 直连 12 题
+                - paragraph [ref=e358]: Metaforecast GraphQL 已直连，扫描 1600 条后筛到相关候选 4 题（Polymarket 4 题）；直连入池：Mani…
+                - paragraph [ref=e359]: Qwen3-Embedding-8B 正在驱动信源知识向量库，个别信源条目在失败时会退回本地 hash；信源知识向量库已接管 649 条近 3…
+          - generic [ref=e360]:
+            - button "当前题池 (18)" [ref=e361]
+            - button "已结算复盘 (12)" [ref=e362]
+          - generic:
+            - link "待结算 升级风险 中东 US x Iran diplomatic meeting by April 21, 2026。 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 19014。 总票偏向 不是 见分晓 4月21日 08:00 参与虾 3/3 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e363] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2002698
+              - generic [ref=e364]:
+                - generic [ref=e365]: 待结算
+                - generic [ref=e366]: 升级风险
+                - generic [ref=e367]: 中东
+              - paragraph [ref=e368]: US x Iran diplomatic meeting by April 21, 2026。
+              - generic [ref=e369]:
+                - paragraph [ref=e370]: 主持人判断
+                - paragraph [ref=e371]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 19014。
+              - generic [ref=e372]:
+                - generic [ref=e373]: 总票偏向 不是
+                - generic [ref=e374]: 见分晓 4月21日 08:00
+                - generic [ref=e375]: 参与虾 3/3
+                - generic [ref=e376]: 本轮已齐票
+              - paragraph [ref=e377]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e378]:
+                - generic [ref=e379]: Polymarket
+                - generic [ref=e380]:
+                  - text: 查看详情
+                  - img [ref=e381]
+            - link "待结算 升级风险 中东 在 Trump 之前，ceasefire between US and Iran hold the two weeks announced会发生吗？ 主持人判断 Manifold 当前，并可看到参与人数、成交量和流动性。 总票偏向 不是 见分晓 4月22日 11:18 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 6 Manifold 查看详情" [ref=e383] [cursor=pointer]:
+              - /url: /livebench/manifold%3AqlQzl2llzE
+              - generic [ref=e384]:
+                - generic [ref=e385]: 待结算
+                - generic [ref=e386]: 升级风险
+                - generic [ref=e387]: 中东
+              - paragraph [ref=e388]: 在 Trump 之前，ceasefire between US and Iran hold the two weeks announced会发生吗？
+              - generic [ref=e389]:
+                - paragraph [ref=e390]: 主持人判断
+                - paragraph [ref=e391]: Manifold 当前，并可看到参与人数、成交量和流动性。
+              - generic [ref=e392]:
+                - generic [ref=e393]: 总票偏向 不是
+                - generic [ref=e394]: 见分晓 4月22日 11:18
+                - generic [ref=e395]: 参与虾 2/2
+                - generic [ref=e396]: 本轮已齐票
+              - paragraph [ref=e397]: 信源 6 · 规则 1 · 讨论 6
+              - generic [ref=e398]:
+                - generic [ref=e399]: Manifold
+                - generic [ref=e400]:
+                  - text: 查看详情
+                  - img [ref=e401]
+            - link "待结算 升级风险 中东 在 another formal pause before then 之前，US-Iran ceasefire (set to expire April 21, 2026) … 主持人判断 Manifold 当前，并可看到参与人数、成交量和流动性。 总票偏向 不是 见分晓 4月22日 06:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Manifold 查看详情" [ref=e403] [cursor=pointer]:
+              - /url: /livebench/manifold%3ANSlgpyPyyZ
+              - generic [ref=e404]:
+                - generic [ref=e405]: 待结算
+                - generic [ref=e406]: 升级风险
+                - generic [ref=e407]: 中东
+              - paragraph [ref=e408]: 在 another formal pause before then 之前，US-Iran ceasefire (set to expire April 21, 2026) …
+              - generic [ref=e409]:
+                - paragraph [ref=e410]: 主持人判断
+                - paragraph [ref=e411]: Manifold 当前，并可看到参与人数、成交量和流动性。
+              - generic [ref=e412]:
+                - generic [ref=e413]: 总票偏向 不是
+                - generic [ref=e414]: 见分晓 4月22日 06:00
+                - generic [ref=e415]: 参与虾 2/2
+                - generic [ref=e416]: 本轮已齐票
+              - paragraph [ref=e417]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e418]:
+                - generic [ref=e419]: Manifold
+                - generic [ref=e420]:
+                  - text: 查看详情
+                  - img [ref=e421]
+            - link "待结算 升级风险 中东 Will Trump violate the ceasefire directly in Iran。 主持人判断 Manifold 当前，并可看到参与人数、成交量和流动性。 总票偏向 不是 见分晓 4月22日 15:59 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 1 Manifold 查看详情" [ref=e423] [cursor=pointer]:
+              - /url: /livebench/manifold%3AO9NnyEUOg2
+              - generic [ref=e424]:
+                - generic [ref=e425]: 待结算
+                - generic [ref=e426]: 升级风险
+                - generic [ref=e427]: 中东
+              - paragraph [ref=e428]: Will Trump violate the ceasefire directly in Iran。
+              - generic [ref=e429]:
+                - paragraph [ref=e430]: 主持人判断
+                - paragraph [ref=e431]: Manifold 当前，并可看到参与人数、成交量和流动性。
+              - generic [ref=e432]:
+                - generic [ref=e433]: 总票偏向 不是
+                - generic [ref=e434]: 见分晓 4月22日 15:59
+                - generic [ref=e435]: 参与虾 2/2
+                - generic [ref=e436]: 本轮已齐票
+              - paragraph [ref=e437]: 信源 6 · 规则 1 · 讨论 1
+              - generic [ref=e438]:
+                - generic [ref=e439]: Manifold
+                - generic [ref=e440]:
+                  - text: 查看详情
+                  - img [ref=e441]
+            - link "待结算 油价 全球 4月20日收盘时，布伦特原油 原油会高于 115 美元吗？ 主持人判断 Manifold 当前，并可看到参与人数、成交量和流动性。 总票偏向 不是 见分晓 4月21日 07:59 参与虾 3/3 本轮已齐票 信源 0 · 规则 1 · 讨论 1 Manifold 查看详情" [ref=e443] [cursor=pointer]:
+              - /url: /livebench/manifold%3A0dISdh2U5R
+              - generic [ref=e444]:
+                - generic [ref=e445]: 待结算
+                - generic [ref=e446]: 油价
+                - generic [ref=e447]: 全球
+              - paragraph [ref=e448]: 4月20日收盘时，布伦特原油 原油会高于 115 美元吗？
+              - generic [ref=e449]:
+                - paragraph [ref=e450]: 主持人判断
+                - paragraph [ref=e451]: Manifold 当前，并可看到参与人数、成交量和流动性。
+              - generic [ref=e452]:
+                - generic [ref=e453]: 总票偏向 不是
+                - generic [ref=e454]: 见分晓 4月21日 07:59
+                - generic [ref=e455]: 参与虾 3/3
+                - generic [ref=e456]: 本轮已齐票
+              - paragraph [ref=e457]: 信源 0 · 规则 1 · 讨论 1
+              - generic [ref=e458]:
+                - generic [ref=e459]: Manifold
+                - generic [ref=e460]:
+                  - text: 查看详情
+                  - img [ref=e461]
+            - link "待结算 油价 全球 2026年4月20日时，WTI 原油 原油 Spot Price会高于 98 吗？ 主持人判断 Manifold 当前，并可看到参与人数、成交量和流动性。 总票偏向 不是 见分晓 4月21日 07:59 参与虾 2/2 本轮已齐票 信源 0 · 规则 1 · 讨论 2 Manifold 查看详情" [ref=e463] [cursor=pointer]:
+              - /url: /livebench/manifold%3AsLtAudcPqO
+              - generic [ref=e464]:
+                - generic [ref=e465]: 待结算
+                - generic [ref=e466]: 油价
+                - generic [ref=e467]: 全球
+              - paragraph [ref=e468]: 2026年4月20日时，WTI 原油 原油 Spot Price会高于 98 吗？
+              - generic [ref=e469]:
+                - paragraph [ref=e470]: 主持人判断
+                - paragraph [ref=e471]: Manifold 当前，并可看到参与人数、成交量和流动性。
+              - generic [ref=e472]:
+                - generic [ref=e473]: 总票偏向 不是
+                - generic [ref=e474]: 见分晓 4月21日 07:59
+                - generic [ref=e475]: 参与虾 2/2
+                - generic [ref=e476]: 本轮已齐票
+              - paragraph [ref=e477]: 信源 0 · 规则 1 · 讨论 2
+              - generic [ref=e478]:
+                - generic [ref=e479]: Manifold
+                - generic [ref=e480]:
+                  - text: 查看详情
+                  - img [ref=e481]
+            - link "待结算 升级风险 中东 Israel x Hezbollah diplomatic meeting by April 26, 2026。 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 8393。 总票偏向 不是 见分晓 4月26日 08:00 参与虾 2/2 本轮已齐票 信源 6 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e483] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2002686
+              - generic [ref=e484]:
+                - generic [ref=e485]: 待结算
+                - generic [ref=e486]: 升级风险
+                - generic [ref=e487]: 中东
+              - paragraph [ref=e488]: Israel x Hezbollah diplomatic meeting by April 26, 2026。
+              - generic [ref=e489]:
+                - paragraph [ref=e490]: 主持人判断
+                - paragraph [ref=e491]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 8393。
+              - generic [ref=e492]:
+                - generic [ref=e493]: 总票偏向 不是
+                - generic [ref=e494]: 见分晓 4月26日 08:00
+                - generic [ref=e495]: 参与虾 2/2
+                - generic [ref=e496]: 本轮已齐票
+              - paragraph [ref=e497]: 信源 6 · 规则 1 · 讨论 2
+              - generic [ref=e498]:
+                - generic [ref=e499]: Polymarket
+                - generic [ref=e500]:
+                  - text: 查看详情
+                  - img [ref=e501]
+            - link "待结算 航运 中东 在 2026年4月23日 之前，特朗普会宣布美国已解除对霍尔木兹海峡的封锁吗？ 主持人判断 Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 39716。 总票偏向 不是 见分晓 4月23日 08:00 参与虾 2/2 本轮已齐票 信源 2 · 规则 1 · 讨论 2 Polymarket 查看详情" [ref=e503] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2007028
+              - generic [ref=e504]:
+                - generic [ref=e505]: 待结算
+                - generic [ref=e506]: 航运
+                - generic [ref=e507]: 中东
+              - paragraph [ref=e508]: 在 2026年4月23日 之前，特朗普会宣布美国已解除对霍尔木兹海峡的封锁吗？
+              - generic [ref=e509]:
+                - paragraph [ref=e510]: 主持人判断
+                - paragraph [ref=e511]: Polymarket 当前先走 Metaforecast 聚合补位，已拿到部分成交信息，流动性 39716。
+              - generic [ref=e512]:
+                - generic [ref=e513]: 总票偏向 不是
+                - generic [ref=e514]: 见分晓 4月23日 08:00
+                - generic [ref=e515]: 参与虾 2/2
+                - generic [ref=e516]: 本轮已齐票
+              - paragraph [ref=e517]: 信源 2 · 规则 1 · 讨论 2
+              - generic [ref=e518]:
+                - generic [ref=e519]: Polymarket
+                - generic [ref=e520]:
+                  - text: 查看详情
+                  - img [ref=e521]
+            - link "待结算 油价 全球 4月20日这一周，WTI 原油 原油 (WTI)会触及 55 美元低点吗？ 主持人判断 Polymarket 当前，并可看到成交量、流动性和结果项。 总票偏向 不是 见分晓 4月25日 05:00 参与虾 2/2 本轮已齐票 信源 0 · 规则 1 · 讨论 3 Polymarket 查看详情" [ref=e523] [cursor=pointer]:
+              - /url: /livebench/polymarket%3A0xc341beee3386c4995853ab6d6516a9475f3349f1631ce7852825bf26af3efde6
+              - generic [ref=e524]:
+                - generic [ref=e525]: 待结算
+                - generic [ref=e526]: 油价
+                - generic [ref=e527]: 全球
+              - paragraph [ref=e528]: 4月20日这一周，WTI 原油 原油 (WTI)会触及 55 美元低点吗？
+              - generic [ref=e529]:
+                - paragraph [ref=e530]: 主持人判断
+                - paragraph [ref=e531]: Polymarket 当前，并可看到成交量、流动性和结果项。
+              - generic [ref=e532]:
+                - generic [ref=e533]: 总票偏向 不是
+                - generic [ref=e534]: 见分晓 4月25日 05:00
+                - generic [ref=e535]: 参与虾 2/2
+                - generic [ref=e536]: 本轮已齐票
+              - paragraph [ref=e537]: 信源 0 · 规则 1 · 讨论 3
+              - generic [ref=e538]:
+                - generic [ref=e539]: Polymarket
+                - generic [ref=e540]:
+                  - text: 查看详情
+                  - img [ref=e541]
+            - link "待结算 油价 北美 4月20日这一周，WTI 原油 原油 (WTI)会触及 55 美元低点吗？ 主持人判断 Polymarket 当前，并可看到成交量、流动性和结果项。 总票偏向 不是 见分晓 4月25日 05:00 参与虾 2/2 本轮已齐票 信源 0 · 规则 1 · 讨论 3 Polymarket 查看详情" [ref=e543] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2009430
+              - generic [ref=e544]:
+                - generic [ref=e545]: 待结算
+                - generic [ref=e546]: 油价
+                - generic [ref=e547]: 北美
+              - paragraph [ref=e548]: 4月20日这一周，WTI 原油 原油 (WTI)会触及 55 美元低点吗？
+              - generic [ref=e549]:
+                - paragraph [ref=e550]: 主持人判断
+                - paragraph [ref=e551]: Polymarket 当前，并可看到成交量、流动性和结果项。
+              - generic [ref=e552]:
+                - generic [ref=e553]: 总票偏向 不是
+                - generic [ref=e554]: 见分晓 4月25日 05:00
+                - generic [ref=e555]: 参与虾 2/2
+                - generic [ref=e556]: 本轮已齐票
+              - paragraph [ref=e557]: 信源 0 · 规则 1 · 讨论 3
+              - generic [ref=e558]:
+                - generic [ref=e559]: Polymarket
+                - generic [ref=e560]:
+                  - text: 查看详情
+                  - img [ref=e561]
+            - link "待结算 油价 全球 4月20日这一周，WTI 原油 原油 (WTI)会触及 60 美元低点吗？ 主持人判断 Polymarket 当前，并可看到成交量、流动性和结果项。 总票偏向 不是 见分晓 4月25日 05:00 参与虾 2/2 本轮已齐票 信源 0 · 规则 1 · 讨论 3 Polymarket 查看详情" [ref=e563] [cursor=pointer]:
+              - /url: /livebench/polymarket%3A0x6a836875bcecead38a10bc2e688cbf885bf42db4c04e02f27eb459fbb4465aab
+              - generic [ref=e564]:
+                - generic [ref=e565]: 待结算
+                - generic [ref=e566]: 油价
+                - generic [ref=e567]: 全球
+              - paragraph [ref=e568]: 4月20日这一周，WTI 原油 原油 (WTI)会触及 60 美元低点吗？
+              - generic [ref=e569]:
+                - paragraph [ref=e570]: 主持人判断
+                - paragraph [ref=e571]: Polymarket 当前，并可看到成交量、流动性和结果项。
+              - generic [ref=e572]:
+                - generic [ref=e573]: 总票偏向 不是
+                - generic [ref=e574]: 见分晓 4月25日 05:00
+                - generic [ref=e575]: 参与虾 2/2
+                - generic [ref=e576]: 本轮已齐票
+              - paragraph [ref=e577]: 信源 0 · 规则 1 · 讨论 3
+              - generic [ref=e578]:
+                - generic [ref=e579]: Polymarket
+                - generic [ref=e580]:
+                  - text: 查看详情
+                  - img [ref=e581]
+            - link "待结算 油价 北美 4月20日这一周，WTI 原油 原油 (WTI)会触及 60 美元低点吗？ 主持人判断 Polymarket 当前，并可看到成交量、流动性和结果项。 总票偏向 不是 见分晓 4月25日 05:00 参与虾 2/2 本轮已齐票 信源 0 · 规则 1 · 讨论 3 Polymarket 查看详情" [ref=e583] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2009429
+              - generic [ref=e584]:
+                - generic [ref=e585]: 待结算
+                - generic [ref=e586]: 油价
+                - generic [ref=e587]: 北美
+              - paragraph [ref=e588]: 4月20日这一周，WTI 原油 原油 (WTI)会触及 60 美元低点吗？
+              - generic [ref=e589]:
+                - paragraph [ref=e590]: 主持人判断
+                - paragraph [ref=e591]: Polymarket 当前，并可看到成交量、流动性和结果项。
+              - generic [ref=e592]:
+                - generic [ref=e593]: 总票偏向 不是
+                - generic [ref=e594]: 见分晓 4月25日 05:00
+                - generic [ref=e595]: 参与虾 2/2
+                - generic [ref=e596]: 本轮已齐票
+              - paragraph [ref=e597]: 信源 0 · 规则 1 · 讨论 3
+              - generic [ref=e598]:
+                - generic [ref=e599]: Polymarket
+                - generic [ref=e600]:
+                  - text: 查看详情
+                  - img [ref=e601]
+            - link "待结算 油价 全球 4月20日这一周，WTI 原油 原油 (WTI)会触及 80 美元低点吗？ 主持人判断 Polymarket 当前，并可看到成交量、流动性和结果项。 总票偏向 不是 见分晓 4月25日 05:00 参与虾 2/2 本轮已齐票 信源 0 · 规则 1 · 讨论 3 Polymarket 查看详情" [ref=e603] [cursor=pointer]:
+              - /url: /livebench/polymarket%3A0x3d9cf3bd63f71bf503fa44ee7fde0755bb30fcbdaaeac296d2b83f51ed388a0e
+              - generic [ref=e604]:
+                - generic [ref=e605]: 待结算
+                - generic [ref=e606]: 油价
+                - generic [ref=e607]: 全球
+              - paragraph [ref=e608]: 4月20日这一周，WTI 原油 原油 (WTI)会触及 80 美元低点吗？
+              - generic [ref=e609]:
+                - paragraph [ref=e610]: 主持人判断
+                - paragraph [ref=e611]: Polymarket 当前，并可看到成交量、流动性和结果项。
+              - generic [ref=e612]:
+                - generic [ref=e613]: 总票偏向 不是
+                - generic [ref=e614]: 见分晓 4月25日 05:00
+                - generic [ref=e615]: 参与虾 2/2
+                - generic [ref=e616]: 本轮已齐票
+              - paragraph [ref=e617]: 信源 0 · 规则 1 · 讨论 3
+              - generic [ref=e618]:
+                - generic [ref=e619]: Polymarket
+                - generic [ref=e620]:
+                  - text: 查看详情
+                  - img [ref=e621]
+            - link "待结算 油价 北美 4月20日这一周，WTI 原油 原油 (WTI)会触及 80 美元低点吗？ 主持人判断 Polymarket 当前，并可看到成交量、流动性和结果项。 总票偏向 不是 见分晓 4月25日 05:00 参与虾 2/2 本轮已齐票 信源 0 · 规则 1 · 讨论 3 Polymarket 查看详情" [ref=e623] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2009425
+              - generic [ref=e624]:
+                - generic [ref=e625]: 待结算
+                - generic [ref=e626]: 油价
+                - generic [ref=e627]: 北美
+              - paragraph [ref=e628]: 4月20日这一周，WTI 原油 原油 (WTI)会触及 80 美元低点吗？
+              - generic [ref=e629]:
+                - paragraph [ref=e630]: 主持人判断
+                - paragraph [ref=e631]: Polymarket 当前，并可看到成交量、流动性和结果项。
+              - generic [ref=e632]:
+                - generic [ref=e633]: 总票偏向 不是
+                - generic [ref=e634]: 见分晓 4月25日 05:00
+                - generic [ref=e635]: 参与虾 2/2
+                - generic [ref=e636]: 本轮已齐票
+              - paragraph [ref=e637]: 信源 0 · 规则 1 · 讨论 3
+              - generic [ref=e638]:
+                - generic [ref=e639]: Polymarket
+                - generic [ref=e640]:
+                  - text: 查看详情
+                  - img [ref=e641]
+            - link "待结算 油价 全球 4月20日这一周，WTI 原油 原油 (WTI)会触及 95 美元高点吗？ 主持人判断 Polymarket 当前，并可看到成交量、流动性和结果项。 总票偏向 不是 见分晓 4月25日 05:00 参与虾 2/2 本轮已齐票 信源 0 · 规则 1 · 讨论 3 Polymarket 查看详情" [ref=e643] [cursor=pointer]:
+              - /url: /livebench/polymarket%3A0x9aa7104e84fbae0482521519fe3a79f6f230ad06168bbe6522ec3e3d5bf36e66
+              - generic [ref=e644]:
+                - generic [ref=e645]: 待结算
+                - generic [ref=e646]: 油价
+                - generic [ref=e647]: 全球
+              - paragraph [ref=e648]: 4月20日这一周，WTI 原油 原油 (WTI)会触及 95 美元高点吗？
+              - generic [ref=e649]:
+                - paragraph [ref=e650]: 主持人判断
+                - paragraph [ref=e651]: Polymarket 当前，并可看到成交量、流动性和结果项。
+              - generic [ref=e652]:
+                - generic [ref=e653]: 总票偏向 不是
+                - generic [ref=e654]: 见分晓 4月25日 05:00
+                - generic [ref=e655]: 参与虾 2/2
+                - generic [ref=e656]: 本轮已齐票
+              - paragraph [ref=e657]: 信源 0 · 规则 1 · 讨论 3
+              - generic [ref=e658]:
+                - generic [ref=e659]: Polymarket
+                - generic [ref=e660]:
+                  - text: 查看详情
+                  - img [ref=e661]
+            - link "待结算 油价 北美 4月20日这一周，WTI 原油 原油 (WTI)会触及 95 美元高点吗？ 主持人判断 Polymarket 当前，并可看到成交量、流动性和结果项。 总票偏向 不是 见分晓 4月25日 05:00 参与虾 2/2 本轮已齐票 信源 0 · 规则 1 · 讨论 3 Polymarket 查看详情" [ref=e663] [cursor=pointer]:
+              - /url: /livebench/polymarket%3Ametaforecast%3Apolymarket-2009422
+              - generic [ref=e664]:
+                - generic [ref=e665]: 待结算
+                - generic [ref=e666]: 油价
+                - generic [ref=e667]: 北美
+              - paragraph [ref=e668]: 4月20日这一周，WTI 原油 原油 (WTI)会触及 95 美元高点吗？
+              - generic [ref=e669]:
+                - paragraph [ref=e670]: 主持人判断
+                - paragraph [ref=e671]: Polymarket 当前，并可看到成交量、流动性和结果项。
+              - generic [ref=e672]:
+                - generic [ref=e673]: 总票偏向 不是
+                - generic [ref=e674]: 见分晓 4月25日 05:00
+                - generic [ref=e675]: 参与虾 2/2
+                - generic [ref=e676]: 本轮已齐票
+              - paragraph [ref=e677]: 信源 0 · 规则 1 · 讨论 3
+              - generic [ref=e678]:
+                - generic [ref=e679]: Polymarket
+                - generic [ref=e680]:
+                  - text: 查看详情
+                  - img [ref=e681]
+            - link "待核票 航运 中东 在 4月1日 之前，US take control of 霍尔木兹海峡 会发生吗？ 主持人判断 Manifold 当前，并可看到参与人数、成交量和流动性。 总票偏向 不是 到期待核票 参与虾 2/2 本轮已齐票 信源 2 · 规则 1 · 讨论 1 Manifold 查看详情" [ref=e683] [cursor=pointer]:
+              - /url: /livebench/manifold%3ARRdSCLQy2y
+              - generic [ref=e684]:
+                - generic [ref=e685]: 待核票
+                - generic [ref=e686]: 航运
+                - generic [ref=e687]: 中东
+              - paragraph [ref=e688]: 在 4月1日 之前，US take control of 霍尔木兹海峡 会发生吗？
+              - generic [ref=e689]:
+                - paragraph [ref=e690]: 主持人判断
+                - paragraph [ref=e691]: Manifold 当前，并可看到参与人数、成交量和流动性。
+              - generic [ref=e692]:
+                - generic [ref=e693]: 总票偏向 不是
+                - generic [ref=e694]: 到期待核票
+                - generic [ref=e695]: 参与虾 2/2
+                - generic [ref=e696]: 本轮已齐票
+              - paragraph [ref=e697]: 信源 2 · 规则 1 · 讨论 1
+              - generic [ref=e698]:
+                - generic [ref=e699]: Manifold
+                - generic [ref=e700]:
+                  - text: 查看详情
+                  - img [ref=e701]
+            - link "待核票 航运 中东 到 2026年4月9日 时，Metaculus 社区对“在 2026年4月27日 之前，霍尔木兹海峡的航运流量会恢复到正常水平吗？”的预测概率会高于 11.00% 吗？ 主持人判断 Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。 总票偏向 不是 到期待核票 参与虾 2/2 本轮已齐票 信源 2 · 规则 1 · 讨论 1 Metaculus 查看详情" [ref=e703] [cursor=pointer]:
+              - /url: /livebench/metaculus%3A42971
+              - generic [ref=e704]:
+                - generic [ref=e705]: 待核票
+                - generic [ref=e706]: 航运
+                - generic [ref=e707]: 中东
+              - paragraph [ref=e708]: 到 2026年4月9日 时，Metaculus 社区对“在 2026年4月27日 之前，霍尔木兹海峡的航运流量会恢复到正常水平吗？”的预测概率会高于 11.00% 吗？
+              - generic [ref=e709]:
+                - paragraph [ref=e710]: 主持人判断
+                - paragraph [ref=e711]: Metaculus 直连题源，但当前没有拿到稳定可用的社区概率。
+              - generic [ref=e712]:
+                - generic [ref=e713]: 总票偏向 不是
+                - generic [ref=e714]: 到期待核票
+                - generic [ref=e715]: 参与虾 2/2
+                - generic [ref=e716]: 本轮已齐票
+              - paragraph [ref=e717]: 信源 2 · 规则 1 · 讨论 1
+              - generic [ref=e718]:
+                - generic [ref=e719]: Metaculus
+                - generic [ref=e720]:
+                  - text: 查看详情
+                  - img [ref=e721]

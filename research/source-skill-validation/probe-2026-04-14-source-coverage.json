@@ -1,0 +1,128 @@
+{
+  "date": "2026-04-14",
+  "completion_stage": "in_progress",
+  "high_value_total": 99,
+  "endpoint_covered": 24,
+  "site_covered": 75,
+  "uncovered": 0,
+  "high_value_site_only_names": [
+    "ak-rss-24h-brief",
+    "news-aggregation",
+    "blogwatcher",
+    "News Monitor Skill",
+    "aggregating-crypto-news",
+    "alpha-vantage",
+    "apilayer-marketstack",
+    "apilayer-mediastack",
+    "TrendRadar",
+    "newsnow",
+    "ShunyaNet Sentinel",
+    "alphaear-news",
+    "a-share-real-time-data",
+    "stock-data-collector",
+    "hk-ipo-research-assistant",
+    "dexter",
+    "arxiv-search-collector",
+    "topic-monitor",
+    "claude-scientific-alpha-vantage",
+    "U.S. Treasury Fiscal Data",
+    "Literature Search",
+    "arxiv-viewer",
+    "academic-research",
+    "10k-10q-earnings-report-summarizer",
+    "earnings-call-transcript-analyzer",
+    "macro-trend-beneficiary-finder",
+    "market-sizing-analysis",
+    "binance-spot",
+    "notion-research-documentation",
+    "finance-news",
+    "academic-research-hub",
+    "rss-digest",
+    "arxiv-watcher",
+    "bbc-news",
+    "stock-analysis",
+    "fda-database",
+    "batch-research",
+    "reddit-fetch",
+    "exa-ai-search-automation",
+    "scrapingbee-automation",
+    "stormglass-io-automation",
+    "market-research-agent",
+    "goplaces",
+    "tavily",
+    "research",
+    "researchers-financial",
+    "finnhub-api",
+    "twelvedata-api",
+    "hedgefundmonitor",
+    "wrds",
+    "tushare",
+    "fmp-api",
+    "openinsider",
+    "quiver",
+    "cninfo-to-notebooklm",
+    "knowledgelm-nse",
+    "scientific-skills-fred-economic-data",
+    "finance-skills-yfinance-data",
+    "alphaear-search",
+    "alphaear-stock",
+    "alphaear-sentiment",
+    "octagon-finance-prediction-markets-analysis",
+    "octagon-finance-sec-10k-analysis",
+    "octagon-finance-sec-10q-analysis",
+    "octagon-finance-sec-8k-analysis",
+    "octagon-finance-sec-proxy-analysis",
+    "octagon-finance-earnings-call-analysis",
+    "octagon-finance-stock-quote",
+    "octagon-finance-analyst-estimates",
+    "octagon-finance-price-target-summary",
+    "open-skills-get-crypto-price",
+    "open-skills-free-weather-data",
+    "open-skills-web-search-api",
+    "competitive-intel",
+    "industry-research"
+  ],
+  "high_value_uncovered_names": [],
+  "skill_frontier": [
+    {
+      "host": "fred.stlouisfed.org",
+      "count": 5
+    },
+    {
+      "host": "www.tradesmart.com.hk",
+      "count": 2
+    },
+    {
+      "host": "feeds.reuters.com",
+      "count": 1
+    },
+    {
+      "host": "feeds.apnews.com",
+      "count": 1
+    },
+    {
+      "host": "alfred.stlouisfed.org",
+      "count": 1
+    },
+    {
+      "host": "geofred.stlouisfed.org",
+      "count": 1
+    },
+    {
+      "host": "www.mckinsey.com",
+      "count": 1
+    },
+    {
+      "host": "ft.10jqka.com.cn",
+      "count": 1
+    },
+    {
+      "host": "openinsider.com",
+      "count": 1
+    },
+    {
+      "host": "tavily.com",
+      "count": 1
+    }
+  ]
+}

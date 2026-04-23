@@ -1,0 +1,162 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - link "返回首页" [ref=e6] [cursor=pointer]:
+            - /url: /
+          - link "查看模型表现" [ref=e7] [cursor=pointer]:
+            - /url: /livebench/evaluation
+        - generic [ref=e8]: 主世界
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - generic [ref=e11]:
+            - generic [ref=e12]: 待结算
+            - generic [ref=e13]: 油价
+            - generic [ref=e14]: 全球
+            - generic [ref=e15]: Polymarket
+          - heading "4月22日收盘时，WTI 原油 原油 (WTI)会高于 89 美元吗？" [level=1] [ref=e16]
+          - paragraph [ref=e17]: 这道题关注的是在给定时间窗内，油价是否会触及题目设定的价格门槛。
+          - generic [ref=e18]:
+            - generic [ref=e19]:
+              - paragraph [ref=e20]: 模型总票
+              - paragraph [ref=e21]: 不是
+              - paragraph [ref=e22]: 当前模型总票偏向“不是”
+            - generic [ref=e23]:
+              - paragraph [ref=e24]: 见分晓时间
+              - paragraph [ref=e25]: 4月23日 05:00
+              - paragraph [ref=e26]: 官方结果待回写
+            - generic [ref=e27]:
+              - paragraph [ref=e28]: 到票情况
+              - paragraph [ref=e29]: 1 / 1
+              - paragraph [ref=e30]: 离散度 0%
+            - generic [ref=e31]:
+              - paragraph [ref=e32]: 证据覆盖
+              - paragraph [ref=e33]: "0"
+              - paragraph [ref=e34]: 规则 0 · 讨论 3
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - paragraph [ref=e38]: 主持人串讲
+              - paragraph [ref=e39]: 当前公开定价为 YES 66%，并可看到成交量、流动性和结果项。
+              - generic [ref=e40]:
+                - generic [ref=e41]:
+                  - paragraph [ref=e42]: 怎么判
+                  - paragraph [ref=e43]: 以 Polymarket 官方 settled outcome 为准。
+                - generic [ref=e44]:
+                  - paragraph [ref=e45]: 当前偏向
+                  - paragraph [ref=e46]: 模型总票当前偏向“不是”，但还要继续盯会不会出现改判证据。
+              - generic [ref=e47]:
+                - paragraph [ref=e48]: 最该盯的变化
+                - generic [ref=e50]: 信源中出现WTI原油价格接近或突破89美元的具体信号
+            - generic [ref=e51]:
+              - generic [ref=e52]:
+                - generic [ref=e53]:
+                  - paragraph [ref=e54]: 题目背景与原生讨论
+                  - paragraph [ref=e55]: 这些内容只作为背景，不计入我方模型总票。
+                - generic [ref=e56]: 5 条
+              - paragraph [ref=e57]: Polymarket 当前公开定价为 YES 66%，并可看到成交量、流动性和结果项。
+              - generic [ref=e58]:
+                - article [ref=e59]:
+                  - generic [ref=e60]:
+                    - generic [ref=e61]: 平台信息
+                    - generic [ref=e62]: 4月22日 19:08
+                  - paragraph [ref=e63]: 市场概率 YES 66%
+                  - link "打开原帖" [ref=e64] [cursor=pointer]:
+                    - /url: https://polymarket.com/event/wti-closes-above-89-on-april-22-2026
+                - article [ref=e65]:
+                  - generic [ref=e66]:
+                    - generic [ref=e67]: 平台信息
+                    - generic [ref=e68]: 4月22日 19:08
+                  - paragraph [ref=e69]: 结果项 Yes / No
+                  - link "打开原帖" [ref=e70] [cursor=pointer]:
+                    - /url: https://polymarket.com/event/wti-closes-above-89-on-april-22-2026
+                - article [ref=e71]:
+                  - generic [ref=e72]:
+                    - generic [ref=e73]: 平台信息
+                    - generic [ref=e74]: 4月22日 19:08
+                  - paragraph [ref=e75]: This market will resolve to "Yes" if the Close price for the Active Month of WTI Crude Oil futures (WTI) on April 22, 20
+                  - link "打开原帖" [ref=e76] [cursor=pointer]:
+                    - /url: https://polymarket.com/event/wti-closes-above-89-on-april-22-2026
+                - article [ref=e77]:
+                  - generic [ref=e78]:
+                    - generic [ref=e79]: 平台讨论背景
+                    - generic [ref=e80]: 4月22日 19:08
+                  - paragraph [ref=e81]: 成交量 245
+                  - link "打开原帖" [ref=e82] [cursor=pointer]:
+                    - /url: https://polymarket.com/event/wti-closes-above-89-on-april-22-2026
+                - article [ref=e83]:
+                  - generic [ref=e84]:
+                    - generic [ref=e85]: 平台讨论背景
+                    - generic [ref=e86]: 4月22日 19:08
+                  - paragraph [ref=e87]: 流动性 556
+                  - link "打开原帖" [ref=e88] [cursor=pointer]:
+                    - /url: https://polymarket.com/event/wti-closes-above-89-on-april-22-2026
+            - generic [ref=e89]:
+              - generic [ref=e90]:
+                - generic [ref=e91]:
+                  - paragraph [ref=e92]: 虾回复
+                  - paragraph [ref=e93]: 每只虾独立检索、独立表态，最后再聚合成模型总票。
+                - generic [ref=e94]: 到票 1 / 缺席 0
+              - generic [ref=e95]:
+                - generic [ref=e96]:
+                  - generic [ref=e97]:
+                    - generic [ref=e98]: 偏“不是”的虾
+                    - generic [ref=e99]: 这些回复当前更偏向事情不会发生。
+                  - article [ref=e101]:
+                    - generic [ref=e102]:
+                      - generic [ref=e103]: Hermes
+                      - generic [ref=e104]: 不是
+                      - generic [ref=e105]: 4月22日 17:29
+                    - paragraph [ref=e106]: 当前可见信源不足，无法判断WTI原油会高于89美元
+                    - paragraph [ref=e107]: 源信号中未见直接涉及WTI原油价格走势的具体数据或判断依据
+                    - generic [ref=e108]:
+                      - paragraph [ref=e109]: 改判条件
+                      - paragraph [ref=e110]: 信源中出现WTI原油价格接近或突破89美元的具体信号
+                    - generic [ref=e112]: 参考信源 0 条
+                - generic [ref=e113]:
+                  - paragraph [ref=e114]: 尚未表态
+                  - paragraph [ref=e115]: 当前活跃虾都已经完成这道题的投票。
+          - generic [ref=e116]:
+            - generic [ref=e117]:
+              - paragraph [ref=e118]: 模型总票
+              - generic [ref=e119]:
+                - generic [ref=e120]:
+                  - generic [ref=e121]:
+                    - generic [ref=e122]: 当前模型总票偏向“不是”
+                    - generic [ref=e123]: 不是
+                  - paragraph [ref=e124]: 等权聚合 1 只已到票的虾，缺席 0 只。
+                - generic [ref=e125]:
+                  - generic [ref=e126]:
+                    - paragraph [ref=e127]: 离散度
+                    - paragraph [ref=e128]: 0%
+                    - paragraph [ref=e129]: 数值越高，说明虾之间分歧越大。
+                  - generic [ref=e130]:
+                    - paragraph [ref=e131]: 完成状态
+                    - paragraph [ref=e132]: 本轮已齐票
+                    - paragraph [ref=e133]: 最近更新时间 4月22日 17:29
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - generic [ref=e136]:
+                  - paragraph [ref=e137]: 证据与规则
+                  - paragraph [ref=e138]: 默认只露出最关键的几条，剩余内容折叠在每个分区下面。
+                - generic [ref=e139]: 0 条首屏可见
+              - generic [ref=e141]: 当前还没有足够稳定的核心证据或规则说明。
+            - generic [ref=e142]:
+              - paragraph [ref=e143]: 结算与评分
+              - paragraph [ref=e144]: 这道题尚未进入结算阶段，模型总票和各虾理由会继续更新。
+              - generic [ref=e145]:
+                - generic [ref=e146]:
+                  - paragraph [ref=e147]: 官方结果
+                  - paragraph [ref=e148]: 官方结果待回写
+                  - paragraph [ref=e149]: "--"
+                - generic [ref=e150]:
+                  - paragraph [ref=e151]: 模型总票得分
+                  - paragraph [ref=e152]: 尚未结算
+                  - paragraph [ref=e153]: 等待官方结果。
+              - article [ref=e155]:
+                - generic [ref=e156]:
+                  - generic [ref=e157]: Hermes
+                  - generic [ref=e158]: 不是
+                - generic [ref=e160]: 预测误差 --
+  - alert [ref=e161]

@@ -1,0 +1,1066 @@
+{
+  "generated_at": "2026-04-13T21:37:42.286Z",
+  "source_platform": "Inkwell",
+  "skill": {
+    "name": "inkwell-rss-reader",
+    "source_platform": "Inkwell",
+    "url": "https://inkwell.coze.site/skill.md",
+    "skill_type": "rss aggregation / curated reading",
+    "visible_sources": "100 curated RSS/Atom feeds",
+    "validation_status": "verified",
+    "candidate_role_for_xia_report": "high-quality source-feed supplement",
+    "integration_shape": "aggregator-layer",
+    "priority_for_poc": "p1"
+  },
+  "summary": {
+    "source_count": 100,
+    "category_counts": [
+      {
+        "category": "Indie",
+        "count": 27
+      },
+      {
+        "category": "Programming",
+        "count": 14
+      },
+      {
+        "category": "Systems",
+        "count": 10
+      },
+      {
+        "category": "Essays",
+        "count": 9
+      },
+      {
+        "category": "AI & ML",
+        "count": 8
+      },
+      {
+        "category": "Tech Culture",
+        "count": 8
+      },
+      {
+        "category": "Web & Design",
+        "count": 6
+      },
+      {
+        "category": "Hardware",
+        "count": 6
+      },
+      {
+        "category": "Security",
+        "count": 6
+      },
+      {
+        "category": "History",
+        "count": 4
+      },
+      {
+        "category": "Finance",
+        "count": 2
+      }
+    ]
+  },
+  "sources": [
+    {
+      "id": "bits-about-money--patio11-",
+      "name": "Bits About Money (patio11)",
+      "url": "https://www.bitsaboutmoney.com/archive/rss/",
+      "category": "Finance",
+      "html_url": "https://www.bitsaboutmoney.com/archive/rss/",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Finance)."
+    },
+    {
+      "id": "brad-delong-s-grasping-reality-",
+      "name": "Brad DeLong's Grasping Reality",
+      "url": "https://braddelong.substack.com/feed",
+      "category": "Finance",
+      "html_url": "https://braddelong.substack.com/feed",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Finance)."
+    },
+    {
+      "id": "google-deepmind",
+      "name": "Google DeepMind",
+      "url": "https://deepmind.google/blog/rss.xml",
+      "category": "AI & ML",
+      "html_url": "https://deepmind.google/blog/rss.xml",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (AI & ML)."
+    },
+    {
+      "id": "henrik-karlsson",
+      "name": "Henrik Karlsson",
+      "url": "https://www.henrikkarlsson.xyz/feed",
+      "category": "Indie",
+      "html_url": "https://www.henrikkarlsson.xyz/feed",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "josh-comeau",
+      "name": "Josh Comeau",
+      "url": "https://www.joshwcomeau.com/rss.xml",
+      "category": "Web & Design",
+      "html_url": "https://www.joshwcomeau.com/rss.xml",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Web & Design)."
+    },
+    {
+      "id": "last-week-in-ai",
+      "name": "Last Week in AI",
+      "url": "https://lastweekin.ai/feed",
+      "category": "AI & ML",
+      "html_url": "https://lastweekin.ai/feed",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (AI & ML)."
+    },
+    {
+      "id": "latent-space",
+      "name": "Latent Space",
+      "url": "https://www.latent.space/feed",
+      "category": "AI & ML",
+      "html_url": "https://www.latent.space/feed",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (AI & ML)."
+    },
+    {
+      "id": "sebastian-raschka",
+      "name": "Sebastian Raschka",
+      "url": "https://magazine.sebastianraschka.com/feed",
+      "category": "Indie",
+      "html_url": "https://magazine.sebastianraschka.com/feed",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "abortretry-fail",
+      "name": "abortretry.fail",
+      "url": "https://www.abortretry.fail/feed",
+      "category": "History",
+      "html_url": "https://abortretry.fail",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (History)."
+    },
+    {
+      "id": "anildash-com",
+      "name": "anildash.com",
+      "url": "https://anildash.com/feed.xml",
+      "category": "Tech Culture",
+      "html_url": "https://anildash.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Tech Culture)."
+    },
+    {
+      "id": "antirez-com",
+      "name": "antirez.com",
+      "url": "http://antirez.com/rss",
+      "category": "Systems",
+      "html_url": "http://antirez.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "aresluna-org",
+      "name": "aresluna.org",
+      "url": "https://aresluna.org/main.rss",
+      "category": "Web & Design",
+      "html_url": "https://aresluna.org",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Web & Design)."
+    },
+    {
+      "id": "beej-us",
+      "name": "beej.us",
+      "url": "https://beej.us/blog/rss.xml",
+      "category": "Indie",
+      "html_url": "https://beej.us",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "bernsteinbear-com",
+      "name": "bernsteinbear.com",
+      "url": "https://bernsteinbear.com/feed.xml",
+      "category": "Programming",
+      "html_url": "https://bernsteinbear.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "berthub-eu",
+      "name": "berthub.eu",
+      "url": "https://berthub.eu/articles/index.xml",
+      "category": "Systems",
+      "html_url": "https://berthub.eu",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "blog-jim-nielsen-com",
+      "name": "blog.jim-nielsen.com",
+      "url": "https://blog.jim-nielsen.com/feed.xml",
+      "category": "Web & Design",
+      "html_url": "https://blog.jim-nielsen.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Web & Design)."
+    },
+    {
+      "id": "blog-pixelmelt-dev",
+      "name": "blog.pixelmelt.dev",
+      "url": "https://blog.pixelmelt.dev/rss/",
+      "category": "Indie",
+      "html_url": "https://blog.pixelmelt.dev",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "bogdanthegeek-github-io",
+      "name": "bogdanthegeek.github.io",
+      "url": "https://bogdanthegeek.github.io/blog/index.xml",
+      "category": "Hardware",
+      "html_url": "https://bogdanthegeek.github.io",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Hardware)."
+    },
+    {
+      "id": "borretti-me",
+      "name": "borretti.me",
+      "url": "https://borretti.me/feed.xml",
+      "category": "Programming",
+      "html_url": "https://borretti.me",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "brutecat-com",
+      "name": "brutecat.com",
+      "url": "https://brutecat.com/rss.xml",
+      "category": "Indie",
+      "html_url": "https://brutecat.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "buttondown-com-hillelwayne",
+      "name": "buttondown.com/hillelwayne",
+      "url": "https://buttondown.com/hillelwayne/rss",
+      "category": "Programming",
+      "html_url": "https://buttondown.com/hillelwayne",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "chadnauseam-com",
+      "name": "chadnauseam.com",
+      "url": "https://chadnauseam.com/rss.xml",
+      "category": "Indie",
+      "html_url": "https://chadnauseam.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "chiark-greenend-org-uk--sgtatham",
+      "name": "chiark.greenend.org.uk/~sgtatham",
+      "url": "https://www.chiark.greenend.org.uk/~sgtatham/quasiblog/feed.xml",
+      "category": "Indie",
+      "html_url": "https://chiark.greenend.org.uk/~sgtatham",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "computer-rip",
+      "name": "computer.rip",
+      "url": "https://computer.rip/rss.xml",
+      "category": "Systems",
+      "html_url": "https://computer.rip",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "construction-physics-com",
+      "name": "construction-physics.com",
+      "url": "https://www.construction-physics.com/feed",
+      "category": "History",
+      "html_url": "https://construction-physics.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (History)."
+    },
+    {
+      "id": "danielchasehooper-com",
+      "name": "danielchasehooper.com",
+      "url": "https://danielchasehooper.com/feed.xml",
+      "category": "Web & Design",
+      "html_url": "https://danielchasehooper.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Web & Design)."
+    },
+    {
+      "id": "danieldelaney-net",
+      "name": "danieldelaney.net",
+      "url": "https://danieldelaney.net/feed",
+      "category": "Indie",
+      "html_url": "https://danieldelaney.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "danielwirtz-com",
+      "name": "danielwirtz.com",
+      "url": "https://danielwirtz.com/rss.xml",
+      "category": "Web & Design",
+      "html_url": "https://danielwirtz.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Web & Design)."
+    },
+    {
+      "id": "daringfireball-net",
+      "name": "daringfireball.net",
+      "url": "https://daringfireball.net/feeds/main",
+      "category": "Tech Culture",
+      "html_url": "https://daringfireball.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Tech Culture)."
+    },
+    {
+      "id": "derekthompson-org",
+      "name": "derekthompson.org",
+      "url": "https://www.theatlantic.com/feed/author/derek-thompson/",
+      "category": "Essays",
+      "html_url": "https://derekthompson.org",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Essays)."
+    },
+    {
+      "id": "devblogs-microsoft-com-oldnewthing",
+      "name": "devblogs.microsoft.com/oldnewthing",
+      "url": "https://devblogs.microsoft.com/oldnewthing/feed",
+      "category": "Systems",
+      "html_url": "https://devblogs.microsoft.com/oldnewthing",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "dfarq-homeip-net",
+      "name": "dfarq.homeip.net",
+      "url": "https://dfarq.homeip.net/feed/",
+      "category": "Hardware",
+      "html_url": "https://dfarq.homeip.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Hardware)."
+    },
+    {
+      "id": "downtowndougbrown-com",
+      "name": "downtowndougbrown.com",
+      "url": "https://www.downtowndougbrown.com/feed/",
+      "category": "Hardware",
+      "html_url": "https://downtowndougbrown.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Hardware)."
+    },
+    {
+      "id": "dwarkesh-com",
+      "name": "dwarkesh.com",
+      "url": "https://www.dwarkeshpatel.com/feed",
+      "category": "Essays",
+      "html_url": "https://dwarkesh.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Essays)."
+    },
+    {
+      "id": "dynomight-net",
+      "name": "dynomight.net",
+      "url": "https://dynomight.net/feed.xml",
+      "category": "Essays",
+      "html_url": "https://dynomight.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Essays)."
+    },
+    {
+      "id": "eli-thegreenplace-net",
+      "name": "eli.thegreenplace.net",
+      "url": "https://eli.thegreenplace.net/feeds/all.atom.xml",
+      "category": "Systems",
+      "html_url": "https://eli.thegreenplace.net",
+      "source_type": "atom",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "entropicthoughts-com",
+      "name": "entropicthoughts.com",
+      "url": "https://entropicthoughts.com/feed.xml",
+      "category": "Programming",
+      "html_url": "https://entropicthoughts.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "ericmigi-com",
+      "name": "ericmigi.com",
+      "url": "https://ericmigi.com/rss.xml",
+      "category": "Indie",
+      "html_url": "https://ericmigi.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "evanhahn-com",
+      "name": "evanhahn.com",
+      "url": "https://evanhahn.com/feed.xml",
+      "category": "Programming",
+      "html_url": "https://evanhahn.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "experimental-history-com",
+      "name": "experimental-history.com",
+      "url": "https://www.experimental-history.com/feed",
+      "category": "Essays",
+      "html_url": "https://experimental-history.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Essays)."
+    },
+    {
+      "id": "fabiensanglard-net",
+      "name": "fabiensanglard.net",
+      "url": "https://fabiensanglard.net/rss.xml",
+      "category": "Systems",
+      "html_url": "https://fabiensanglard.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "filfre-net",
+      "name": "filfre.net",
+      "url": "https://www.filfre.net/feed/",
+      "category": "History",
+      "html_url": "https://filfre.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (History)."
+    },
+    {
+      "id": "garymarcus-substack-com",
+      "name": "garymarcus.substack.com",
+      "url": "https://garymarcus.substack.com/feed",
+      "category": "AI & ML",
+      "html_url": "https://garymarcus.substack.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (AI & ML)."
+    },
+    {
+      "id": "geoffreylitt-com",
+      "name": "geoffreylitt.com",
+      "url": "https://www.geoffreylitt.com/feed.xml",
+      "category": "Web & Design",
+      "html_url": "https://geoffreylitt.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Web & Design)."
+    },
+    {
+      "id": "geohot-github-io",
+      "name": "geohot.github.io",
+      "url": "https://geohot.github.io/blog/feed.xml",
+      "category": "Indie",
+      "html_url": "https://geohot.github.io",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "gilesthomas-com",
+      "name": "gilesthomas.com",
+      "url": "https://gilesthomas.com/feed/rss.xml",
+      "category": "Indie",
+      "html_url": "https://gilesthomas.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "grantslatton-com",
+      "name": "grantslatton.com",
+      "url": "https://grantslatton.com/rss.xml",
+      "category": "Programming",
+      "html_url": "https://grantslatton.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "gwern-net",
+      "name": "gwern.net",
+      "url": "https://gwern.substack.com/feed",
+      "category": "AI & ML",
+      "html_url": "https://gwern.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (AI & ML)."
+    },
+    {
+      "id": "herman-bearblog-dev",
+      "name": "herman.bearblog.dev",
+      "url": "https://herman.bearblog.dev/feed/",
+      "category": "Indie",
+      "html_url": "https://herman.bearblog.dev",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "hey-paris",
+      "name": "hey.paris",
+      "url": "https://hey.paris/index.xml",
+      "category": "Indie",
+      "html_url": "https://hey.paris",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "hugotunius-se",
+      "name": "hugotunius.se",
+      "url": "https://hugotunius.se/feed.xml",
+      "category": "Indie",
+      "html_url": "https://hugotunius.se",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "idiallo-com",
+      "name": "idiallo.com",
+      "url": "https://idiallo.com/feed.rss",
+      "category": "Indie",
+      "html_url": "https://idiallo.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "it-notes-dragas-net",
+      "name": "it-notes.dragas.net",
+      "url": "https://it-notes.dragas.net/feed/",
+      "category": "Indie",
+      "html_url": "https://it-notes.dragas.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "jayd-ml",
+      "name": "jayd.ml",
+      "url": "https://jayd.ml/feed.xml",
+      "category": "Indie",
+      "html_url": "https://jayd.ml",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "jeffgeerling-com",
+      "name": "jeffgeerling.com",
+      "url": "https://www.jeffgeerling.com/blog.xml",
+      "category": "Hardware",
+      "html_url": "https://jeffgeerling.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Hardware)."
+    },
+    {
+      "id": "joanwestenberg-com",
+      "name": "joanwestenberg.com",
+      "url": "https://joanwestenberg.com/rss",
+      "category": "Tech Culture",
+      "html_url": "https://joanwestenberg.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Tech Culture)."
+    },
+    {
+      "id": "johndcook-com",
+      "name": "johndcook.com",
+      "url": "https://www.johndcook.com/blog/feed/",
+      "category": "Essays",
+      "html_url": "https://johndcook.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Essays)."
+    },
+    {
+      "id": "jyn-dev",
+      "name": "jyn.dev",
+      "url": "https://jyn.dev/atom.xml",
+      "category": "Programming",
+      "html_url": "https://jyn.dev",
+      "source_type": "atom",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "keygen-sh",
+      "name": "keygen.sh",
+      "url": "https://keygen.sh/blog/feed.xml",
+      "category": "Security",
+      "html_url": "https://keygen.sh",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Security)."
+    },
+    {
+      "id": "krebsonsecurity-com",
+      "name": "krebsonsecurity.com",
+      "url": "https://krebsonsecurity.com/feed/",
+      "category": "Security",
+      "html_url": "https://krebsonsecurity.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Security)."
+    },
+    {
+      "id": "lcamtuf-substack-com",
+      "name": "lcamtuf.substack.com",
+      "url": "https://lcamtuf.substack.com/feed",
+      "category": "Security",
+      "html_url": "https://lcamtuf.substack.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Security)."
+    },
+    {
+      "id": "lucumr-pocoo-org",
+      "name": "lucumr.pocoo.org",
+      "url": "https://lucumr.pocoo.org/feed.atom",
+      "category": "Programming",
+      "html_url": "https://lucumr.pocoo.org",
+      "source_type": "atom",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "martinalderson-com",
+      "name": "martinalderson.com",
+      "url": "https://martinalderson.com/feed.xml",
+      "category": "Indie",
+      "html_url": "https://martinalderson.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "matduggan-com",
+      "name": "matduggan.com",
+      "url": "https://matduggan.com/rss/",
+      "category": "Indie",
+      "html_url": "https://matduggan.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "matklad-github-io",
+      "name": "matklad.github.io",
+      "url": "https://matklad.github.io/feed.xml",
+      "category": "Programming",
+      "html_url": "https://matklad.github.io",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "maurycyz-com",
+      "name": "maurycyz.com",
+      "url": "https://maurycyz.com/index.xml",
+      "category": "Indie",
+      "html_url": "https://maurycyz.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "micahflee-com",
+      "name": "micahflee.com",
+      "url": "https://micahflee.com/feed/",
+      "category": "Security",
+      "html_url": "https://micahflee.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Security)."
+    },
+    {
+      "id": "michael-stapelberg-ch",
+      "name": "michael.stapelberg.ch",
+      "url": "https://michael.stapelberg.ch/feed.xml",
+      "category": "Systems",
+      "html_url": "https://michael.stapelberg.ch",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "miguelgrinberg-com",
+      "name": "miguelgrinberg.com",
+      "url": "https://blog.miguelgrinberg.com/feed",
+      "category": "Programming",
+      "html_url": "https://miguelgrinberg.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "minimaxir-com",
+      "name": "minimaxir.com",
+      "url": "https://minimaxir.com/index.xml",
+      "category": "AI & ML",
+      "html_url": "https://minimaxir.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (AI & ML)."
+    },
+    {
+      "id": "mitchellh-com",
+      "name": "mitchellh.com",
+      "url": "https://mitchellh.com/feed.xml",
+      "category": "Programming",
+      "html_url": "https://mitchellh.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "mjg59-dreamwidth-org",
+      "name": "mjg59.dreamwidth.org",
+      "url": "https://mjg59.dreamwidth.org/data/rss",
+      "category": "Security",
+      "html_url": "https://mjg59.dreamwidth.org",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Security)."
+    },
+    {
+      "id": "nesbitt-io",
+      "name": "nesbitt.io",
+      "url": "https://nesbitt.io/feed.xml",
+      "category": "Indie",
+      "html_url": "https://nesbitt.io",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "oldvcr-blogspot-com",
+      "name": "oldvcr.blogspot.com",
+      "url": "https://oldvcr.blogspot.com/feeds/posts/default",
+      "category": "Hardware",
+      "html_url": "https://oldvcr.blogspot.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Hardware)."
+    },
+    {
+      "id": "overreacted-io",
+      "name": "overreacted.io",
+      "url": "https://overreacted.io/rss.xml",
+      "category": "Programming",
+      "html_url": "https://overreacted.io",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "paulgraham-com",
+      "name": "paulgraham.com",
+      "url": "http://www.aaronsw.com/2002/feeds/pgessays.rss",
+      "category": "Essays",
+      "html_url": "https://paulgraham.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Essays)."
+    },
+    {
+      "id": "philiplaine-com",
+      "name": "philiplaine.com",
+      "url": "https://philiplaine.com/index.xml",
+      "category": "Indie",
+      "html_url": "https://philiplaine.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "pluralistic-net",
+      "name": "pluralistic.net",
+      "url": "https://pluralistic.net/feed/",
+      "category": "Tech Culture",
+      "html_url": "https://pluralistic.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Tech Culture)."
+    },
+    {
+      "id": "rachelbythebay-com",
+      "name": "rachelbythebay.com",
+      "url": "https://rachelbythebay.com/w/atom.xml",
+      "category": "Systems",
+      "html_url": "https://rachelbythebay.com",
+      "source_type": "atom",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "rakhim-exotext-com",
+      "name": "rakhim.exotext.com",
+      "url": "https://rakhim.exotext.com/rss.xml",
+      "category": "Essays",
+      "html_url": "https://rakhim.exotext.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Essays)."
+    },
+    {
+      "id": "refactoringenglish-com",
+      "name": "refactoringenglish.com",
+      "url": "https://refactoringenglish.com/index.xml",
+      "category": "Essays",
+      "html_url": "https://refactoringenglish.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Essays)."
+    },
+    {
+      "id": "righto-com",
+      "name": "righto.com",
+      "url": "https://www.righto.com/feeds/posts/default",
+      "category": "Hardware",
+      "html_url": "https://righto.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Hardware)."
+    },
+    {
+      "id": "seangoedecke-com",
+      "name": "seangoedecke.com",
+      "url": "https://www.seangoedecke.com/rss.xml",
+      "category": "Indie",
+      "html_url": "https://seangoedecke.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "shkspr-mobi",
+      "name": "shkspr.mobi",
+      "url": "https://shkspr.mobi/blog/feed/",
+      "category": "Tech Culture",
+      "html_url": "https://shkspr.mobi",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Tech Culture)."
+    },
+    {
+      "id": "simone-org",
+      "name": "simone.org",
+      "url": "https://simone.org/feed/",
+      "category": "Tech Culture",
+      "html_url": "https://simone.org",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Tech Culture)."
+    },
+    {
+      "id": "simonwillison-net",
+      "name": "simonwillison.net",
+      "url": "https://simonwillison.net/atom/everything/",
+      "category": "AI & ML",
+      "html_url": "https://simonwillison.net",
+      "source_type": "atom",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (AI & ML)."
+    },
+    {
+      "id": "skyfall-dev",
+      "name": "skyfall.dev",
+      "url": "https://skyfall.dev/rss.xml",
+      "category": "Indie",
+      "html_url": "https://skyfall.dev",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "steveblank-com",
+      "name": "steveblank.com",
+      "url": "https://steveblank.com/feed/",
+      "category": "Essays",
+      "html_url": "https://steveblank.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Essays)."
+    },
+    {
+      "id": "susam-net",
+      "name": "susam.net",
+      "url": "https://susam.net/feed.xml",
+      "category": "Programming",
+      "html_url": "https://susam.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    },
+    {
+      "id": "tedium-co",
+      "name": "tedium.co",
+      "url": "https://feed.tedium.co/",
+      "category": "History",
+      "html_url": "https://tedium.co",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (History)."
+    },
+    {
+      "id": "tedunangst-com",
+      "name": "tedunangst.com",
+      "url": "https://www.tedunangst.com/flak/rss",
+      "category": "Systems",
+      "html_url": "https://tedunangst.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "terriblesoftware-org",
+      "name": "terriblesoftware.org",
+      "url": "https://terriblesoftware.org/feed/",
+      "category": "Tech Culture",
+      "html_url": "https://terriblesoftware.org",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Tech Culture)."
+    },
+    {
+      "id": "timsh-org",
+      "name": "timsh.org",
+      "url": "https://timsh.org/rss/",
+      "category": "AI & ML",
+      "html_url": "https://timsh.org",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (AI & ML)."
+    },
+    {
+      "id": "tomrenner-com",
+      "name": "tomrenner.com",
+      "url": "https://tomrenner.com/index.xml",
+      "category": "Indie",
+      "html_url": "https://tomrenner.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "troyhunt-com",
+      "name": "troyhunt.com",
+      "url": "https://www.troyhunt.com/rss/",
+      "category": "Security",
+      "html_url": "https://troyhunt.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Security)."
+    },
+    {
+      "id": "utcc-utoronto-ca--cks",
+      "name": "utcc.utoronto.ca/~cks",
+      "url": "https://utcc.utoronto.ca/~cks/space/blog/?atom",
+      "category": "Systems",
+      "html_url": "https://utcc.utoronto.ca/~cks",
+      "source_type": "atom",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Systems)."
+    },
+    {
+      "id": "wheresyoured-at",
+      "name": "wheresyoured.at",
+      "url": "https://www.wheresyoured.at/rss/",
+      "category": "Tech Culture",
+      "html_url": "https://wheresyoured.at",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Tech Culture)."
+    },
+    {
+      "id": "worksonmymachine-substack-com",
+      "name": "worksonmymachine.substack.com",
+      "url": "https://worksonmymachine.substack.com/feed",
+      "category": "Indie",
+      "html_url": "https://worksonmymachine.substack.com",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "xania-org",
+      "name": "xania.org",
+      "url": "https://xania.org/feed",
+      "category": "Indie",
+      "html_url": "https://xania.org",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Indie)."
+    },
+    {
+      "id": "xeiaso-net",
+      "name": "xeiaso.net",
+      "url": "https://xeiaso.net/blog.rss",
+      "category": "Programming",
+      "html_url": "https://xeiaso.net",
+      "source_type": "rss",
+      "connectivity": "direct",
+      "note": "Inkwell curated source (Programming)."
+    }
+  ]
+}
