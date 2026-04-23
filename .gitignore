@@ -58,6 +58,7 @@ graphify-out/
 .tools/
 .hermes-venv/
 .venv-zvec/
+zvec/
 %SystemDrive%/
 ${APPDATA}/
 research/external-repos/
