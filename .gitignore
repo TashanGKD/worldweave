@@ -54,6 +54,13 @@ graphify-out/
 .yarn/unplugged
 .yarn/build-state.yml
 .yarn/install-state.gz
+.playwright-cli/
+.tools/
+.hermes-venv/
+.venv-zvec/
+%SystemDrive%/
+${APPDATA}/
+research/external-repos/
 
 # Editor directories and files
 .vscode/*
