@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 
-import { buildOpenClawSkillUrl } from '@/lib/request-origin';
+import { resolvePublicSkillUrl } from '@/lib/request-origin';
 
 import { readWorldApiSnapshot } from './api-snapshot';
 import type {
@@ -7522,13 +7522,7 @@ export async function getCachedWorldLiveBenchQuestionPreviews(
 }
 
 function buildOpenClawSkillEntry(requestOrigin?: string | null) {
-  const requestScopedUrl = buildOpenClawSkillUrl(requestOrigin);
-  const explicitUrl = (process.env.AGENT_WORLD_SKILL_URL || '').trim();
-  const openclawBase = (process.env.OPENCLAW_BASE_URL || '').trim().replace(/\/+$/, '');
-  const publicUrl =
-    requestScopedUrl ||
-    explicitUrl ||
-    (openclawBase ? `${openclawBase}/api/v1/openclaw/skill.md` : 'https://world.coze.site/skill.md');
+  const publicUrl = resolvePublicSkillUrl({ fallbackOrigin: requestOrigin }) || 'https://world.coze.site/skill.md';
 
     return {
       mode: 'anonymous' as const,

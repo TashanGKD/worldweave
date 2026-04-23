@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 
 import DashboardClient from '@/app/dashboard-client';
-import { resolveRequestOrigin } from '@/lib/request-origin';
+import { resolvePublicSkillUrl, resolveRequestOrigin } from '@/lib/request-origin';
 import {
   getCachedWorldDashboardState,
   getCachedWorldSubworlds,
@@ -168,20 +168,21 @@ function slimInitialDashboardState(state: InitialDashboardState | null): Initial
 
 export default async function Page() {
   const scene = 'global' as const;
-  const requestOrigin = resolveRequestOrigin({ headers: await headers() });
+  const requestHeaders = await headers();
+  const requestOrigin = resolveRequestOrigin({ headers: requestHeaders });
   const [cachedState, cachedSubworlds] = await Promise.all([
     withInitialCacheTimeout(getCachedWorldDashboardState(scene), null),
     withInitialCacheTimeout(getCachedWorldSubworlds(), []),
   ]);
 
   const nextInitialState =
-    cachedState && requestOrigin
+    cachedState
       ? {
           ...cachedState,
           skill_entry: cachedState.skill_entry
             ? {
                 ...cachedState.skill_entry,
-                url: `${requestOrigin}/api/v1/openclaw/skill.md`,
+                url: resolvePublicSkillUrl({ headers: requestHeaders, fallbackOrigin: requestOrigin }) || cachedState.skill_entry.url,
                 description:
                   '把这个地址交给接入方即可。它用于近 30 天信源查询，也会把判断样本带回校准复盘。',
                 copy_hint: '每次查完信源，系统都会沉淀复盘样本，再把验证过的方法带回后续回答。',

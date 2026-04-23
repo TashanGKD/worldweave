@@ -867,10 +867,8 @@ export default function DashboardClient({
   const skillEntry = useMemo(() => {
     const base = state?.skill_entry || null;
     if (!base) return null;
-    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : null;
     return {
       ...base,
-      url: currentOrigin ? `${currentOrigin}/api/v1/openclaw/skill.md` : base.url,
       description:
         '把这个地址交给接入方。它用于近 30 天信源查询、整理和回答；后台会用结算反馈持续复盘。',
       copy_hint: '信源查询会沉淀为复盘样本，后续回答会吸收验证过的方法。',
