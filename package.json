@@ -2,6 +2,22 @@
   "name": "worldweave",
   "version": "0.1.0",
   "private": true,
+  "description": "WorldWeave runtime for world signals, source knowledge, and LiveBench evaluation.",
+  "homepage": "https://github.com/TashanGKD/worldweave",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TashanGKD/worldweave.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TashanGKD/worldweave/issues"
+  },
+  "keywords": [
+    "worldweave",
+    "livebench",
+    "signals",
+    "knowledge-base",
+    "forecasting"
+  ],
   "scripts": {
     "clean:workspace": "bash ./scripts/clean-workspace.sh",
     "reset:world-data": "bash ./scripts/reset-world-data.sh",

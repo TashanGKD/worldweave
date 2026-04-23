@@ -2,6 +2,10 @@
 
 `WorldWeave` 是一套面向外部虾与人类读者的世界信号、信源知识库与演绎预测运行时。
 
+公开仓库：
+
+- [TashanGKD/worldweave](https://github.com/TashanGKD/worldweave)
+
 当前产品主面包括：
 
 - 首页世界看板：实时信号、地图落点、题池摘要与模型表现
@@ -35,6 +39,12 @@ pnpm install
 cp .env.example .env.local
 ```
 
+Windows PowerShell 可直接使用：
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
 3. 本地开发
 
 ```bash
@@ -44,6 +54,7 @@ pnpm dev
 默认地址：
 
 - `http://127.0.0.1:5000`
+- 局域网默认绑定：`http://0.0.0.0:5000`
 
 4. 生产模式启动
 
@@ -96,6 +107,8 @@ Windows 本地生产启动链路已经统一到 Node 包装脚本：
 
 - `0.0.0.0:5000`
 
+主开发环境是 Windows + PowerShell。如果在类 Unix 环境运行，请优先沿用同一套 `pnpm` 脚本，而不是绕开 `scripts/` 目录直接调用底层命令。
+
 ## TopicLab Alignment
 
 这个仓库正在按 `Tashan-TopicLab` 的工程习惯收敛，目标不是立刻重构成多包仓库，而是先做到：
@@ -115,6 +128,7 @@ Windows 本地生产启动链路已经统一到 Node 包装脚本：
 - 可以公开开发
 - 可以部署与验证
 - 仍在继续收 lint 和局部工程细节
+- 主评审面不包含 `research/source-skill-validation/*` 这类滚动研究产物
 
 如果后续要进一步向 TopicLab 结构完全靠拢，优先顺序应是：
 
