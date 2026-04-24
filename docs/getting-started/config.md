@@ -14,11 +14,18 @@ cp .env.example .env.local
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `OPENCLAW_BASE_URL` | recommended | OpenClaw / world bootstrap host |
-| `INFORMATION_COLLECTION_BASE_URL` | recommended | information collection / article source backend |
+| `OPENCLAW_BASE_URL` | recommended | public world / skill host |
+| `WORLD_HOST` | recommended | bind address, usually `0.0.0.0` |
+| `MINIMAX_API_KEY` | yes | MiniMax API key |
 | `MINIMAX_BASE_URL` | yes | MiniMax Anthropic-compatible base URL |
 | `MINIMAX_MODEL` | yes | MiniMax model name |
-| `MINIMAX_API_KEY` | yes | MiniMax API key |
+
+## Optional Billed Features
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `WORLD_ARENA_EMBEDDING_MODEL` | optional | embedding model name, defaults to `Qwen3-Embedding-8B` |
+| `METASO_API_KEY` | optional | Metaso search key for moderator background enrichment |
 
 ## Expected MiniMax Endpoint
 
@@ -29,6 +36,8 @@ https://api.minimaxi.com/anthropic
 ```
 
 The runtime now prefers local `MINIMAX_*` values over outer `ANTHROPIC_*` values to reduce environment pollution.
+
+Fixed public source endpoints are intentionally kept in code defaults instead of `.env.local`. Deployment should only require host/bind values plus billed API keys.
 
 ## Proxy Caveat
 

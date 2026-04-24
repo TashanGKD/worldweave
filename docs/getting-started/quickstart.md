@@ -18,6 +18,8 @@ Fill in at least:
 - `MINIMAX_BASE_URL`
 - `MINIMAX_MODEL`
 
+For server deployment, also set `OPENCLAW_BASE_URL` to the public address. Optional paid enrichment uses `METASO_API_KEY`; Qwen3 Embedding uses the MiniMax key and only needs `WORLD_ARENA_EMBEDDING_MODEL` if you want to override the default model name.
+
 ## 2. Install dependencies
 
 ```bash
