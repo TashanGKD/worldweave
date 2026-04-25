@@ -256,14 +256,6 @@ export default function WorldGlobe({ markers, trails, activeMarkerId, onSelectMa
         }
 
         globe
-          .hexPolygonsData(globePolygons.features)
-          .hexPolygonResolution(3)
-          .hexPolygonMargin(0.24)
-          .hexPolygonColor(() => 'rgba(50, 189, 166, 0.045)')
-          .hexPolygonUseDots(false)
-          .hexPolygonAltitude(() => 0.004);
-
-        globe
           .polygonsData(globePolygons.features)
           .polygonCapColor(() => 'rgba(4, 18, 28, 0.05)')
           .polygonSideColor(() => 'rgba(4, 18, 28, 0.03)')

@@ -14,13 +14,20 @@ function normalizeOrigin(value: string | null | undefined) {
   return trimmed || null;
 }
 
-function inferProtocol(host: string) {
-  const hostname = host.replace(/:\d+$/, '');
-  if (
+function isLocalHostname(hostname: string) {
+  return (
     hostname === 'localhost' ||
     hostname === '127.0.0.1' ||
     hostname === '0.0.0.0' ||
     hostname === '[::1]' ||
+    hostname === '::1'
+  );
+}
+
+function inferProtocol(host: string) {
+  const hostname = host.replace(/:\d+$/, '');
+  if (
+    isLocalHostname(hostname) ||
     hostname.startsWith('10.') ||
     hostname.startsWith('192.168.') ||
     /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname) ||
@@ -67,14 +74,28 @@ export function resolveConfiguredPublicOrigin() {
   return normalizeOrigin(process.env.OPENCLAW_BASE_URL);
 }
 
+function withRequestPortWhenLocal(configuredOrigin: string | null, requestOrigin: string | null) {
+  if (!configuredOrigin || !requestOrigin) return configuredOrigin;
+  try {
+    const configured = new URL(configuredOrigin);
+    const request = new URL(requestOrigin);
+    if (configured.port || !request.port || configured.protocol !== request.protocol) return configuredOrigin;
+    if (!isLocalHostname(request.hostname)) return configuredOrigin;
+    configured.port = request.port;
+    return normalizeOrigin(configured.toString());
+  } catch {
+    return configuredOrigin;
+  }
+}
+
 export function resolvePublicSkillUrl(input?: {
   headers?: HeaderSource;
   requestUrl?: string | null;
   fallbackOrigin?: string | null;
 }) {
-  const configuredOrigin = resolveConfiguredPublicOrigin();
+  const requestOrigin = resolveRequestOrigin(input);
+  const configuredOrigin = withRequestPortWhenLocal(resolveConfiguredPublicOrigin(), requestOrigin);
   if (configuredOrigin) return buildOpenClawSkillUrl(configuredOrigin);
 
-  const requestOrigin = resolveRequestOrigin(input);
   return buildOpenClawSkillUrl(requestOrigin);
 }

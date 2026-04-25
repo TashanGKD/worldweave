@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Link2, MapPin, Radio, RefreshCw } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -617,11 +617,15 @@ export default function DashboardClient({
   initialState = null,
   initialSubworlds = DEFAULT_SUBWORLDS,
 }: PageClientProps) {
-  const normalizedInitialState = normalizeDashboardState(initialState);
-  const normalizedInitialQuestionPool = questionPoolFromState(normalizedInitialState);
+  const normalizedInitialState = useMemo(() => normalizeDashboardState(initialState), [initialState]);
+  const normalizedInitialSubworlds = useMemo(() => normalizeSubworlds(initialSubworlds), [initialSubworlds]);
+  const normalizedInitialQuestionPool = useMemo(
+    () => questionPoolFromState(normalizedInitialState),
+    [normalizedInitialState],
+  );
   const [scene, setScene] = useState<WorldScene>(initialScene);
   const [state, setState] = useState<WorldDashboardResponse | null>(normalizedInitialState);
-  const [subworlds, setSubworlds] = useState<WorldSubworld[]>(normalizeSubworlds(initialSubworlds));
+  const [subworlds, setSubworlds] = useState<WorldSubworld[]>(normalizedInitialSubworlds);
   const [questionPool, setQuestionPool] = useState<LiveBenchQuestionPreview[]>(normalizedInitialQuestionPool);
   const [globeTimeMode, setGlobeTimeMode] = useState<'today' | 'memory30'>('memory30');
   const [activeSignalId, setActiveSignalId] = useState<string | null>(null);
@@ -630,9 +634,14 @@ export default function DashboardClient({
   const [loading, setLoading] = useState(!hasUsefulDashboardState(normalizedInitialState));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasUsefulStateRef = useRef(hasUsefulDashboardState(normalizedInitialState));
+
+  useEffect(() => {
+    hasUsefulStateRef.current = hasUsefulDashboardState(state);
+  }, [state]);
 
   const loadDashboard = useCallback(async (nextScene: WorldScene, options: { manual?: boolean; background?: boolean } = {}) => {
-    if (!options.background && !hasUsefulDashboardState(state)) setLoading(true);
+    if (!options.background) setLoading(true);
     if (options.manual) setRefreshing(true);
     setError(null);
 
@@ -648,9 +657,9 @@ export default function DashboardClient({
       const nextSubworlds = normalizeSubworlds(subworldsData?.subworlds);
       const nextQuestionPool = questionPoolFromState(normalizedState);
       const nextStateIsUseful = hasUsefulDashboardState(normalizedState);
-      const currentStateIsUseful = hasUsefulDashboardState(state);
 
-      if (nextStateIsUseful || !currentStateIsUseful) {
+      if (nextStateIsUseful || !hasUsefulStateRef.current) {
+        hasUsefulStateRef.current = nextStateIsUseful;
         setState(normalizedState);
         setActiveSignalId((current) =>
           current && normalizedState?.nodes?.some((node) => node.node_id === current)
@@ -666,16 +675,14 @@ export default function DashboardClient({
         });
       }
       setSubworlds(nextSubworlds);
-      if (nextQuestionPool.length > 0 || questionPool.length === 0) {
-        setQuestionPool(nextQuestionPool);
-      }
+      setQuestionPool((currentPool) => (nextQuestionPool.length > 0 || currentPool.length === 0 ? nextQuestionPool : currentPool));
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '加载世界状态失败');
     } finally {
       setLoading(false);
       if (options.manual) setRefreshing(false);
     }
-  }, [questionPool.length, state]);
+  }, []);
 
   useEffect(() => {
     let backgroundTimer: number | null = null;
@@ -685,7 +692,7 @@ export default function DashboardClient({
         saved_at: Date.now(),
         scene,
         state: normalizedInitialState,
-        subworlds: normalizeSubworlds(initialSubworlds),
+        subworlds: normalizedInitialSubworlds,
       });
       setLoading(false);
       setQuestionPool(questionPoolFromState(normalizedInitialState));
@@ -719,7 +726,7 @@ export default function DashboardClient({
     return () => {
       if (backgroundTimer !== null) window.clearTimeout(backgroundTimer);
     };
-  }, [initialScene, initialSubworlds, loadDashboard, normalizedInitialState, scene]);
+  }, [initialScene, loadDashboard, normalizedInitialState, normalizedInitialSubworlds, scene]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {

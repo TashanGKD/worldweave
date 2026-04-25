@@ -1339,10 +1339,11 @@ export default function PageClient({
   initialMarketSnapshot = null,
   initialExplain = null,
 }: PageClientProps) {
-  const normalizedInitialState = normalizeWorldStateResponse(initialState);
+  const normalizedInitialState = useMemo(() => normalizeWorldStateResponse(initialState), [initialState]);
+  const normalizedInitialSubworlds = useMemo(() => normalizeSubworlds(initialSubworlds), [initialSubworlds]);
   const [scene, setScene] = useState<WorldScene>(initialScene);
   const [state, setState] = useState<WorldStateResponse | null>(normalizedInitialState);
-  const [subworlds, setSubworlds] = useState<WorldSubworld[]>(normalizeSubworlds(initialSubworlds));
+  const [subworlds, setSubworlds] = useState<WorldSubworld[]>(normalizedInitialSubworlds);
   const [marketSnapshot, setMarketSnapshot] = useState<WorldMarketSnapshot | null>(initialMarketSnapshot);
   const [explain, setExplain] = useState<WorldExplainResponse | null>(initialExplain);
   const [globeTimeMode, setGlobeTimeMode] = useState<'today' | 'memory30'>('today');
@@ -1377,7 +1378,7 @@ export default function PageClient({
       const nextSubworlds =
         subworldsRes.ok && subworldsData?.subworlds
           ? normalizeSubworlds(subworldsData.subworlds)
-          : subworlds;
+          : normalizedInitialSubworlds;
 
       setState(normalizedState);
       setSubworlds(nextSubworlds);
@@ -1391,9 +1392,9 @@ export default function PageClient({
         saved_at: Date.now(),
         scene: nextScene,
         state: normalizedState,
-        marketSnapshot: hasUsefulMarketSnapshot(marketSnapshot) ? marketSnapshot : null,
+        marketSnapshot: null,
         subworlds: nextSubworlds,
-        explain: hasUsefulExplain(explain) ? explain : null,
+        explain: null,
       });
 
       void Promise.allSettled([
@@ -1423,7 +1424,7 @@ export default function PageClient({
     } finally {
       setLoading(false);
     }
-  }, [explain, marketSnapshot, subworlds]);
+  }, [normalizedInitialSubworlds]);
 
   useEffect(() => {
     purgeLegacyDashboardCaches();
@@ -1434,7 +1435,7 @@ export default function PageClient({
         scene,
         state: normalizedInitialState,
         marketSnapshot: hasUsefulMarketSnapshot(initialMarketSnapshot) ? initialMarketSnapshot : null,
-        subworlds: normalizeSubworlds(initialSubworlds),
+        subworlds: normalizedInitialSubworlds,
         explain: hasUsefulExplain(initialExplain) ? initialExplain : null,
       });
       setLoading(false);
@@ -1454,7 +1455,15 @@ export default function PageClient({
       }
     }
     void loadDashboard(scene);
-  }, [initialExplain, initialMarketSnapshot, initialScene, initialSubworlds, loadDashboard, normalizedInitialState, scene]);
+  }, [
+    initialExplain,
+    initialMarketSnapshot,
+    initialScene,
+    loadDashboard,
+    normalizedInitialState,
+    normalizedInitialSubworlds,
+    scene,
+  ]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
