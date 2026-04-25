@@ -63,7 +63,7 @@ and keep `.env.local` current.
 
 The start script now reloads local `.env.local` and re-exports:
 
-- `ANTHROPIC_BASE_URL` from `MINIMAX_BASE_URL`
+- `ANTHROPIC_BASE_URL` from the fixed MiniMax-compatible default, unless explicitly overridden
 - `ANTHROPIC_API_KEY` from `MINIMAX_API_KEY`
 
 That makes production startup more consistent with the intended MiniMax runtime.

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const DEFAULT_OPENAI_BASE_URL = 'https://api.scnet.cn/api/llm/v1';
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 2) {
   args.set(process.argv[index], process.argv[index + 1]);
@@ -190,7 +191,7 @@ async function main() {
           ...process.env,
           HERMES_HOME: path.join(hermesRepo, '.hermes-world-test'),
           OPENAI_API_KEY: env.MINIMAX_API_KEY || process.env.OPENAI_API_KEY,
-          OPENAI_BASE_URL: env.MINIMAX_BASE_URL || process.env.OPENAI_BASE_URL,
+          OPENAI_BASE_URL: env.MINIMAX_BASE_URL || process.env.OPENAI_BASE_URL || DEFAULT_OPENAI_BASE_URL,
           HERMES_INFERENCE_PROVIDER: 'custom',
           HERMES_GIT_BASH_PATH: 'C:\\Program Files\\Git\\bin\\bash.exe',
           NO_COLOR: '1',

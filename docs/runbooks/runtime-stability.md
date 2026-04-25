@@ -62,9 +62,9 @@ pnpm health:world
 The expected runtime endpoint is:
 
 ```text
-https://api.minimaxi.com/anthropic
+https://api.scnet.cn/api/llm/v1
 ```
 
-If a different Anthropic-compatible base URL leaks into the process, requests may silently hit the wrong provider.
+If a different model base URL leaks into the process, requests may silently hit the wrong provider.
 
-The current runtime code protects against this by preferring local `MINIMAX_*` config over outer `ANTHROPIC_*` values, but `pnpm health:world` should still be run after any deploy or environment change.
+The current runtime code protects against this by using fixed MiniMax-compatible defaults and only treating `MINIMAX_*` / `ANTHROPIC_*` as explicit overrides. `pnpm health:world` should still be run after any deploy or environment change.

@@ -15,10 +15,8 @@ cp .env.example .env.local
 Fill in at least:
 
 - `MINIMAX_API_KEY`
-- `MINIMAX_BASE_URL`
-- `MINIMAX_MODEL`
 
-For server deployment, also set `OPENCLAW_BASE_URL` to the public address. Optional paid enrichment uses `METASO_API_KEY`; Qwen3 Embedding uses the MiniMax key and only needs `WORLD_ARENA_EMBEDDING_MODEL` if you want to override the default model name.
+Optional paid enrichment uses `METASO_API_KEY`. The public skill URL is derived from the request host by default, so `OPENCLAW_BASE_URL` is usually unnecessary when the server is behind a normal reverse proxy or port mapping.
 
 ## 2. Install dependencies
 

@@ -6,9 +6,11 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
-if (!process.env.ANTHROPIC_BASE_URL && process.env.MINIMAX_BASE_URL) {
-  process.env.ANTHROPIC_BASE_URL = process.env.MINIMAX_BASE_URL;
-}
+process.env.MINIMAX_BASE_URL ||= 'https://api.scnet.cn/api/llm/v1';
+process.env.MINIMAX_MODEL ||= 'MiniMax-M2.5';
+process.env.MINIMAX_API_STYLE ||= 'openai-completions';
+
+if (!process.env.ANTHROPIC_BASE_URL) process.env.ANTHROPIC_BASE_URL = process.env.MINIMAX_BASE_URL;
 if (!process.env.ANTHROPIC_API_KEY && process.env.MINIMAX_API_KEY) {
   process.env.ANTHROPIC_API_KEY = process.env.MINIMAX_API_KEY;
 }

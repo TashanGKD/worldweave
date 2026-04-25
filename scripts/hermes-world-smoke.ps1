@@ -35,7 +35,7 @@ Get-Content $envFile | ForEach-Object {
 
 $env:HERMES_HOME = Join-Path $hermesRepo ".hermes-world-test"
 $env:OPENAI_API_KEY = $vars["MINIMAX_API_KEY"]
-$env:OPENAI_BASE_URL = $vars["MINIMAX_BASE_URL"]
+$env:OPENAI_BASE_URL = if ($vars["MINIMAX_BASE_URL"]) { $vars["MINIMAX_BASE_URL"] } else { "https://api.scnet.cn/api/llm/v1" }
 $env:HERMES_INFERENCE_PROVIDER = "custom"
 $env:HERMES_GIT_BASH_PATH = "C:\Program Files\Git\bin\bash.exe"
 $env:NO_COLOR = "1"

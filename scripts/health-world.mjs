@@ -6,11 +6,11 @@ import Anthropic from '@anthropic-ai/sdk';
 dotenv.config({ path: '.env.local' });
 
 const appBaseUrl = process.env.WORLD_HEALTH_BASE_URL || 'http://127.0.0.1:5000';
-const minimaxBaseUrl = process.env.MINIMAX_BASE_URL || process.env.ANTHROPIC_BASE_URL || 'https://api.minimaxi.com/anthropic';
+const minimaxBaseUrl = process.env.MINIMAX_BASE_URL || process.env.ANTHROPIC_BASE_URL || 'https://api.scnet.cn/api/llm/v1';
 const minimaxApiKey = process.env.MINIMAX_API_KEY || process.env.ANTHROPIC_API_KEY || '';
-const minimaxModel = process.env.MINIMAX_MODEL || 'MiniMax-M2.7';
+const minimaxModel = process.env.MINIMAX_MODEL || 'MiniMax-M2.5';
 const embeddingModel = process.env.WORLD_ARENA_EMBEDDING_MODEL || 'Qwen3-Embedding-8B';
-const minimaxApiStyle = (process.env.MINIMAX_API_STYLE || process.env.MINIMAX_API || '').trim().toLowerCase();
+const minimaxApiStyle = (process.env.MINIMAX_API_STYLE || process.env.MINIMAX_API || 'openai-completions').trim().toLowerCase();
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {
@@ -148,7 +148,7 @@ async function checkEmbedding() {
 
 function checkEnvironment() {
   return {
-    minimaxApiStyle: minimaxApiStyle || 'anthropic',
+    minimaxApiStyle,
     minimaxBaseUrl,
     minimaxBaseUrlLooksRight: Boolean(minimaxBaseUrl),
     hasProxy:

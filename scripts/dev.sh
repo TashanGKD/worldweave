@@ -11,7 +11,7 @@ cd "${WORLD_WORKSPACE_PATH}"
 if [[ -f ".env.local" ]]; then
     set -a
     source ".env.local"
-    export ANTHROPIC_BASE_URL="${MINIMAX_BASE_URL:-${ANTHROPIC_BASE_URL:-https://api.minimaxi.com/anthropic}}"
+    export ANTHROPIC_BASE_URL="${MINIMAX_BASE_URL:-${ANTHROPIC_BASE_URL:-https://api.scnet.cn/api/llm/v1}}"
     export ANTHROPIC_API_KEY="${MINIMAX_API_KEY:-${ANTHROPIC_API_KEY:-}}"
     unset ANTHROPIC_AUTH_TOKEN || true
     set +a

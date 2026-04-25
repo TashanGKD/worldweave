@@ -14,30 +14,29 @@ cp .env.example .env.local
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `OPENCLAW_BASE_URL` | recommended | public world / skill host |
-| `WORLD_HOST` | recommended | bind address, usually `0.0.0.0` |
 | `MINIMAX_API_KEY` | yes | MiniMax API key |
-| `MINIMAX_BASE_URL` | yes | MiniMax Anthropic-compatible base URL |
-| `MINIMAX_MODEL` | yes | MiniMax model name |
 
 ## Optional Billed Features
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `WORLD_ARENA_EMBEDDING_MODEL` | optional | embedding model name, defaults to `Qwen3-Embedding-8B` |
 | `METASO_API_KEY` | optional | Metaso search key for moderator background enrichment |
 
-## Expected MiniMax Endpoint
+## Fixed Runtime Defaults
 
-The expected value is:
+These defaults are fixed in code and normally do not need to appear in `.env.local`:
 
-```text
-https://api.minimaxi.com/anthropic
+```env
+WORLD_HOST=0.0.0.0
+MINIMAX_BASE_URL=https://api.scnet.cn/api/llm/v1
+MINIMAX_MODEL=MiniMax-M2.5
+MINIMAX_API_STYLE=openai-completions
+WORLD_ARENA_EMBEDDING_MODEL=Qwen3-Embedding-8B
 ```
 
-The runtime now prefers local `MINIMAX_*` values over outer `ANTHROPIC_*` values to reduce environment pollution.
+`OPENCLAW_BASE_URL` is also optional. If it is not set, the skill URL is derived from the current request host, which is the preferred deployment path when the server is behind a reverse proxy or port mapping.
 
-Fixed public source endpoints are intentionally kept in code defaults instead of `.env.local`. Deployment should only require host/bind values plus billed API keys.
+Fixed public source endpoints are intentionally kept in code defaults instead of `.env.local`. Deployment should only require billed API keys.
 
 ## Proxy Caveat
 

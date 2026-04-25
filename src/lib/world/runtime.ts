@@ -362,7 +362,7 @@ function resolveMiniMaxApiKey(): string {
 }
 
 function resolveMiniMaxApiStyle(): 'anthropic' | 'openai-completions' {
-  const raw = (process.env.MINIMAX_API_STYLE || process.env.MINIMAX_API || '').trim().toLowerCase();
+  const raw = (process.env.MINIMAX_API_STYLE || process.env.MINIMAX_API || 'openai-completions').trim().toLowerCase();
   if (raw === 'openai-completions' || raw === 'openai' || raw === 'chat-completions') {
     return 'openai-completions';
   }
@@ -373,7 +373,7 @@ function resolveMiniMaxBaseUrl(): string {
   return (
     process.env.MINIMAX_BASE_URL ||
     process.env.ANTHROPIC_BASE_URL ||
-    'https://api.minimaxi.com/anthropic'
+    'https://api.scnet.cn/api/llm/v1'
   ).replace(/\/$/, '');
 }
 
@@ -898,7 +898,7 @@ const MAX_STORED_REPORTS = 500;
 const DEFAULT_WORLDLINE_ID = 'worldline-primary';
 const DEFAULT_INFORMATION_COLLECTION_BASE_URL = '';
 const MINIMAX_BASE_URL = resolveMiniMaxBaseUrl();
-const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-M2.7';
+const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-M2.5';
 const TRANSLATION_BATCH_SIZE = 4;
 const VISIBLE_TRANSLATION_BATCH_SIZE = 24;
 const TRANSLATION_PRIME_LIMIT = 18;

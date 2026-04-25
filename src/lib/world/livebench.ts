@@ -769,12 +769,12 @@ function resolveMiniMaxBaseUrl() {
   return (
     process.env.MINIMAX_BASE_URL ||
     process.env.ANTHROPIC_BASE_URL ||
-    'https://api.minimaxi.com/anthropic'
+    'https://api.scnet.cn/api/llm/v1'
   ).replace(/\/$/, '');
 }
 
 function resolveMiniMaxApiStyle(): 'anthropic' | 'openai-completions' {
-  const raw = (process.env.MINIMAX_API_STYLE || process.env.MINIMAX_API || '').trim().toLowerCase();
+  const raw = (process.env.MINIMAX_API_STYLE || process.env.MINIMAX_API || 'openai-completions').trim().toLowerCase();
   if (raw === 'openai-completions' || raw === 'openai' || raw === 'chat-completions') {
     return 'openai-completions';
   }
