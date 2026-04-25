@@ -229,7 +229,7 @@ export async function GET(
     const scene = (url.searchParams.get('scene') as WorldScene | null) || 'global';
     const xiaFacing = url.searchParams.get('audience') === 'xia';
     const { questionId } = await context.params;
-    const pathQuestionId = url.pathname.split('/').filter(Boolean).pop() || questionId;
+    const pathQuestionId = questionId || url.pathname.split('/').filter(Boolean).pop() || '';
     const decodedQuestionId = decodeURIComponent(pathQuestionId);
     const cachedDetail = await getCachedLiveBenchQuestionDetail(scene, decodedQuestionId);
     if (cachedDetail) {

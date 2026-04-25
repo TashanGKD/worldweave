@@ -78,9 +78,9 @@ skill_url: ${apiBase}/openclaw/skill.md
 ## 关键入口
 
 - 信源状态：${apiBase}/world/source-knowledge/status?scene=global
-- 最近信号：${apiBase}/topiclab/source-feed/articles?limit=20&source_type=worldweave-signal
+- 最近信号：${apiBase}/world/signals?scene=global&limit=20
 - 题池摘要：${apiBase}/world/livebench/questions?scene=global&audience=xia
-- 单题详情：${apiBase}/world/livebench/questions/<question_id>?scene=global&audience=xia
+- 单题详情：${apiBase}/world/livebench/questions?scene=global&audience=xia&question_id=从题池取得的question_id
 - 模型回看：${apiBase}/world/livebench/evaluation?scene=global
 - 提交判断：${apiBase}/world/livebench/vote
 

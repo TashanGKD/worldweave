@@ -132,6 +132,7 @@ export async function GET(request: Request) {
     const scene = (url.searchParams.get('scene') as WorldScene | null) || 'global';
     const status = (url.searchParams.get('status') as LiveQuestionStatus | null) || null;
     const xiaFacing = url.searchParams.get('audience') === 'xia';
+    const questionId = url.searchParams.get('question_id');
     const freshRequested = url.searchParams.get('fresh') === '1';
     const batchRefresh = request.headers.get('x-world-batch-refresh') === '1';
     const bypassSnapshot = freshRequested || batchRefresh;
@@ -139,6 +140,22 @@ export async function GET(request: Request) {
     const limit = Number.isFinite(limitValue) && limitValue > 0 ? Math.min(Math.floor(limitValue), 500) : 0;
     const normalizedStatus =
       status === 'active' || status === 'resolved' || status === 'watchlist' ? status : undefined;
+
+    if (questionId) {
+      const detailUrl = new URL(`/api/v1/world/livebench/questions/${encodeURIComponent(questionId)}`, url.origin);
+      detailUrl.searchParams.set('scene', scene);
+      if (xiaFacing) detailUrl.searchParams.set('audience', 'xia');
+      const detailResponse = await fetch(detailUrl, { cache: 'no-store' });
+      const detailBody = await detailResponse.text();
+      return new NextResponse(detailBody, {
+        status: detailResponse.status,
+        headers: {
+          'Content-Type': detailResponse.headers.get('Content-Type') || 'application/json',
+          'Cache-Control': 'no-store, max-age=0',
+          'x-world-detail-alias': 'query',
+        },
+      });
+    }
 
     const dashboardFallback = async () => {
       const dashboard = await getCachedWorldDashboardState(scene);
