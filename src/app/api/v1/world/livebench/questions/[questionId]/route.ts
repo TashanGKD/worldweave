@@ -9,6 +9,7 @@ import {
 import type { LiveBenchQuestionPreview, WorldScene } from '@/lib/world/types';
 
 const QUESTION_DETAIL_FAST_TIMEOUT_MS = 3000;
+const QUESTION_DETAIL_CACHE_TIMEOUT_MS = 1800;
 const QUESTION_DETAIL_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 type LooseRecord = Record<string, unknown>;
 type LoosePosition = Record<string, unknown>;
@@ -319,7 +320,11 @@ export async function GET(
     const { questionId } = await context.params;
     const pathQuestionId = questionId || url.pathname.split('/').filter(Boolean).pop() || '';
     const decodedQuestionId = decodeURIComponent(pathQuestionId);
-    const cachedDetail = await getCachedLiveBenchQuestionDetail(scene, decodedQuestionId);
+    const cachedDetailPromise = getCachedLiveBenchQuestionDetail(scene, decodedQuestionId).catch(() => null);
+    const cachedDetail = await Promise.race([
+      cachedDetailPromise,
+      timeout<Record<string, unknown> | null>(QUESTION_DETAIL_CACHE_TIMEOUT_MS, null),
+    ]);
     if (cachedDetail) {
       return NextResponse.json(xiaFacing ? toXiaFacingQuestionDetail(cachedDetail as unknown as XiaQuestionDetail) : cachedDetail, {
         headers: {
@@ -328,11 +333,23 @@ export async function GET(
         },
       });
     }
+    if (xiaFacing) {
+      const previewFallback = await findQuestionPreviewFallback(scene, decodedQuestionId);
+      if (previewFallback) {
+        const fallbackDetail = buildPreviewFallbackDetail(scene, previewFallback);
+        return NextResponse.json(toXiaFacingQuestionDetail(fallbackDetail), {
+          headers: {
+            'Cache-Control': 'no-store, max-age=0',
+            'x-world-detail-source': 'preview-fallback',
+          },
+        });
+      }
+    }
     const liveDetail = await Promise.race([
       getWorldLiveBenchQuestionDetail(scene, decodedQuestionId),
       timeout<Record<string, unknown> | null>(QUESTION_DETAIL_FAST_TIMEOUT_MS, null),
     ]);
-    const detail = liveDetail || (await getCachedLiveBenchQuestionDetail(scene, decodedQuestionId));
+    const detail = liveDetail || (await cachedDetailPromise);
     if (!detail) {
       const previewFallback = await findQuestionPreviewFallback(scene, decodedQuestionId);
       if (previewFallback) {
