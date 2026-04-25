@@ -110,7 +110,7 @@ const METAFORECAST_MAX_PAGES = 32;
 const METASO_SEARCH_URL = (process.env.METASO_SEARCH_URL || 'https://metaso.cn/api/v1/search').trim();
 const METASO_API_KEY = (process.env.METASO_API_KEY || '').trim();
 const METASO_RESULT_LIMIT = 5;
-const METASO_CHUNK_TTL_MS = 12 * 60 * 60 * 1000;
+const METASO_CHUNK_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const remoteModelRefreshContext = new AsyncLocalStorage<boolean>();
 const execFileAsync = promisify(execFile);
 

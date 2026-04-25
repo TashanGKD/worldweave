@@ -92,6 +92,18 @@ These are the rules we should follow before any larger refactor:
 4. New generated outputs must be ignored and kept out of normal review flow.
 5. Any new runtime dependency should get at least one scripted health probe.
 
+## Source Feed Bridge
+
+WorldWeave should not replace TopicLab's topic, post, or discussion storage. The safe integration boundary is:
+
+1. WorldWeave owns signal discovery, source freshness, source scoring, and LiveBench evaluation.
+2. TopicLab owns topic creation, AI discussion, posts, and user-facing topic history.
+3. WorldWeave exposes a TopicLab-shaped source-feed list at `/api/v1/topiclab/source-feed/articles`.
+4. TopicLab can consume that list as a source channel and keep its existing article-to-topic flow.
+5. Skill and LiveBench remain standalone WorldWeave modules, similar to a SkillHub-style companion module.
+
+This keeps source signals usable as discussion seeds without creating a hard dependency that would leave TopicLab blank if WorldWeave is warming up.
+
 ## Near-Term Refactor Direction
 
 When we decide to do a larger structural pass, the safest order is:

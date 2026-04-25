@@ -7403,6 +7403,79 @@ export function isRenderableDashboardState(state: Pick<WorldDashboardStatePayloa
   );
 }
 
+function cachedEvidenceSignalMatchesScene(
+  signal: Pick<WorldEvidenceSignal, 'scene' | 'tags' | 'alignment_tags'> | null | undefined,
+  scene: WorldScene,
+) {
+  if (!signal || scene === 'global') return true;
+  const target = normalizeTag(scene);
+  return (
+    normalizeTag(signal.scene) === target ||
+    signal.alignment_tags?.some((tag) => normalizeTag(tag) === `scene:${target}`)
+  );
+}
+
+function cachedNodeMatchesScene(
+  node: WorldDashboardStatePayload['nodes'][number] | null | undefined,
+  scene: WorldScene,
+) {
+  if (!node || scene === 'global') return true;
+  const target = normalizeTag(scene);
+  return normalizeTag(node.scene) === target || node.alignment_tags?.some((tag) => normalizeTag(tag) === `scene:${target}`);
+}
+
+function dedupeCachedEvidenceSignals(signals: WorldEvidenceSignal[]) {
+  const seen = new Set<string>();
+  return signals.filter((signal) => {
+    if (!signal.id || seen.has(signal.id)) return false;
+    seen.add(signal.id);
+    return true;
+  });
+}
+
+function deriveCachedDashboardStateForScene(
+  globalState: WorldDashboardStatePayload | null,
+  scene: WorldScene,
+): WorldDashboardStatePayload | null {
+  if (!globalState || scene === 'global') return globalState;
+
+  const graph_signals = (globalState.graph_signals || []).filter((signal) =>
+    cachedEvidenceSignalMatchesScene(signal, scene),
+  );
+  const top_signals = (globalState.top_signals || []).filter((signal) =>
+    cachedEvidenceSignalMatchesScene(signal, scene),
+  );
+  const knowledge_signals = (globalState.knowledge_signals || []).filter((signal) =>
+    cachedEvidenceSignalMatchesScene(signal as unknown as WorldEvidenceSignal, scene),
+  );
+  const nodes = (globalState.nodes || []).filter((node) => cachedNodeMatchesScene(node, scene));
+  const evidenceSignals = dedupeCachedEvidenceSignals([...top_signals, ...graph_signals]);
+  const mappedSignalCount = evidenceSignals.filter(
+    (signal) => signal.latitude !== null && signal.longitude !== null,
+  ).length;
+
+  return {
+    ...globalState,
+    scene,
+    metrics: {
+      ...globalState.metrics,
+      active_signal_count: evidenceSignals.length,
+      mapped_signal_count: mappedSignalCount,
+      hottest_region: evidenceSignals[0]?.region || globalState.metrics.hottest_region,
+      least_covered_region: evidenceSignals[evidenceSignals.length - 1]?.region || globalState.metrics.least_covered_region,
+    },
+    nodes,
+    graph_signals,
+    top_signals,
+    knowledge_signals,
+    world_view_summary: buildDashboardWorldViewSummaryFromSignals({
+      generated_at: globalState.generated_at,
+      top_signals,
+      graph_signals,
+    }),
+  };
+}
+
 function normalizeCachedSourceRefreshSummary(
   summary: WorldDashboardSourceRefreshSummary | null | undefined,
 ): WorldDashboardSourceRefreshSummary | null | undefined {
@@ -7455,15 +7528,18 @@ async function hydrateCachedSourceRefreshSummary(
 
 export async function getCachedWorldDashboardState(scene: WorldScene = 'global') {
   const snapshot = await readWorldDashboardSnapshot();
-  const state = snapshot?.states?.[scene] || null;
+  const state =
+    snapshot?.states?.[scene] ||
+    deriveCachedDashboardStateForScene(snapshot?.states?.global || null, scene);
   if (!state) return null;
+  const livebenchScene: WorldScene = 'global';
   const normalizedState: WorldDashboardStatePayload = {
     ...state,
     source_refresh_summary: await hydrateCachedSourceRefreshSummary(state.source_refresh_summary),
   };
   const [evaluation, sourceStatus] = await Promise.all([
     readWorldApiSnapshot<LiveBenchEvaluation>(
-      scene,
+      livebenchScene,
       'livebench_evaluation',
       API_SNAPSHOT_MAX_AGE_MS,
     ),
@@ -7496,16 +7572,16 @@ export async function getCachedWorldDashboardState(scene: WorldScene = 'global')
     : sourceAlignedState;
   try {
     const snapshotPreviews = await readWorldApiSnapshot<LiveBenchQuestionPreview[]>(
-      scene,
+      livebenchScene,
       'livebench_questions',
       API_SNAPSHOT_MAX_AGE_MS,
     );
     const currentPreviews =
       snapshotPreviews?.filter((preview) => preview.status !== 'resolved') ||
-      (await getCachedLiveBenchQuestionPreviews(scene));
+      (await getCachedLiveBenchQuestionPreviews(livebenchScene));
     const resolvedPreviews =
       snapshotPreviews?.filter((preview) => preview.status === 'resolved') ||
-      (await getCachedLiveBenchQuestionPreviews(scene, 'resolved'));
+      (await getCachedLiveBenchQuestionPreviews(livebenchScene, 'resolved'));
     const pending_question_previews = (currentPreviews || [])
       .filter((preview) => preview.status !== 'resolved')
       .slice(0, 48);
@@ -7560,6 +7636,7 @@ export async function getWorldState(
   options?: { forceCatalogRefresh?: boolean; requestOrigin?: string | null; allowModelRefresh?: boolean },
 ) {
   const allowModelRefresh = isBatchModelRefreshAllowed(options);
+  const livebenchScene: WorldScene = 'global';
   const signals = await loadSignals({
     allowExpiredDiskCache: true,
     preferCached: true,
@@ -7611,8 +7688,8 @@ export async function getWorldState(
   };
   const livebench_arena: LiveBenchArenaState = toPublicLiveBenchArenaState(
     await (allowModelRefresh
-      ? withLiveBenchRemoteModelRefresh(() => buildLiveBenchArenaState(scene, localizedSignals))
-      : buildLiveBenchArenaState(scene, localizedSignals)),
+      ? withLiveBenchRemoteModelRefresh(() => buildLiveBenchArenaState(livebenchScene, localizedSignals))
+      : buildLiveBenchArenaState(livebenchScene, localizedSignals)),
   );
   const metrics = buildStateMetrics(scopedSignals, livebench_arena);
   const nodes = buildDashboardStateNodes(hotspotSourceSignals, explorationSourceSignals);
@@ -7915,6 +7992,7 @@ export async function getWorldDashboardState(
   options?: { forceCatalogRefresh?: boolean; requestOrigin?: string | null; allowModelRefresh?: boolean },
 ) {
   const allowModelRefresh = isBatchModelRefreshAllowed(options);
+  const livebenchScene: WorldScene = 'global';
   const generated_at = new Date().toISOString();
   const signals = await loadSignals({
     allowExpiredDiskCache: true,
@@ -7965,14 +8043,14 @@ export async function getWorldDashboardState(
   ]);
 
   const dashboardEvaluationPromise: Promise<LiveBenchEvaluation | null> = Promise.race([
-    getLiveBenchEvaluationFromStore(scene).catch(() => null),
+    getLiveBenchEvaluationFromStore(livebenchScene).catch(() => null),
     sleep(8000).then<LiveBenchEvaluation | null>(() => null),
   ]);
 
   const [arena, sourceCatalog, monitorRuntime, dashboardEvaluation] = await Promise.all([
     (allowModelRefresh
-      ? withLiveBenchRemoteModelRefresh(() => buildLiveBenchArenaState(scene, localizedSignals))
-      : buildLiveBenchArenaState(scene, localizedSignals)
+      ? withLiveBenchRemoteModelRefresh(() => buildLiveBenchArenaState(livebenchScene, localizedSignals))
+      : buildLiveBenchArenaState(livebenchScene, localizedSignals)
     ).then((value) => toPublicLiveBenchArenaState(value)),
     sourceCatalogPromise,
     buildSourceGovernanceState().catch(() => null),
@@ -7980,7 +8058,7 @@ export async function getWorldDashboardState(
   ]);
   const subworlds = buildWorldSubworldSummaries(localizedSignals, sourceCatalog);
 
-  const arenaEvaluation = arena ? buildLiveBenchEvaluationFromArena(scene, arena) : null;
+  const arenaEvaluation = arena ? buildLiveBenchEvaluationFromArena(livebenchScene, arena) : null;
   const evaluation = dashboardEvaluation || arenaEvaluation;
   const metrics = alignDashboardMetricsWithEvaluation(
     buildStateMetrics(scopedSignals, arena),
