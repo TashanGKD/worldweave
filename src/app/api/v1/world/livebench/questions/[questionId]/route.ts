@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 
-import { getWorldLiveBenchQuestionDetail } from '@/lib/world/runtime';
+import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { getCachedLiveBenchQuestionDetail } from '@/lib/world/livebench';
-import type { WorldScene } from '@/lib/world/types';
+import {
+  getCachedWorldLiveBenchQuestionPreviews,
+  getWorldLiveBenchQuestionDetail,
+} from '@/lib/world/runtime';
+import type { LiveBenchQuestionPreview, WorldScene } from '@/lib/world/types';
 
 const QUESTION_DETAIL_FAST_TIMEOUT_MS = 3000;
+const QUESTION_DETAIL_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 type LooseRecord = Record<string, unknown>;
 type LoosePosition = Record<string, unknown>;
 
@@ -31,6 +36,15 @@ function asOptionalString(value: unknown) {
 
 function timeout<T>(ms: number, value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+}
+
+function questionIdsMatch(left: string | null | undefined, right: string) {
+  if (!left) return false;
+  try {
+    return decodeURIComponent(left) === right || left === right;
+  } catch {
+    return left === right;
+  }
 }
 
 function cleanXiaFacingText(value: string | null | undefined) {
@@ -145,6 +159,80 @@ function stripInternalPositionFields(position: LoosePosition) {
   return rest;
 }
 
+async function findQuestionPreviewFallback(scene: WorldScene, questionId: string) {
+  const fromRuntime = await getCachedWorldLiveBenchQuestionPreviews(scene);
+  const runtimeMatch = fromRuntime.find((preview) => questionIdsMatch(preview.question_id, questionId));
+  if (runtimeMatch) return runtimeMatch;
+  const snapshot = await readWorldApiSnapshot<LiveBenchQuestionPreview[]>(
+    scene,
+    'livebench_questions',
+    QUESTION_DETAIL_SNAPSHOT_MAX_AGE_MS,
+  );
+  return snapshot?.find((preview) => questionIdsMatch(preview.question_id, questionId)) || null;
+}
+
+function buildPreviewFallbackDetail(scene: WorldScene, preview: LiveBenchQuestionPreview): XiaQuestionDetail {
+  const aggregateVote = preview.aggregate_vote || {};
+  const brief = cleanXiaFacingText(preview.moderator_line || preview.background);
+  return {
+    generated_at: new Date().toISOString(),
+    scene,
+    question: {
+      question_id: preview.question_id,
+      href: preview.href,
+      status: preview.status,
+      settlement_status: preview.settlement_status,
+      title: cleanXiaTitle(preview.title),
+      background: cleanXiaFacingText(preview.background),
+      region_label: preview.region_label,
+      topic_label: preview.topic_label,
+      resolve_at: preview.resolve_at,
+      official_outcome: preview.official_outcome,
+      official_resolved_at: preview.official_resolved_at,
+    },
+    preview: {
+      ...preview,
+      title: cleanXiaTitle(preview.title),
+      background: cleanXiaFacingText(preview.background),
+      moderator_line: brief,
+      source_label: preview.source_label ? '公开题源' : preview.source_label,
+    },
+    moderator_brief: {
+      summary: brief || '主持人已整理题面、时间窗和结算口径，请按可见信源给出贴题判断。',
+      brief: brief || '主持人已整理题面、时间窗和结算口径，请按可见信源给出贴题判断。',
+      resolution_rule: '以题目结算口径为准；结算前只提交基于当时可见信息的判断。',
+      current_bias: brief || '当前需要先补充信源，再形成判断。',
+      watch_for: ['官方结算口径', '时间窗内的新信号', '与题面直接相关的公开更新'],
+      key_turning_points: ['官方口径变化', '强信源反向更新', '临近结算时仍缺少直接证据'],
+      citation_ids: [],
+    },
+    external_discussion: {
+      summary: '当前题池只提供摘要上下文；请先查询近 30 天信源，再按题面和结算口径判断。',
+      entries: [],
+    },
+    xia_positions: {
+      yes: [],
+      no: [],
+      unclear: [],
+    },
+    aggregate_vote: {
+      side: aggregateVote.side,
+      participant_count: aggregateVote.participant_count || preview.xia_count || 0,
+      missing_count: aggregateVote.missing_count || 0,
+      dispersion: aggregateVote.stddev || aggregateVote.spread || null,
+    },
+    evidence: [],
+    settlement: {
+      official_outcome: preview.official_outcome,
+      official_resolved_at: preview.official_resolved_at,
+      platform_brier_score: null,
+      platform_hit: null,
+      replay_summary: preview.official_outcome ? '该题已结算，可结合当时信源回看判断是否稳健。' : '该题尚未结算。',
+      xia_scores: [],
+    },
+  };
+}
+
 function toXiaFacingQuestionDetail(detail: XiaQuestionDetail) {
   const aggregateVote = detail.aggregate_vote || {};
   const preview = detail.preview || {};
@@ -246,6 +334,16 @@ export async function GET(
     ]);
     const detail = liveDetail || (await getCachedLiveBenchQuestionDetail(scene, decodedQuestionId));
     if (!detail) {
+      const previewFallback = await findQuestionPreviewFallback(scene, decodedQuestionId);
+      if (previewFallback) {
+        const fallbackDetail = buildPreviewFallbackDetail(scene, previewFallback);
+        return NextResponse.json(xiaFacing ? toXiaFacingQuestionDetail(fallbackDetail) : fallbackDetail, {
+          headers: {
+            'Cache-Control': 'no-store, max-age=0',
+            'x-world-detail-source': 'preview-fallback',
+          },
+        });
+      }
       return NextResponse.json(
         { error: 'Livebench question detail is warming; retry after the next background snapshot.' },
         {
