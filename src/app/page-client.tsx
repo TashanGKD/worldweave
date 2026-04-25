@@ -39,6 +39,16 @@ const REPORT_MEMORY_DAYS = 30;
 const WEEKLY_PREDICTION_WINDOW_DAYS = 7;
 const GLOBE_MEMORY_DAYS = 30;
 
+async function readJsonOrNull<T>(response: Response): Promise<T | null> {
+  const text = await response.text().catch(() => '');
+  if (!text.trim()) return null;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 type WorldSubworld = {
   key: WorldScene;
   title: string;
@@ -1356,14 +1366,18 @@ export default function PageClient({
       ]);
 
       const [stateData, subworldsData] = await Promise.all([
-        stateRes.json(),
-        subworldsRes.json(),
+        readJsonOrNull<{ error?: string } & WorldStateResponse>(stateRes),
+        readJsonOrNull<{ subworlds?: WorldSubworld[]; error?: string }>(subworldsRes),
       ]);
 
-      if (!stateRes.ok) throw new Error(stateData.error || '加载世界状态失败');
+      if (!stateRes.ok) throw new Error(stateData?.error || `世界状态暂时不可用（${stateRes.status}）`);
+      if (!stateData) throw new Error('世界状态暂时没有返回有效内容，请稍后刷新。');
 
       const normalizedState = normalizeWorldStateResponse(stateData);
-      const nextSubworlds = normalizeSubworlds(subworldsData?.subworlds);
+      const nextSubworlds =
+        subworldsRes.ok && subworldsData?.subworlds
+          ? normalizeSubworlds(subworldsData.subworlds)
+          : subworlds;
 
       setState(normalizedState);
       setSubworlds(nextSubworlds);
@@ -1389,7 +1403,7 @@ export default function PageClient({
         async ([marketSnapshotResult, explainResult]) => {
           if (marketSnapshotResult.status === 'fulfilled') {
             const marketResponse = marketSnapshotResult.value;
-            const marketData = await marketResponse.json().catch(() => null);
+            const marketData = await readJsonOrNull<WorldMarketSnapshot>(marketResponse);
             if (marketResponse.ok && marketData) {
               setMarketSnapshot(marketData);
             }
@@ -1397,7 +1411,7 @@ export default function PageClient({
 
           if (explainResult.status === 'fulfilled') {
             const explainResponse = explainResult.value;
-            const explainData = await explainResponse.json().catch(() => null);
+            const explainData = await readJsonOrNull<WorldExplainResponse>(explainResponse);
             if (explainResponse.ok && explainData) {
               setExplain(explainData);
             }
@@ -1409,7 +1423,7 @@ export default function PageClient({
     } finally {
       setLoading(false);
     }
-  }, [explain, marketSnapshot]);
+  }, [explain, marketSnapshot, subworlds]);
 
   useEffect(() => {
     purgeLegacyDashboardCaches();

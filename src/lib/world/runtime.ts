@@ -7372,6 +7372,11 @@ async function persistWorldDashboardSnapshot(
   try {
     await fs.mkdir(path.dirname(DASHBOARD_SNAPSHOT_FILE), { recursive: true });
     const existing = await readWorldDashboardSnapshot();
+    const existingState = existing?.states?.[scene];
+    if (existingState && isRenderableDashboardState(existingState) && !isRenderableDashboardState(state)) {
+      console.warn('[dashboard] skipped replacing usable snapshot with empty dashboard state');
+      return;
+    }
     const payload: WorldDashboardSnapshotPayload = {
       version: DASHBOARD_SNAPSHOT_VERSION,
       saved_at: new Date().toISOString(),
@@ -7385,6 +7390,17 @@ async function persistWorldDashboardSnapshot(
   } catch (error) {
     console.warn('[dashboard] failed to persist snapshot:', error instanceof Error ? error.message : String(error));
   }
+}
+
+export function isRenderableDashboardState(state: Pick<WorldDashboardStatePayload, 'metrics' | 'nodes' | 'graph_signals' | 'top_signals'> | null | undefined): boolean {
+  if (!state) return false;
+  return Boolean(
+    (state.metrics?.active_signal_count || 0) > 0 ||
+      (state.metrics?.mapped_signal_count || 0) > 0 ||
+      state.nodes?.length ||
+      state.graph_signals?.length ||
+      state.top_signals?.length,
+  );
 }
 
 function normalizeCachedSourceRefreshSummary(

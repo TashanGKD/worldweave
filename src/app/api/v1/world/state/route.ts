@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 
 import { resolveRequestOrigin } from '@/lib/request-origin';
-import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
+import { getCachedWorldDashboardState, getWorldDashboardState, isRenderableDashboardState } from '@/lib/world/runtime';
 import type { WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const STATE_TIMEOUT_MS = 15000;
+const STATE_TIMEOUT_MS = 30000;
 const DASHBOARD_STATE_MAX_AGE_MS = 30 * 60 * 1000;
 const CACHED_STATE_TIMEOUT_MS = 1500;
 
@@ -99,7 +99,8 @@ export async function GET(request: Request) {
     const timeoutMs = allowModelRefresh ? 120000 : STATE_TIMEOUT_MS;
     const requestOrigin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
     const cachedState = await withCachedStateTimeout(getCachedWorldDashboardState(scene), null);
-    if (!allowModelRefresh && cachedState) {
+    const cachedStateRenderable = isRenderableDashboardState(cachedState);
+    if (!allowModelRefresh && cachedState && cachedStateRenderable) {
       return NextResponse.json(
         {
           ...cachedState,
@@ -114,19 +115,13 @@ export async function GET(request: Request) {
         },
       );
     }
-    if (!allowModelRefresh && !cachedState) {
-      return NextResponse.json(buildFallbackState(scene, requestOrigin), {
-        headers: {
-          'Cache-Control': 'no-store, max-age=0',
-          'x-world-fallback': '1',
-        },
-      });
-    }
     const state = await Promise.race([
       getWorldDashboardState(scene, { requestOrigin, allowModelRefresh }),
-      new Promise((resolve) =>
-        setTimeout(() => resolve(cachedState || buildFallbackState(scene, requestOrigin)), timeoutMs),
-      ),
+      new Promise((resolve) => {
+        const fallbackState =
+          cachedState && cachedStateRenderable ? cachedState : buildFallbackState(scene, requestOrigin);
+        setTimeout(() => resolve(fallbackState), timeoutMs);
+      }),
     ]);
     return NextResponse.json(state, {
       headers: {
