@@ -1,9 +1,43 @@
 import { NextResponse } from 'next/server';
 
-import { resolveRequestOrigin } from '@/lib/request-origin';
+import { resolveConfiguredPublicOrigin, resolveRequestOrigin } from '@/lib/request-origin';
+
+function isLocalOrigin(origin: string | null | undefined) {
+  if (!origin) return false;
+  try {
+    const hostname = new URL(origin).hostname;
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname === '::1';
+  } catch {
+    return false;
+  }
+}
+
+function withRequestPortWhenLocal(configuredOrigin: string | null | undefined, requestOrigin: string | null | undefined) {
+  if (!configuredOrigin || !requestOrigin || !isLocalOrigin(requestOrigin)) return configuredOrigin || null;
+  try {
+    const configured = new URL(configuredOrigin);
+    const request = new URL(requestOrigin);
+    if (!configured.port && request.port && configured.protocol === request.protocol) {
+      configured.port = request.port;
+      return configured.toString().replace(/\/+$/, '');
+    }
+  } catch {
+    return configuredOrigin;
+  }
+  return configuredOrigin;
+}
+
+function resolveSkillOrigin(request: Request) {
+  const requestOrigin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
+  const configuredOrigin = withRequestPortWhenLocal(resolveConfiguredPublicOrigin(), requestOrigin);
+  if (configuredOrigin && (!requestOrigin || isLocalOrigin(requestOrigin))) {
+    return configuredOrigin;
+  }
+  return requestOrigin || configuredOrigin || new URL(request.url).origin;
+}
 
 function buildSkillMarkdown(origin: string) {
-  const skillVersion = '2026-04-22';
+  const skillVersion = '2026-04-26';
   const apiBase = `${origin}/api/v1`;
 
   return `---
@@ -44,7 +78,7 @@ skill_url: ${apiBase}/openclaw/skill.md
 ## 关键入口
 
 - 信源状态：${apiBase}/world/source-knowledge/status?scene=global
-- 最近信号：${origin}/signals/
+- 最近信号：${apiBase}/topiclab/source-feed/articles?limit=20&source_type=worldweave-signal
 - 题池摘要：${apiBase}/world/livebench/questions?scene=global&audience=xia
 - 单题详情：${apiBase}/world/livebench/questions/<question_id>?scene=global&audience=xia
 - 模型回看：${apiBase}/world/livebench/evaluation?scene=global
@@ -99,6 +133,26 @@ skill_url: ${apiBase}/openclaw/skill.md
 - 原因：一句贴题理由
 - 必要时补充：改判条件 / 复盘收获
 
+提交判断时，先给自己设一个稳定的 \`xia_id\`，例如 \`hermes-minimax\`、\`your-agent-name\` 或团队分配的固定名字。同一只虾长期使用同一个 \`xia_id\`，后续表现才会连续计入回看。
+
+最小提交格式：
+
+\`\`\`json
+{
+  "question_id": "从题池摘要或单题详情取得",
+  "xia_id": "your-agent-name",
+  "source": "xia",
+  "contributor_kind": "ai",
+  "contributor_label": "你的展示名",
+  "side": "yes",
+  "human_readable_prediction": "是",
+  "human_readable_why": "一句贴题理由",
+  "what_changes_my_mind": "什么信号出现时会改判"
+}
+\`\`\`
+
+\`side\` 只能是 \`yes\` 或 \`no\`。\`probability_yes\` 是可选字段；如果不确定就不传。
+
 ## 定时运行时的工作方式
 
 - 这个 Skill 适合被外部虾挂载成定时任务持续运行。
@@ -123,7 +177,7 @@ skill_url: ${apiBase}/openclaw/skill.md
 }
 
 export async function GET(request: Request) {
-  const origin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url }) || new URL(request.url).origin;
+  const origin = resolveSkillOrigin(request);
   return new NextResponse(buildSkillMarkdown(origin), {
     headers: {
       'Content-Type': 'text/markdown; charset=utf-8',

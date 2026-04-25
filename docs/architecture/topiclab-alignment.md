@@ -104,6 +104,45 @@ WorldWeave should not replace TopicLab's topic, post, or discussion storage. The
 
 This keeps source signals usable as discussion seeds without creating a hard dependency that would leave TopicLab blank if WorldWeave is warming up.
 
+### Frontend Integration
+
+The TopicLab frontend can treat WorldWeave as the replacement for the main information source-feed page, not as a replacement for the whole TopicLab app.
+
+Recommended frontend shape:
+
+1. Keep TopicLab's existing `SourceFeedPage` card actions: favorite, like, share, and reply-to-topic.
+2. Replace the existing media tab with a `WorldWeave` or `世界脉络` tab.
+3. In that main information tab, call the normal `sourceFeedApi.list(...)` path with `source_type=worldweave-signal`.
+4. Render the returned rows with the existing `SourceArticleCard` first; only introduce a richer WorldWeave card once the basic article-to-topic path is proven.
+5. Do not iframe or deep-link to the WorldWeave dashboard as the primary flow. The dashboard remains useful for operators, while TopicLab users need cards that can become topics.
+
+This gives users a WorldWeave-facing source page while preserving TopicLab's discussion UX and existing state.
+
+### Backend Integration
+
+The TopicLab backend should keep `/source-feed/articles` as the single source-feed boundary. WorldWeave is one upstream source behind that boundary.
+
+Recommended backend shape:
+
+1. Add `WORLDWEAVE_BASE_URL` as a non-secret environment value.
+2. In `topiclab-backend/app/api/source_feed.py`, route `source_type=worldweave-signal` to `${WORLDWEAVE_BASE_URL}/api/v1/topiclab/source-feed/articles`.
+3. Keep the existing Information Collection upstream for all other `source_type` values.
+4. Normalize returned rows through the same source article shape before `annotate_source_articles_with_interactions(...)`.
+5. Keep `/source-feed/articles/{article_id}/topic` unchanged. The frontend already sends a snapshot when creating a topic, so WorldWeave rows can become topics even when the external article detail endpoint is not implemented yet.
+
+This mirrors the old TopicLab pattern: one source-feed API, multiple upstream source channels, one downstream topic/discussion system.
+
+### Integration Checklist
+
+Use this as the handoff checklist before deploying the TopicLab side:
+
+1. Set `WORLDWEAVE_BASE_URL` in TopicLab backend env. Use the internal service URL when both apps run in the same network; otherwise use the stable public WorldWeave URL.
+2. Verify WorldWeave directly: `GET {WORLDWEAVE_BASE_URL}/api/v1/topiclab/source-feed/articles?limit=3&source_type=worldweave-signal`.
+3. Verify TopicLab proxy: `GET {TOPICLAB_BACKEND}/source-feed/articles?limit=3&source_type=worldweave-signal`.
+4. Open `/info/source` and confirm the cards show TopicLab interactions: like, favorite, share, and reply-to-topic.
+5. Create one topic from a WorldWeave card. The topic creation path should use the existing snapshot fallback and should not require a WorldWeave article-detail endpoint.
+6. Keep `/info/academic` on the existing IC / arXiv path unless a separate replacement is explicitly planned.
+
 ## Near-Term Refactor Direction
 
 When we decide to do a larger structural pass, the safest order is:

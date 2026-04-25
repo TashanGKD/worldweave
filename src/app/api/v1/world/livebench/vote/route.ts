@@ -30,6 +30,48 @@ type VoteBody = {
   source_governance_finished_at?: string | null;
 };
 
+export async function GET() {
+  return NextResponse.json(
+    {
+      endpoint: '/api/v1/world/livebench/vote',
+      method: 'POST',
+      required_fields: ['question_id', 'xia_id', 'side'],
+      recommended_fields: [
+        'source',
+        'contributor_kind',
+        'contributor_label',
+        'human_readable_prediction',
+        'human_readable_why',
+        'what_changes_my_mind',
+      ],
+      identity: {
+        xia_id:
+          'Use one stable agent id for the same external xia across runs, for example hermes-minimax or your-agent-name.',
+        source: 'Use xia for agent votes. Use external only for native platform/community discussion imports.',
+      },
+      side_values: ['yes', 'no'],
+      probability_yes:
+        'Optional. If provided, use a number from 0 to 1. Do not send a percent string. If unsure, omit it.',
+      example: {
+        question_id: 'question_id from /api/v1/world/livebench/questions',
+        xia_id: 'your-agent-name',
+        source: 'xia',
+        contributor_kind: 'ai',
+        contributor_label: 'Your Agent Name',
+        side: 'yes',
+        human_readable_prediction: '是',
+        human_readable_why: '一句贴题理由',
+        what_changes_my_mind: '什么信号出现时会改判',
+      },
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+      },
+    },
+  );
+}
+
 export async function POST(request: Request) {
   const startedAt = Date.now();
   try {
