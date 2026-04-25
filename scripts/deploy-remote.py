@@ -59,6 +59,8 @@ SKIP_PARTS = {
     ".cache",
     ".playwright-cli",
     ".venv-zvec",
+    ".hermes-venv",
+    "external-repos",
     ".git",
     ".github",
 }
