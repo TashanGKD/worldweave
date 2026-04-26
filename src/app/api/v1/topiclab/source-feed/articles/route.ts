@@ -12,6 +12,7 @@ interface TopicLabSourceFeedArticle {
   title: string;
   source_feed_name: string;
   source_type: string;
+  category: string;
   url: string;
   pic_url: string | null;
   description: string;
@@ -25,6 +26,13 @@ function parsePositiveInt(value: string | null, fallback: number, max: number) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
   return Math.min(Math.floor(parsed), max);
+}
+
+function parseOffset(url: URL, limit: number) {
+  const explicitOffset = Number(url.searchParams.get('offset') || NaN);
+  if (Number.isFinite(explicitOffset) && explicitOffset >= 0) return Math.floor(explicitOffset);
+  const page = parsePositiveInt(url.searchParams.get('page'), 1, 10000);
+  return (page - 1) * limit;
 }
 
 function stableNumericId(input: string) {
@@ -45,6 +53,50 @@ function dedupeSignals(signals: WorldEvidenceSignal[]) {
   });
 }
 
+function topicLabCategory(signal: WorldEvidenceSignal) {
+  const scene = signal.scene || 'global';
+  if (scene === 'technology') return 'AI 技术';
+  if (scene === 'finance') return '市场';
+  if (scene === 'health') return '公共卫生';
+  if (scene === 'war') return '全球情报';
+  if (scene === 'capacity') return '供应链';
+  return '全球情报';
+}
+
+function normalizeSearchText(value: string | null) {
+  return (value || '').trim().toLowerCase();
+}
+
+function signalMatchesQuery(signal: WorldEvidenceSignal, query: string) {
+  if (!query) return true;
+  const haystack = [
+    signal.display_title,
+    signal.title,
+    signal.display_summary,
+    signal.summary,
+    signal.urgency_reason,
+    signal.location_name,
+    signal.region,
+    signal.country,
+    signal.scene,
+    ...(signal.tags || []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(query);
+}
+
+function signalMatchesCategory(signal: WorldEvidenceSignal, category: string) {
+  if (!category || category === 'all') return true;
+  const normalized = category.toLowerCase();
+  return (
+    signal.scene?.toLowerCase() === normalized ||
+    topicLabCategory(signal).toLowerCase() === normalized ||
+    signal.tags?.some((tag) => tag.toLowerCase() === normalized)
+  );
+}
+
 function toTopicLabArticle(input: {
   signal: WorldEvidenceSignal;
   origin: string | null;
@@ -61,6 +113,7 @@ function toTopicLabArticle(input: {
     title,
     source_feed_name: input.sourceFeedName,
     source_type: input.sourceType,
+    category: topicLabCategory(input.signal),
     url,
     pic_url: null,
     description,
@@ -84,8 +137,11 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const scene = (url.searchParams.get('scene') as WorldScene | null) || 'global';
-    const limit = parsePositiveInt(url.searchParams.get('limit'), 20, 100);
-    const offset = Math.max(0, Number(url.searchParams.get('offset') || 0) || 0);
+    const limit = parsePositiveInt(url.searchParams.get('limit') || url.searchParams.get('page_size'), 20, 100);
+    const offset = parseOffset(url, limit);
+    const page = Math.floor(offset / limit) + 1;
+    const query = normalizeSearchText(url.searchParams.get('q') || url.searchParams.get('query') || url.searchParams.get('search'));
+    const category = normalizeSearchText(url.searchParams.get('category') || url.searchParams.get('tab'));
     const sourceType = url.searchParams.get('source_type') || 'worldweave-signal';
     const sourceFeedName = url.searchParams.get('source_feed_name') || '世界脉络';
     const origin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
@@ -93,7 +149,8 @@ export async function GET(request: Request) {
     const signals = dedupeSignals([...(dashboard.top_signals || []), ...(dashboard.graph_signals || [])]).sort(
       (left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime(),
     );
-    const list = signals
+    const filteredSignals = signals.filter((signal) => signalMatchesQuery(signal, query) && signalMatchesCategory(signal, category));
+    const list = filteredSignals
       .map((signal) => toTopicLabArticle({ signal, origin, sourceType, sourceFeedName }))
       .slice(offset, offset + limit);
 
@@ -102,7 +159,17 @@ export async function GET(request: Request) {
         list,
         limit,
         offset,
-        total: signals.length,
+        page,
+        page_size: limit,
+        total: filteredSignals.length,
+        has_more: offset + list.length < filteredSignals.length,
+        filters: {
+          q: query,
+          category,
+          scene,
+          source_type: sourceType,
+          source_feed_name: sourceFeedName,
+        },
       },
       {
         headers: {
