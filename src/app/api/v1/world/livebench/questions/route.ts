@@ -153,6 +153,7 @@ export async function GET(request: Request) {
           'Content-Type': detailResponse.headers.get('Content-Type') || 'application/json',
           'Cache-Control': 'no-store, max-age=0',
           'x-world-detail-alias': 'query',
+          'x-world-detail-source': detailResponse.headers.get('x-world-detail-source') || 'query',
         },
       });
     }

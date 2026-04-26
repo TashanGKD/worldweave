@@ -202,7 +202,7 @@ async function recallPreviewEvidence(request: Request, scene: WorldScene, previe
     url.searchParams.set('limit', '6');
     const response = await fetch(url, {
       cache: 'no-store',
-      signal: AbortSignal.timeout(1800),
+      signal: AbortSignal.timeout(3000),
     });
     if (!response.ok) return [];
     const body = (await response.json()) as { signals?: RecallCard[] };
