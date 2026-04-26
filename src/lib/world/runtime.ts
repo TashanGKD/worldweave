@@ -7276,7 +7276,7 @@ function normalizeDashboardSnapshotPayload(
     return null;
   }
   const savedAtMs = new Date(payload.saved_at).getTime();
-  if (!Number.isFinite(savedAtMs) || Date.now() - savedAtMs > DASHBOARD_SNAPSHOT_MAX_AGE_MS) {
+  if (!Number.isFinite(savedAtMs)) {
     return null;
   }
 
