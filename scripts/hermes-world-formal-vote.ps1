@@ -230,6 +230,8 @@ if (@($sourceContext.errors | Where-Object { $_ -match '^source_status:|^recent_
     submitted = $false
     reason = "source_recall_prerequisite_failed"
     source_errors = $sourceContext.errors
+    source_attached = $true
+    cited_signal_count = @($voteBody.cited_signal_ids).Count
     learning_log = $learningPath
   } | ConvertTo-Json -Depth 6
   exit 1
@@ -311,15 +313,33 @@ if (!$questionTopic) {
 }
 $peerDigestYes = @($candidateXiaDetail.learning_context.peer_digest.yes) -join ' | '
 $peerDigestNo = @($candidateXiaDetail.learning_context.peer_digest.no) -join ' | '
-$recallLines = @($candidateRecall.signals | Select-Object -First 8 | ForEach-Object {
-  "- $($_.title): $($_.summary)"
-})
-$evidenceLines = @($candidateXiaDetail.evidence | ForEach-Object {
-  $section = $_
-  @($section.references | Select-Object -First 3 | ForEach-Object {
-    "- $($_.title): $($_.summary)"
-  })
-}) | Select-Object -First 6
+$recallLines = @(
+  @($candidateRecall.signals) | Select-Object -First 8 | ForEach-Object {
+    $title = [string]$_.title
+    $summary = [string]$_.summary
+    if ($title.Trim() -or $summary.Trim()) {
+      "- ${title}: $summary"
+    }
+  } | Where-Object { $_ }
+)
+if ($recallLines.Count -eq 0) {
+  $recallLines = @("- 当前按题召回暂无可用线索。")
+}
+$evidenceLines = @(
+  @($candidateXiaDetail.evidence) | ForEach-Object {
+    $section = $_
+    @($section.references) | Select-Object -First 3 | ForEach-Object {
+      $title = [string]$_.title
+      $summary = [string]$_.summary
+      if ($title.Trim() -or $summary.Trim()) {
+        "- ${title}: $summary"
+      }
+    }
+  } | Where-Object { $_ } | Select-Object -First 6
+)
+if ($evidenceLines.Count -eq 0) {
+  $evidenceLines = @("- 单题详情暂无额外证据，请以按题召回和题面规则为准。")
+}
 $taskTextLines = @(
   "question: $questionTitle",
   "background: $questionBackground",
@@ -751,6 +771,8 @@ try {
     skipped_question_ids = $skipQuestionIdList
     source_context = $sourceContext
     source_recall = $candidateRecall
+    source_attached = $true
+    cited_signal_ids = @($voteBody.cited_signal_ids)
     source_snapshot_id = $sourceSnapshotId
     initial = $initial
     side = $voteJson.side
@@ -809,6 +831,8 @@ try {
       skipped_question_ids = $skipQuestionIdList
       source_context = $sourceContext
       source_recall = $candidateRecall
+      source_attached = $true
+      cited_signal_ids = @($voteBody.cited_signal_ids)
       initial = $initial
       side = $side
       prediction = $prediction
