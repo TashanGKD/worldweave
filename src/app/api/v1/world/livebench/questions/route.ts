@@ -13,8 +13,26 @@ const QUESTIONS_USER_FRESH_TIMEOUT_MS = 5000;
 const QUESTIONS_FRESH_TIMEOUT_MS = 45000;
 const QUESTIONS_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
+type RecallCard = {
+  id?: string;
+  title?: string;
+  summary?: string;
+  url?: string | null;
+  published_at?: string | null;
+  region_label?: string | null;
+};
+
 function timeout<T>(ms: number, value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+}
+
+function questionIdsMatch(left: string | null | undefined, right: string) {
+  if (!left) return false;
+  try {
+    return decodeURIComponent(left) === right || left === right;
+  } catch {
+    return left === right;
+  }
 }
 
 function cleanXiaFacingText(value: string | null | undefined) {
@@ -126,6 +144,150 @@ function toXiaFacingQuestionPreview(preview: LiveBenchQuestionPreview) {
   };
 }
 
+async function recallQuestionEvidence(request: Request, scene: WorldScene, preview: LiveBenchQuestionPreview) {
+  const query = [preview.title, preview.background, preview.topic_label, preview.region_label]
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, 500);
+  if (!query.trim()) return [];
+  try {
+    const url = new URL('/api/v1/world/source-knowledge/recall', request.url);
+    url.searchParams.set('scene', scene);
+    url.searchParams.set('query', query);
+    url.searchParams.set('limit', '6');
+    const response = await fetch(url, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) return [];
+    const body = (await response.json()) as { signals?: RecallCard[] };
+    return Array.isArray(body.signals) ? body.signals : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildXiaQuestionDetailFromPreview(
+  scene: WorldScene,
+  preview: LiveBenchQuestionPreview,
+  recallSignals: RecallCard[],
+) {
+  const safePreview = sanitizeQuestionPreview(preview);
+  const brief = cleanXiaFacingText(safePreview.moderator_line || safePreview.background);
+  const references = recallSignals.slice(0, 6).map((signal, index) => ({
+    ref_id: `[${index + 1}]`,
+    label: signal.title || `信源线索 ${index + 1}`,
+    url: signal.url || '',
+    source_name: '统一信源池',
+    source_kind: 'signal',
+    recall_role: 'zvec-core',
+    published_at: signal.published_at || null,
+    signal_id: signal.id || null,
+    note: signal.summary || signal.region_label || null,
+  }));
+  const ruleReference = {
+    ref_id: '[rule]',
+    label: '题面与结算规则',
+    url: String(safePreview.href || ''),
+    source_name: '题目规则',
+    source_kind: 'question_rule',
+    recall_role: 'question-rule',
+    published_at: safePreview.resolve_at || null,
+    signal_id: null,
+    note: cleanXiaFacingText(safePreview.background || safePreview.moderator_line),
+  };
+  return {
+    generated_at: new Date().toISOString(),
+    scene,
+    question: {
+      question_id: safePreview.question_id,
+      href: safePreview.href,
+      status: safePreview.status,
+      settlement_status: safePreview.settlement_status,
+      title: cleanXiaTitle(safePreview.title),
+      background: cleanXiaFacingText(safePreview.background),
+      region_label: safePreview.region_label,
+      topic_label: safePreview.topic_label,
+      resolve_at: safePreview.resolve_at,
+      official_outcome: safePreview.official_outcome,
+      official_resolved_at: safePreview.official_resolved_at,
+    },
+    preview: toXiaFacingQuestionPreview(safePreview),
+    moderator_brief: {
+      summary: brief || '主持人已整理题面、时间窗和结算口径，请按可见信源给出贴题判断。',
+      brief: brief || '主持人已整理题面、时间窗和结算口径，请按可见信源给出贴题判断。',
+      resolution_rule: '以题目结算口径为准；结算前只提交基于当时可见信息的判断。',
+      current_bias: brief || '当前需要先补充信源，再形成判断。',
+      watch_for: ['官方结算口径', '时间窗内的新信号', '与题面直接相关的公开更新'],
+      key_turning_points: ['官方口径变化', '强信源反向更新', '临近结算时仍缺少直接证据'],
+      citation_ids: references.map((reference) => reference.signal_id).filter(Boolean),
+    },
+    external_discussion: {
+      summary: '当前题池只提供摘要上下文；请先查询近 30 天信源，再按题面和结算口径判断。',
+      entries: [],
+    },
+    xia_positions: {
+      yes: [],
+      no: [],
+      unclear: [],
+    },
+    aggregate_vote: {
+      side: safePreview.aggregate_vote?.side,
+      participant_count: safePreview.aggregate_vote?.participant_count || safePreview.xia_count || 0,
+      missing_count: safePreview.aggregate_vote?.missing_count || 0,
+      dispersion: safePreview.aggregate_vote?.stddev || safePreview.aggregate_vote?.spread || null,
+    },
+    evidence: [
+      references.length
+        ? {
+            role: 'zvec-core',
+            title: '按题召回信源',
+            description: '围绕题面、地区和主题召回的近 30 天信源。先看这些线索，再形成判断。',
+            total_count: references.length,
+            visible_count: references.length,
+            references,
+          }
+        : {
+            role: 'question-rule',
+            title: '题面与规则',
+            description: '按题召回暂时没有命中时，先以题面、时间窗和结算规则作为最低限度依据。',
+            total_count: 1,
+            visible_count: 1,
+            references: [ruleReference],
+          },
+    ],
+    settlement: {
+      official_outcome: safePreview.official_outcome,
+      official_resolved_at: safePreview.official_resolved_at,
+      platform_brier_score: null,
+      platform_hit: null,
+      replay_summary: safePreview.official_outcome ? '该题已结算，可结合当时信源回看判断是否稳健。' : '该题尚未结算。',
+      xia_scores: [],
+    },
+    learning_context: {
+      sequence: [
+        '先基于信源和题面写下初判。',
+        '再读主持人串讲、背景材料、其他虾分歧和模型总票方向。',
+        '最后提交是/不是、理由、改判条件，并在结算后复盘。',
+      ],
+      host_background: brief,
+      platform_background: '当前题池只提供摘要上下文；请先查询近 30 天信源，再按题面和结算口径判断。',
+      peer_digest: {
+        yes: [],
+        no: [],
+        unclear: [],
+      },
+      aggregate_direction: {
+        side: safePreview.aggregate_vote?.side,
+        participant_count: safePreview.aggregate_vote?.participant_count || safePreview.xia_count || 0,
+        missing_count: safePreview.aggregate_vote?.missing_count || 0,
+        dispersion: safePreview.aggregate_vote?.stddev || safePreview.aggregate_vote?.spread || null,
+      },
+      final_vote_hint: '最终判断可以吸收复核材料，但理由要回到信源、规则、时间窗和改判条件。',
+    },
+  };
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -142,6 +304,25 @@ export async function GET(request: Request) {
       status === 'active' || status === 'resolved' || status === 'watchlist' ? status : undefined;
 
     if (questionId) {
+      if (xiaFacing) {
+        const decodedQuestionId = decodeURIComponent(questionId);
+        const snapshotPreviews = await readWorldApiSnapshot<LiveBenchQuestionPreview[]>(
+          scene,
+          'livebench_questions',
+          QUESTIONS_SNAPSHOT_MAX_AGE_MS,
+        );
+        const preview = snapshotPreviews?.find((item) => questionIdsMatch(item.question_id, decodedQuestionId));
+        if (preview) {
+          const recallSignals = await recallQuestionEvidence(request, scene, preview);
+          return NextResponse.json(buildXiaQuestionDetailFromPreview(scene, preview, recallSignals), {
+            headers: {
+              'Cache-Control': 'no-store, max-age=0',
+              'x-world-detail-alias': 'query',
+              'x-world-detail-source': recallSignals.length ? 'preview-recall' : 'preview-fallback',
+            },
+          });
+        }
+      }
       const detailUrl = new URL(`/api/v1/world/livebench/questions/${encodeURIComponent(questionId)}`, url.origin);
       detailUrl.searchParams.set('scene', scene);
       if (xiaFacing) detailUrl.searchParams.set('audience', 'xia');
