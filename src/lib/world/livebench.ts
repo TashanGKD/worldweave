@@ -6727,7 +6727,7 @@ export async function listLiveBenchQuestionPreviewsFromStore(
   scene: WorldScene,
   status?: LiveQuestionStatus,
 ) {
-  const store = mergeRetainedArchiveIntoStore(await loadStore(), await readRetainedLiveBenchArchive());
+  const store = await loadStore();
   const scopedQuestions = selectQuestionsForScene(
     scene,
     store.questions
@@ -6848,7 +6848,7 @@ export async function getLiveBenchEvaluation(
 }
 
 export async function getLiveBenchEvaluationFromStore(scene: WorldScene): Promise<LiveBenchEvaluation> {
-  const store = mergeRetainedArchiveIntoStore(await loadStore(), await readRetainedLiveBenchArchive());
+  const store = await loadStore();
   const scopedQuestions = selectQuestionsForScene(
     scene,
     store.questions
