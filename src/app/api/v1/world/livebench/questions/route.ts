@@ -303,6 +303,19 @@ export async function GET(request: Request) {
     const normalizedStatus =
       status === 'active' || status === 'resolved' || status === 'watchlist' ? status : undefined;
 
+    const dashboardFallback = async () => {
+      const dashboard = await getCachedWorldDashboardState(scene);
+      const pending = dashboard?.pending_question_previews || [];
+      const resolved = dashboard?.resolved_question_previews || [];
+      const fallback =
+        normalizedStatus === 'active' || normalizedStatus === 'watchlist'
+          ? pending.filter((question) => question.status === normalizedStatus)
+          : normalizedStatus === 'resolved'
+            ? resolved
+            : [...pending, ...resolved];
+      return limit ? fallback.slice(0, limit) : fallback;
+    };
+
     if (questionId) {
       if (xiaFacing) {
         const decodedQuestionId = decodeURIComponent(questionId);
@@ -312,6 +325,13 @@ export async function GET(request: Request) {
           QUESTIONS_SNAPSHOT_MAX_AGE_MS,
         );
         let preview = snapshotPreviews?.find((item) => questionIdsMatch(item.question_id, decodedQuestionId));
+        if (!preview) {
+          const dashboardPreviews = await Promise.race([
+            dashboardFallback(),
+            timeout<LiveBenchQuestionPreview[]>(1000, []),
+          ]);
+          preview = dashboardPreviews.find((item) => questionIdsMatch(item.question_id, decodedQuestionId));
+        }
         if (!preview) {
           const cachedPreviews = await Promise.race([
             getCachedWorldLiveBenchQuestionPreviews(scene),
@@ -345,19 +365,6 @@ export async function GET(request: Request) {
         },
       });
     }
-
-    const dashboardFallback = async () => {
-      const dashboard = await getCachedWorldDashboardState(scene);
-      const pending = dashboard?.pending_question_previews || [];
-      const resolved = dashboard?.resolved_question_previews || [];
-      const fallback =
-        normalizedStatus === 'active' || normalizedStatus === 'watchlist'
-          ? pending.filter((question) => question.status === normalizedStatus)
-          : normalizedStatus === 'resolved'
-            ? resolved
-            : [...pending, ...resolved];
-      return limit ? fallback.slice(0, limit) : fallback;
-    };
     const readSnapshotPreviews = async () => {
       const snapshotPreviews = await readWorldApiSnapshot<LiveBenchQuestionPreview[]>(
         scene,
