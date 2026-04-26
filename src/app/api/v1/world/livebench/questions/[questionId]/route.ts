@@ -31,6 +31,15 @@ type XiaQuestionDetail = LooseRecord & {
   scene?: unknown;
 };
 
+type RecallCard = {
+  id?: string;
+  title?: string;
+  summary?: string;
+  url?: string | null;
+  published_at?: string | null;
+  region_label?: string | null;
+};
+
 function asOptionalString(value: unknown) {
   return typeof value === 'string' ? value : undefined;
 }
@@ -161,20 +170,66 @@ function stripInternalPositionFields(position: LoosePosition) {
 }
 
 async function findQuestionPreviewFallback(scene: WorldScene, questionId: string) {
-  const fromRuntime = await getCachedWorldLiveBenchQuestionPreviews(scene);
-  const runtimeMatch = fromRuntime.find((preview) => questionIdsMatch(preview.question_id, questionId));
-  if (runtimeMatch) return runtimeMatch;
   const snapshot = await readWorldApiSnapshot<LiveBenchQuestionPreview[]>(
     scene,
     'livebench_questions',
     QUESTION_DETAIL_SNAPSHOT_MAX_AGE_MS,
   );
-  return snapshot?.find((preview) => questionIdsMatch(preview.question_id, questionId)) || null;
+  const snapshotMatch = snapshot?.find((preview) => questionIdsMatch(preview.question_id, questionId));
+  if (snapshotMatch) return snapshotMatch;
+  const fromRuntime = await Promise.race([
+    getCachedWorldLiveBenchQuestionPreviews(scene),
+    timeout<LiveBenchQuestionPreview[]>(1000, []),
+  ]);
+  return fromRuntime.find((preview) => questionIdsMatch(preview.question_id, questionId)) || null;
 }
 
-function buildPreviewFallbackDetail(scene: WorldScene, preview: LiveBenchQuestionPreview): XiaQuestionDetail {
+async function recallPreviewEvidence(request: Request, scene: WorldScene, preview: LiveBenchQuestionPreview) {
+  const query = [
+    preview.title,
+    preview.background,
+    preview.topic_label,
+    preview.region_label,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .slice(0, 500);
+  if (!query.trim()) return [];
+  try {
+    const url = new URL('/api/v1/world/source-knowledge/recall', request.url);
+    url.searchParams.set('scene', scene);
+    url.searchParams.set('query', query);
+    url.searchParams.set('limit', '6');
+    const response = await fetch(url, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(1800),
+    });
+    if (!response.ok) return [];
+    const body = (await response.json()) as { signals?: RecallCard[] };
+    return Array.isArray(body.signals) ? body.signals : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildPreviewFallbackDetail(
+  scene: WorldScene,
+  preview: LiveBenchQuestionPreview,
+  recallSignals: RecallCard[] = [],
+): XiaQuestionDetail {
   const aggregateVote = preview.aggregate_vote || {};
   const brief = cleanXiaFacingText(preview.moderator_line || preview.background);
+  const references = recallSignals.slice(0, 6).map((signal, index) => ({
+    ref_id: `[${index + 1}]`,
+    label: signal.title || `信源线索 ${index + 1}`,
+    url: signal.url || '',
+    source_name: '统一信源池',
+    source_kind: 'signal' as const,
+    recall_role: 'zvec-core' as const,
+    published_at: signal.published_at || null,
+    signal_id: signal.id || null,
+    note: signal.summary || signal.region_label || null,
+  }));
   return {
     generated_at: new Date().toISOString(),
     scene,
@@ -205,7 +260,7 @@ function buildPreviewFallbackDetail(scene: WorldScene, preview: LiveBenchQuestio
       current_bias: brief || '当前需要先补充信源，再形成判断。',
       watch_for: ['官方结算口径', '时间窗内的新信号', '与题面直接相关的公开更新'],
       key_turning_points: ['官方口径变化', '强信源反向更新', '临近结算时仍缺少直接证据'],
-      citation_ids: [],
+      citation_ids: references.map((reference) => reference.signal_id).filter(Boolean),
     },
     external_discussion: {
       summary: '当前题池只提供摘要上下文；请先查询近 30 天信源，再按题面和结算口径判断。',
@@ -222,7 +277,18 @@ function buildPreviewFallbackDetail(scene: WorldScene, preview: LiveBenchQuestio
       missing_count: aggregateVote.missing_count || 0,
       dispersion: aggregateVote.stddev || aggregateVote.spread || null,
     },
-    evidence: [],
+    evidence: references.length
+      ? [
+          {
+            role: 'zvec-core',
+            title: '按题召回信源',
+            description: '围绕题面、地区和主题召回的近 30 天信源。先看这些线索，再形成判断。',
+            total_count: references.length,
+            visible_count: references.length,
+            references,
+          },
+        ]
+      : [],
     settlement: {
       official_outcome: preview.official_outcome,
       official_resolved_at: preview.official_resolved_at,
@@ -320,6 +386,19 @@ export async function GET(
     const { questionId } = await context.params;
     const pathQuestionId = questionId || url.pathname.split('/').filter(Boolean).pop() || '';
     const decodedQuestionId = decodeURIComponent(pathQuestionId);
+    if (xiaFacing) {
+      const previewFallback = await findQuestionPreviewFallback(scene, decodedQuestionId);
+      if (previewFallback) {
+        const recallSignals = await recallPreviewEvidence(request, scene, previewFallback);
+        const fallbackDetail = buildPreviewFallbackDetail(scene, previewFallback, recallSignals);
+        return NextResponse.json(toXiaFacingQuestionDetail(fallbackDetail), {
+          headers: {
+            'Cache-Control': 'no-store, max-age=0',
+            'x-world-detail-source': recallSignals.length ? 'preview-recall' : 'preview-fallback',
+          },
+        });
+      }
+    }
     const cachedDetailPromise = getCachedLiveBenchQuestionDetail(scene, decodedQuestionId).catch(() => null);
     const cachedDetail = await Promise.race([
       cachedDetailPromise,
