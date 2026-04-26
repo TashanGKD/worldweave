@@ -20,6 +20,8 @@ async function main() {
   const sourcesRedirect = await read('src/app/api/v1/openclaw/sources.skill.md/route.ts');
   const evaluationRedirect = await read('src/app/api/v1/openclaw/evaluation.skill.md/route.ts');
   const voteRoute = await read('src/app/api/v1/world/livebench/vote/route.ts');
+  const judgmentsRoute = await read('src/app/api/v1/world/livebench/judgments/route.ts');
+  const votesRoute = await read('src/app/api/v1/world/livebench/votes/route.ts');
   const livebenchSource = await read('src/lib/world/livebench.ts');
   const questionsRoute = await read('src/app/api/v1/world/livebench/questions/route.ts');
   const questionDetailRoute = await read('src/app/api/v1/world/livebench/questions/[questionId]/route.ts');
@@ -109,6 +111,8 @@ async function main() {
   ensure(signalsRoute, 'signals:', 'world signals API must expose a signals array', failures);
   ensure(signalsRoute, 'Cache-Control', 'world signals API must be no-store', failures);
   ensure(signalsPage, "redirect('/source-knowledge')", 'legacy /signals page must redirect to source knowledge page', failures);
+  ensure(judgmentsRoute, "export { GET, POST } from '../vote/route'", 'judgments alias must proxy to vote route', failures);
+  ensure(votesRoute, "export { GET, POST } from '../vote/route'", 'votes alias must proxy to vote route', failures);
 
   if (failures.length > 0) {
     console.error(JSON.stringify({ ok: false, failures }, null, 2));
@@ -125,6 +129,8 @@ async function main() {
           'src/app/api/v1/openclaw/sources.skill.md/route.ts',
           'src/app/api/v1/openclaw/evaluation.skill.md/route.ts',
           'src/app/api/v1/world/livebench/vote/route.ts',
+          'src/app/api/v1/world/livebench/judgments/route.ts',
+          'src/app/api/v1/world/livebench/votes/route.ts',
           'src/app/api/v1/world/livebench/questions/route.ts',
           'src/app/api/v1/world/livebench/questions/[questionId]/route.ts',
           'src/app/api/v1/world/signals/route.ts',
