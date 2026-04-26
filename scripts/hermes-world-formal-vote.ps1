@@ -100,6 +100,7 @@ function Read-WorldSkillMount([string]$BaseUrl) {
 function Read-WorldSourceContext([string]$BaseUrl) {
   $status = $null
   $governance = $null
+  $signals = $null
   $errors = @()
 
   try {
@@ -112,6 +113,12 @@ function Read-WorldSourceContext([string]$BaseUrl) {
     $governance = Invoke-JsonGet "$BaseUrl/api/v1/world/source-knowledge/governance"
   } catch {
     $errors += "source_governance: $($_.Exception.Message)"
+  }
+
+  try {
+    $signals = Invoke-JsonGet "$BaseUrl/api/v1/world/signals?scene=global&limit=12"
+  } catch {
+    $errors += "recent_signals: $($_.Exception.Message)"
   }
 
   $health = if ($status) { $status.source_health } else { $null }
@@ -145,15 +152,17 @@ function Read-WorldSourceContext([string]$BaseUrl) {
   }
 
   $signalSummary = [pscustomobject]@{
-    available = $false
-    active_signal_count = $null
-    mapped_signal_count = $null
-    top_signal_count = $null
-    knowledge_signal_count = $null
-    graph_signal_count = $null
-    world_monitor_count = $null
-    minimax_labeled_count = $null
-    wechat_labeled_count = $null
+    available = [bool]$signals
+    total = if ($signals) { $signals.total } else { $null }
+    returned_count = if ($signals) { @($signals.signals).Count } else { $null }
+    latest_published_at = if ($signals -and @($signals.signals).Count -gt 0) { @($signals.signals)[0].published_at } else { $null }
+    excerpts = if ($signals) {
+      @($signals.signals | Select-Object -First 6 | ForEach-Object {
+        "$($_.title): $($_.summary)"
+      })
+    } else {
+      @()
+    }
   }
 
   $sourceTextLines = @(
@@ -163,8 +172,8 @@ function Read-WorldSourceContext([string]$BaseUrl) {
     "source_governance=monitor:$($governanceSummary.monitor_source_count), changed:$($governanceSummary.changed_source_count), high_quality:$($governanceSummary.high_quality_source_count), recommended:$($governanceSummary.recommended_source_count), cooling:$($governanceSummary.cooling_down_count), failures:$($governanceSummary.runtime_failure_count)",
     "source_latest_signal=$($sourceSummary.latest_signal_published_at), source_last_poll=$($governanceSummary.latest_poll_finished_at)",
     "source_embedding=$($sourceSummary.last_embedding_backend)",
-    "dashboard_signals=available:$($signalSummary.available), active:$($signalSummary.active_signal_count), mapped:$($signalSummary.mapped_signal_count), top:$($signalSummary.top_signal_count), knowledge:$($signalSummary.knowledge_signal_count), graph:$($signalSummary.graph_signal_count)",
-    "source_mix=world_monitor:$($signalSummary.world_monitor_count), minimax_labeled:$($signalSummary.minimax_labeled_count), wechat_labeled:$($signalSummary.wechat_labeled_count)"
+    "recent_signals=available:$($signalSummary.available), total:$($signalSummary.total), returned:$($signalSummary.returned_count), latest:$($signalSummary.latest_published_at)",
+    "recent_signal_excerpts=$([string]::Join(' || ', @($signalSummary.excerpts)))"
   )
   $sourceText = [string]::Join([Environment]::NewLine, $sourceTextLines)
 
@@ -175,6 +184,16 @@ function Read-WorldSourceContext([string]$BaseUrl) {
     errors = $errors
     text = $sourceText
   }
+}
+
+function Read-QuestionSourceRecall([string]$BaseUrl, [string]$QuestionText) {
+  $encodedQuery = [uri]::EscapeDataString($QuestionText)
+  return Invoke-JsonGet "$BaseUrl/api/v1/world/source-knowledge/recall?scene=global&limit=8&query=$encodedQuery"
+}
+
+function Read-XiaQuestionDetail([string]$BaseUrl, [string]$QuestionId) {
+  $encodedQuestionId = [uri]::EscapeDataString($QuestionId)
+  return Invoke-JsonGet "$BaseUrl/api/v1/world/livebench/questions?scene=global&audience=xia&question_id=$encodedQuestionId"
 }
 
 function Write-HermesLearningLog([object]$record) {
@@ -194,6 +213,27 @@ function Write-HermesLearningLog([object]$record) {
 Write-ProgressLog "source_context:start"
 $sourceContext = Read-WorldSourceContext $BaseUrl
 Write-ProgressLog "source_context:done errors=$(@($sourceContext.errors).Count)"
+if (@($sourceContext.errors | Where-Object { $_ -match '^source_status:|^recent_signals:' }).Count -gt 0 -or -not $sourceContext.status.generated_at -or [int]$sourceContext.dashboard_signals.returned_count -le 0) {
+  $learningPath = Write-HermesLearningLog ([pscustomobject]@{
+    timestamp = (Get-Date).ToUniversalTime().ToString("o")
+    ok = $false
+    submitted = $false
+    reason = "source_recall_prerequisite_failed"
+    base_url = $BaseUrl
+    skill_url = "$BaseUrl/api/v1/openclaw/skill.md"
+    xia_id = $XiaId
+    model = $Model
+    source_context = $sourceContext
+  })
+  [pscustomobject]@{
+    ok = $false
+    submitted = $false
+    reason = "source_recall_prerequisite_failed"
+    source_errors = $sourceContext.errors
+    learning_log = $learningPath
+  } | ConvertTo-Json -Depth 6
+  exit 1
+}
 Write-ProgressLog "skill_mount:start"
 $skillMount = Read-WorldSkillMount $BaseUrl
 Write-ProgressLog "skill_mount:done ok=$($skillMount.ok) bytes=$($skillMount.bytes)"
@@ -205,27 +245,29 @@ Write-ProgressLog "questions:done count=$($questions.Count)"
 $candidate = $null
 $candidateDetail = $null
 $candidateXiaDetail = $null
+$candidateRecall = $null
 
 foreach ($question in $questions) {
   if ($question.settlement_status -ne "open") { continue }
   if ($skipQuestionIdList -contains $question.question_id) { continue }
   $participantLabels = @($question.aggregate_vote.participant_labels | ForEach-Object { [string]$_ })
   if ($participantLabels -contains $ContributorLabel) { continue }
-  $candidate = $question
-  $candidateDetail = $question
-  $candidateXiaDetail = [pscustomobject]@{
-    preview = $question
-    learning_context = [pscustomobject]@{
-      host_background = $question.moderator_line
-      platform_background = $question.background
-      aggregate_direction = [pscustomobject]@{
-        side = $question.aggregate_vote.side
-      }
-      peer_digest = [pscustomobject]@{
-        yes = @()
-        no = @()
-      }
-    }
+  try {
+    Write-ProgressLog "question_detail:start question_id=$($question.question_id)"
+    $detail = Read-XiaQuestionDetail $BaseUrl $question.question_id
+    Write-ProgressLog "question_detail:done question_id=$($question.question_id)"
+    Write-ProgressLog "source_recall:start question_id=$($question.question_id)"
+    $recall = Read-QuestionSourceRecall $BaseUrl "$($question.title) $($question.background) $($question.topic_label) $($question.region_label)"
+    Write-ProgressLog "source_recall:done question_id=$($question.question_id) recalled=$($recall.recalled_count)"
+    if (!$detail -or !$detail.preview) { continue }
+    if (!$recall -or [int]$recall.recalled_count -le 0) { continue }
+    $candidate = $question
+    $candidateDetail = $detail
+    $candidateXiaDetail = $detail
+    $candidateRecall = $recall
+  } catch {
+    Write-ProgressLog "candidate_context:failed question_id=$($question.question_id) error=$($_.Exception.Message)"
+    continue
   }
   Write-ProgressLog "candidate:selected question_id=$($question.question_id)"
   break
@@ -237,7 +279,7 @@ if (!$candidate -or !$candidateDetail) {
     timestamp = (Get-Date).ToUniversalTime().ToString("o")
     ok = $true
     submitted = $false
-    reason = "no_open_question_without_hermes_vote"
+    reason = "no_open_question_with_source_recall"
     base_url = $BaseUrl
     skill_url = "$BaseUrl/api/v1/openclaw/skill.md"
     skill_mount = $skillMount
@@ -250,7 +292,7 @@ if (!$candidate -or !$candidateDetail) {
   [pscustomobject]@{
     ok = $true
     submitted = $false
-    reason = "no_open_question_without_hermes_vote"
+    reason = "no_open_question_with_source_recall"
     question_count = $questions.Count
     xia_id = $XiaId
     learning_log = $learningPath
@@ -269,6 +311,15 @@ if (!$questionTopic) {
 }
 $peerDigestYes = @($candidateXiaDetail.learning_context.peer_digest.yes) -join ' | '
 $peerDigestNo = @($candidateXiaDetail.learning_context.peer_digest.no) -join ' | '
+$recallLines = @($candidateRecall.signals | Select-Object -First 8 | ForEach-Object {
+  "- $($_.title): $($_.summary)"
+})
+$evidenceLines = @($candidateXiaDetail.evidence | ForEach-Object {
+  $section = $_
+  @($section.references | Select-Object -First 3 | ForEach-Object {
+    "- $($_.title): $($_.summary)"
+  })
+}) | Select-Object -First 6
 $taskTextLines = @(
   "question: $questionTitle",
   "background: $questionBackground",
@@ -278,6 +329,10 @@ $taskTextLines = @(
   "status: $($candidate.settlement_status)",
   "source_query:",
   $sourceContext.text,
+  "按题召回线索：",
+  ([string]::Join([Environment]::NewLine, $recallLines)),
+  "单题证据：",
+  ([string]::Join([Environment]::NewLine, $evidenceLines)),
   "主持人背景：$($candidateXiaDetail.learning_context.host_background)",
   "复核背景：$($candidateXiaDetail.learning_context.platform_background)",
   "复核方向：$($candidateXiaDetail.learning_context.aggregate_direction.side)",
@@ -621,6 +676,7 @@ if ([regex]::IsMatch($checkedVoteText, $forbiddenPattern)) {
     title = $candidate.title
     skipped_question_ids = $skipQuestionIdList
     source_context = $sourceContext
+    source_recall = $candidateRecall
     initial = $initial
     side = $side
     prediction = $prediction
@@ -661,6 +717,7 @@ $voteBody = @{
   human_readable_prediction = $prediction
   human_readable_why = $why
   what_changes_my_mind = $change
+  cited_signal_ids = @($candidateRecall.signals | Select-Object -First 5 | ForEach-Object { [string]$_.id })
   source_attached = $true
   source_snapshot_id = $sourceSnapshotId
   source_context_generated_at = $sourceSnapshotGeneratedAt
@@ -693,6 +750,7 @@ try {
     resolve_at = $candidate.resolve_at
     skipped_question_ids = $skipQuestionIdList
     source_context = $sourceContext
+    source_recall = $candidateRecall
     source_snapshot_id = $sourceSnapshotId
     initial = $initial
     side = $voteJson.side
@@ -750,6 +808,7 @@ try {
       title = $candidate.title
       skipped_question_ids = $skipQuestionIdList
       source_context = $sourceContext
+      source_recall = $candidateRecall
       initial = $initial
       side = $side
       prediction = $prediction
@@ -783,6 +842,7 @@ try {
     title = $candidate.title
     skipped_question_ids = $skipQuestionIdList
     source_context = $sourceContext
+    source_recall = $candidateRecall
     initial = $initial
     side = $side
     prediction = $prediction

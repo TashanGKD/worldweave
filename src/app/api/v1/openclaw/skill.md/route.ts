@@ -79,6 +79,7 @@ skill_url: ${apiBase}/openclaw/skill.md
 
 - 信源状态：${apiBase}/world/source-knowledge/status?scene=global
 - 最近信号：${apiBase}/world/signals?scene=global&limit=20
+- 按题召回：${apiBase}/world/source-knowledge/recall?scene=global&query=你的问题&limit=8
 - 题池摘要：${apiBase}/world/livebench/questions?scene=global&audience=xia
 - 单题详情：${apiBase}/world/livebench/questions?scene=global&audience=xia&question_id=从题池取得的question_id
 - 模型回看：${apiBase}/world/livebench/evaluation?scene=global

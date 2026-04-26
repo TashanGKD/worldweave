@@ -23,9 +23,11 @@ async function main() {
   const judgmentsRoute = await read('src/app/api/v1/world/livebench/judgments/route.ts');
   const votesRoute = await read('src/app/api/v1/world/livebench/votes/route.ts');
   const livebenchSource = await read('src/lib/world/livebench.ts');
+  const hermesFormalVote = await read('scripts/hermes-world-formal-vote.ps1');
   const questionsRoute = await read('src/app/api/v1/world/livebench/questions/route.ts');
   const questionDetailRoute = await read('src/app/api/v1/world/livebench/questions/[questionId]/route.ts');
   const signalsRoute = await read('src/app/api/v1/world/signals/route.ts');
+  const recallRoute = await read('src/app/api/v1/world/source-knowledge/recall/route.ts');
   const signalsPage = await read('src/app/signals/page.tsx');
 
   const requiredSections = [
@@ -54,6 +56,7 @@ async function main() {
     'probability_yes',
     '可选字段；如果不确定就不传',
     '/world/signals',
+    '/world/source-knowledge/recall',
     'question_id=从题池取得的question_id',
     '/world/livebench/vote',
     'probability_yes',
@@ -110,9 +113,36 @@ async function main() {
   );
   ensure(signalsRoute, 'signals:', 'world signals API must expose a signals array', failures);
   ensure(signalsRoute, 'Cache-Control', 'world signals API must be no-store', failures);
+  ensure(recallRoute, 'query', 'source recall API must accept a query', failures);
+  ensure(recallRoute, 'recalled_count', 'source recall API must expose recalled_count', failures);
+  ensure(recallRoute, 'Cache-Control', 'source recall API must be no-store', failures);
   ensure(signalsPage, "redirect('/source-knowledge')", 'legacy /signals page must redirect to source knowledge page', failures);
   ensure(judgmentsRoute, "export { GET, POST } from '../vote/route'", 'judgments alias must proxy to vote route', failures);
   ensure(votesRoute, "export { GET, POST } from '../vote/route'", 'votes alias must proxy to vote route', failures);
+  ensure(
+    hermesFormalVote,
+    '/api/v1/world/source-knowledge/recall',
+    'Hermes formal vote must call source recall before judging',
+    failures,
+  );
+  ensure(
+    hermesFormalVote,
+    'source_recall_prerequisite_failed',
+    'Hermes formal vote must stop when source prerequisites fail',
+    failures,
+  );
+  ensure(
+    hermesFormalVote,
+    'Read-XiaQuestionDetail',
+    'Hermes formal vote must load single-question detail before judging',
+    failures,
+  );
+  ensure(
+    hermesFormalVote,
+    'cited_signal_ids',
+    'Hermes formal vote must attach recalled source signal ids to votes',
+    failures,
+  );
 
   if (failures.length > 0) {
     console.error(JSON.stringify({ ok: false, failures }, null, 2));
@@ -134,7 +164,9 @@ async function main() {
           'src/app/api/v1/world/livebench/questions/route.ts',
           'src/app/api/v1/world/livebench/questions/[questionId]/route.ts',
           'src/app/api/v1/world/signals/route.ts',
+          'src/app/api/v1/world/source-knowledge/recall/route.ts',
           'src/app/signals/page.tsx',
+          'scripts/hermes-world-formal-vote.ps1',
           'src/lib/world/livebench.ts',
         ],
         required_sections: requiredSections,
