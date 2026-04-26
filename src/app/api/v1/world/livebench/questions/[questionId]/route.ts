@@ -230,6 +230,17 @@ function buildPreviewFallbackDetail(
     signal_id: signal.id || null,
     note: signal.summary || signal.region_label || null,
   }));
+  const ruleReference = {
+    ref_id: '[rule]',
+    label: '题面与结算规则',
+    url: String(preview.href || ''),
+    source_name: '题目规则',
+    source_kind: 'question_rule' as const,
+    recall_role: 'question-rule' as const,
+    published_at: preview.resolve_at || null,
+    signal_id: null,
+    note: cleanXiaFacingText(preview.background || preview.moderator_line),
+  };
   return {
     generated_at: new Date().toISOString(),
     scene,
@@ -277,18 +288,25 @@ function buildPreviewFallbackDetail(
       missing_count: aggregateVote.missing_count || 0,
       dispersion: aggregateVote.stddev || aggregateVote.spread || null,
     },
-    evidence: references.length
-      ? [
-          {
+    evidence: [
+      references.length
+        ? {
             role: 'zvec-core',
             title: '按题召回信源',
             description: '围绕题面、地区和主题召回的近 30 天信源。先看这些线索，再形成判断。',
             total_count: references.length,
             visible_count: references.length,
             references,
+          }
+        : {
+            role: 'question-rule',
+            title: '题面与规则',
+            description: '按题召回暂时没有命中时，先以题面、时间窗和结算规则作为最低限度依据。',
+            total_count: 1,
+            visible_count: 1,
+            references: [ruleReference],
           },
-        ]
-      : [],
+    ],
     settlement: {
       official_outcome: preview.official_outcome,
       official_resolved_at: preview.official_resolved_at,
