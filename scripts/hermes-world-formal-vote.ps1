@@ -732,7 +732,7 @@ $voteBody = @{
   source = "xia"
   contributor_kind = "xia"
   contributor_label = $ContributorLabel
-  origin_url = "$BaseUrl/api/v1/world/livebench/questions/$([uri]::EscapeDataString($candidate.question_id))?scene=global&audience=xia"
+  origin_url = "$BaseUrl/api/v1/world/livebench/questions?scene=global&audience=xia&question_id=$([uri]::EscapeDataString($candidate.question_id))"
   side = $side
   human_readable_prediction = $prediction
   human_readable_why = $why
