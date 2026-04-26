@@ -311,7 +311,14 @@ export async function GET(request: Request) {
           'livebench_questions',
           QUESTIONS_SNAPSHOT_MAX_AGE_MS,
         );
-        const preview = snapshotPreviews?.find((item) => questionIdsMatch(item.question_id, decodedQuestionId));
+        let preview = snapshotPreviews?.find((item) => questionIdsMatch(item.question_id, decodedQuestionId));
+        if (!preview) {
+          const cachedPreviews = await Promise.race([
+            getCachedWorldLiveBenchQuestionPreviews(scene),
+            timeout<LiveBenchQuestionPreview[]>(5000, []),
+          ]);
+          preview = cachedPreviews.find((item) => questionIdsMatch(item.question_id, decodedQuestionId));
+        }
         if (preview) {
           const recallSignals = await recallQuestionEvidence(request, scene, preview);
           return NextResponse.json(buildXiaQuestionDetailFromPreview(scene, preview, recallSignals), {

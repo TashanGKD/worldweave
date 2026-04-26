@@ -98,6 +98,13 @@ export async function GET(request: Request) {
       .filter((entry) => (tokens.length > 0 ? entry.score > 0 : true))
       .sort((left, right) => right.score - left.score || new Date(right.signal.published_at).getTime() - new Date(left.signal.published_at).getTime())
       .slice(0, limit);
+    const fallbackScored =
+      scored.length > 0
+        ? scored
+        : signals
+            .map((signal) => ({ signal, score: scoreSignal(signal, []) }))
+            .sort((left, right) => right.score - left.score || new Date(right.signal.published_at).getTime() - new Date(left.signal.published_at).getTime())
+            .slice(0, limit);
 
     return NextResponse.json(
       {
@@ -107,8 +114,9 @@ export async function GET(request: Request) {
         limit,
         token_count: tokens.length,
         total_considered: signals.length,
-        recalled_count: scored.length,
-        signals: scored.map((entry) => toRecallCard(entry.signal, entry.score)),
+        recalled_count: fallbackScored.length,
+        fallback_used: scored.length === 0,
+        signals: fallbackScored.map((entry) => toRecallCard(entry.signal, entry.score)),
       },
       {
         headers: {
