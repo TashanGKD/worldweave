@@ -797,6 +797,8 @@ try {
     vote_id = $voteJson.vote_id
     initial = $initial
     reflection = $reflection
+    source_attached = $true
+    cited_signal_count = @($voteBody.cited_signal_ids).Count
     learning_log = $learningPath
     hermes_session = if ($outputText -match 'session_id:\s*(\S+)') { $matches[1] } else { $null }
   } | ConvertTo-Json -Depth 5
