@@ -43,8 +43,8 @@ function tokenize(query: string) {
   );
 }
 
-function scoreSignal(signal: WorldEvidenceSignal, tokens: string[]) {
-  const haystack = [
+function getSignalHaystack(signal: WorldEvidenceSignal) {
+  return [
     signal.title,
     signal.display_title,
     signal.summary,
@@ -57,6 +57,16 @@ function scoreSignal(signal: WorldEvidenceSignal, tokens: string[]) {
   ]
     .join(' ')
     .toLowerCase();
+}
+
+function hasTokenMatch(signal: WorldEvidenceSignal, tokens: string[]) {
+  if (tokens.length === 0) return true;
+  const haystack = getSignalHaystack(signal);
+  return tokens.some((token) => haystack.includes(token));
+}
+
+function scoreSignal(signal: WorldEvidenceSignal, tokens: string[]) {
+  const haystack = getSignalHaystack(signal);
   const lexicalScore = tokens.reduce((score, token) => score + (haystack.includes(token) ? 1 : 0), 0);
   const recencyScore = Number.isFinite(new Date(signal.published_at).getTime())
     ? Math.max(0, 1 - (Date.now() - new Date(signal.published_at).getTime()) / (30 * 24 * 60 * 60 * 1000))
@@ -95,7 +105,7 @@ export async function GET(request: Request) {
     ]);
     const scored = signals
       .map((signal) => ({ signal, score: scoreSignal(signal, tokens) }))
-      .filter((entry) => (tokens.length > 0 ? entry.score > 0 : true))
+      .filter((entry) => hasTokenMatch(entry.signal, tokens))
       .sort((left, right) => right.score - left.score || new Date(right.signal.published_at).getTime() - new Date(left.signal.published_at).getTime())
       .slice(0, limit);
     const fallbackScored =
