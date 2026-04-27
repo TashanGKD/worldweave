@@ -1,20 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
 const cacheDir = path.join(root, '.cache');
 const validationDir = path.join(root, 'research', 'source-skill-validation');
-const sourceRefreshScript = path.join(
-  process.env.USERPROFILE || 'C:\\Users\\16571',
-  '.codex',
-  'skills',
-  'source-skill-refresh',
-  'scripts',
-  'run_source_skill_refresh.py',
-);
 const directoryCandidateScript = path.join(root, 'scripts', 'extract-source-directory-candidates.mjs');
 
 fs.mkdirSync(cacheDir, { recursive: true });
@@ -30,8 +22,6 @@ function parseArgs(argv) {
     loop: false,
     intervalMinutes: Number(process.env.WORLD_SOURCE_REFRESH_INTERVAL_MINUTES || 30),
     timeoutMinutes: Number(process.env.WORLD_SOURCE_REFRESH_TIMEOUT_MINUTES || 20),
-    skipHubProbe: false,
-    skipHubScan: false,
     skipWorldWarm: false,
     includeHeavyWorldSync: process.env.WORLD_SOURCE_REFRESH_INCLUDE_HEAVY_SYNC === '1',
     worldBaseUrl: (process.env.WORLD_BATCH_REFRESH_BASE_URL || 'http://127.0.0.1:5000').replace(/\/+$/, ''),
@@ -39,8 +29,6 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === '--loop') args.loop = true;
-    if (arg === '--skip-hub-probe') args.skipHubProbe = true;
-    if (arg === '--skip-hub-scan') args.skipHubScan = true;
     if (arg === '--skip-world-warm') args.skipWorldWarm = true;
     if (arg === '--include-heavy-world-sync') args.includeHeavyWorldSync = true;
     if (arg === '--interval-minutes') args.intervalMinutes = Number(argv[++index] || args.intervalMinutes);
@@ -81,7 +69,6 @@ function newestMatchingFile(pattern) {
 }
 
 function collectOutputs(reportDate) {
-  const summaryFile = path.join(validationDir, `probe-${reportDate}-source-skill-refresh-summary.json`);
   const directoryCandidatesFile = path.join(validationDir, `directory-candidates-${reportDate}.json`);
   const coverageFile = newestMatchingFile(/^probe-\d{4}-\d{2}-\d{2}-source-coverage\.json$/);
   const connectivityFile = newestMatchingFile(/^probe-\d{4}-\d{2}-\d{2}-source-connectivity\.json$/);
@@ -92,7 +79,6 @@ function collectOutputs(reportDate) {
   const hubHealth = hubHealthFile ? readJson(hubHealthFile.path) : null;
 
   return {
-    wrapper_summary: fs.existsSync(summaryFile) ? summaryFile : null,
     directory_candidates: fs.existsSync(directoryCandidatesFile) ? directoryCandidatesFile : null,
     coverage_file: coverageFile,
     connectivity_file: connectivityFile,
@@ -163,29 +149,6 @@ function writeApiSnapshot(scene, key, data) {
   fs.writeFileSync(apiSnapshotPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
-function findPython() {
-  if (process.env.PYTHON) return process.env.PYTHON;
-  const py = spawnSync('python', ['--version'], { encoding: 'utf8' });
-  if (py.status === 0) return 'python';
-  return 'py';
-}
-
-function killProcessTree(pid) {
-  if (process.platform === 'win32') {
-    spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
-    return;
-  }
-  try {
-    process.kill(-pid, 'SIGTERM');
-  } catch {
-    try {
-      process.kill(pid, 'SIGTERM');
-    } catch {
-      // ignore
-    }
-  }
-}
-
 async function callWorldEndpoint(baseUrl, method, pathname, timeoutMs = 120000, snapshot, batchHeader = false) {
   const startedAt = Date.now();
   try {
@@ -239,41 +202,9 @@ async function warmWorldCaches(args) {
   if (args.skipWorldWarm) {
     return { skipped: true, reason: 'skip-world-warm' };
   }
-  const endpoints = [
-    {
-      method: 'GET',
-      pathname: '/api/v1/world/livebench/questions?scene=global&limit=500',
-      timeoutMs: 15000,
-      critical: true,
-      batchHeader: false,
-      snapshot: { scene: 'global', key: 'livebench_questions' },
-    },
-    {
-      method: 'GET',
-      pathname: '/api/v1/world/livebench/evaluation?scene=global',
-      timeoutMs: 15000,
-      critical: true,
-      batchHeader: false,
-      snapshot: { scene: 'global', key: 'livebench_evaluation' },
-    },
-    {
-      method: 'GET',
-      pathname: '/api/v1/world/source-knowledge/status?scene=global',
-      timeoutMs: 15000,
-      critical: false,
-      batchHeader: false,
-      snapshot: { scene: 'global', key: 'source_status' },
-    },
-  ];
+  const endpoints = [];
   if (args.includeHeavyWorldSync) {
     endpoints.push(
-      {
-        method: 'GET',
-        pathname: '/api/v1/world/state?scene=global&batch=1',
-        timeoutMs: 45000,
-        critical: false,
-        batchHeader: true,
-      },
       {
         method: 'POST',
         pathname: '/api/v1/world/livebench/sync?scene=global&batch=1',
@@ -288,8 +219,42 @@ async function warmWorldCaches(args) {
         critical: false,
         batchHeader: true,
       },
+      {
+        method: 'GET',
+        pathname: '/api/v1/world/state?scene=global&batch=1',
+        timeoutMs: 45000,
+        critical: false,
+        batchHeader: true,
+      },
     );
   }
+  const snapshotBatchHeader = args.includeHeavyWorldSync;
+  endpoints.push(
+    {
+      method: 'GET',
+      pathname: '/api/v1/world/livebench/questions?scene=global&limit=500',
+      timeoutMs: 15000,
+      critical: true,
+      batchHeader: snapshotBatchHeader,
+      snapshot: { scene: 'global', key: 'livebench_questions' },
+    },
+    {
+      method: 'GET',
+      pathname: '/api/v1/world/livebench/evaluation?scene=global',
+      timeoutMs: 15000,
+      critical: true,
+      batchHeader: snapshotBatchHeader,
+      snapshot: { scene: 'global', key: 'livebench_evaluation' },
+    },
+    {
+      method: 'GET',
+      pathname: '/api/v1/world/source-knowledge/status?scene=global',
+      timeoutMs: 15000,
+      critical: false,
+      batchHeader: snapshotBatchHeader,
+      snapshot: { scene: 'global', key: 'source_status' },
+    },
+  );
   const results = [];
   for (const endpoint of endpoints) {
     const result = await callWorldEndpoint(
@@ -466,17 +431,6 @@ async function runSourceRefreshRemediation(args, warmStatus) {
 async function runOnce(args) {
   const startedAt = nowIso();
   const reportDate = startedAt.slice(0, 10);
-  const timeoutMs = Math.max(1, args.timeoutMinutes) * 60 * 1000;
-  const command = [
-    sourceRefreshScript,
-    '--repo-root',
-    root,
-    '--report-date',
-    reportDate,
-  ];
-  if (args.skipHubProbe) command.push('--skip-hub-probe');
-  if (args.skipHubScan) command.push('--skip-hub-scan');
-
   const baseStatus = {
     kind: 'world-source-refresh',
     started_at: startedAt,
@@ -487,38 +441,14 @@ async function runOnce(args) {
     exit_code: null,
     duration_ms: null,
     report_date: reportDate,
-    command: [findPython(), ...command],
+    command: ['node', 'scripts/world-source-refresh.mjs'],
     outputs: collectOutputs(reportDate),
   };
   writeStatus(baseStatus);
-  append(outPath, `\n[${startedAt}] source refresh start: ${baseStatus.command.join(' ')}\n`);
+  append(outPath, `\n[${startedAt}] WorldWeave runtime refresh start\n`);
 
-  const child = spawn(baseStatus.command[0], command, {
-    cwd: root,
-    env: process.env,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    windowsHide: true,
-    detached: process.platform !== 'win32',
-  });
-
-  child.stdout.on('data', (chunk) => append(outPath, chunk.toString()));
-  child.stderr.on('data', (chunk) => append(errPath, chunk.toString()));
-
+  let exitCode = 0;
   let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    append(errPath, `\n[${nowIso()}] source refresh timed out after ${args.timeoutMinutes} minutes\n`);
-    killProcessTree(child.pid);
-  }, timeoutMs);
-
-  const exitCode = await new Promise((resolve) => {
-    child.on('exit', (code) => resolve(code ?? 1));
-    child.on('error', (error) => {
-      append(errPath, `\n[${nowIso()}] source refresh failed to start: ${error.message}\n`);
-      resolve(1);
-    });
-  });
-  clearTimeout(timer);
 
   const sourceFinishedAt = nowIso();
   const directoryCandidateRefresh = refreshDirectoryCandidates(reportDate);
@@ -548,9 +478,6 @@ async function runOnce(args) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (!fs.existsSync(sourceRefreshScript)) {
-    throw new Error(`Missing source-skill-refresh script: ${sourceRefreshScript}`);
-  }
 
   do {
     try {

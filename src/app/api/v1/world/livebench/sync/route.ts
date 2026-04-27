@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { deleteWorldApiSnapshots } from '@/lib/world/api-snapshot';
 import { syncWorldLiveBenchArena } from '@/lib/world/runtime';
 import type { WorldScene } from '@/lib/world/types';
 
@@ -9,7 +10,9 @@ export async function POST(request: Request) {
     const scene = (url.searchParams.get('scene') as WorldScene | null) || 'global';
     const allowModelRefresh =
       url.searchParams.get('batch') === '1' || request.headers.get('x-world-batch-refresh') === '1';
-    return NextResponse.json(await syncWorldLiveBenchArena(scene, { allowModelRefresh }), {
+    const result = await syncWorldLiveBenchArena(scene, { allowModelRefresh });
+    await deleteWorldApiSnapshots(scene, ['livebench_questions', 'livebench_evaluation']);
+    return NextResponse.json(result, {
       headers: {
         'Cache-Control': 'no-store, max-age=0',
       },
