@@ -802,15 +802,27 @@ export default function DashboardClient({
     return () => window.clearInterval(timer);
   }, [globeAutoPauseUntil, markers]);
 
-  const alertNodes = useMemo(
-    () =>
-      (state?.nodes || [])
-        .filter((node) => node.node_type === 'hotspot' && node.severity >= 4)
-        .filter((node) => isAlertBoardCandidate(node))
-        .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score)
-        .slice(0, 12),
-    [state],
-  );
+  const alertBoard = useMemo(() => {
+    const candidates = (state?.nodes || [])
+      .filter((node) => isAlertBoardCandidate(node))
+      .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score);
+    const highNodes = candidates.filter((node) => node.node_type === 'hotspot' && node.severity >= 4).slice(0, 12);
+    if (highNodes.length > 0) {
+      return {
+        title: '红色热点',
+        titleClassName: 'text-red-500',
+        emptyText: '当前没有明显升温到需要单独盯住的条目。',
+        nodes: highNodes,
+      };
+    }
+    return {
+      title: '当前信号',
+      titleClassName: 'text-slate-500',
+      emptyText: '当前分类还没有需要单独盯住的条目。',
+      nodes: candidates.slice(0, 12),
+    };
+  }, [state]);
+  const alertNodes = alertBoard.nodes;
 
   const markerLevelCounts = useMemo(
     () =>
@@ -1084,7 +1096,9 @@ export default function DashboardClient({
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-medium tracking-[0.08em] text-red-500">红色热点</p>
+                    <p className={`text-[11px] font-medium tracking-[0.08em] ${alertBoard.titleClassName}`}>
+                      {alertBoard.title}
+                    </p>
                     <span className="text-[11px] text-slate-400">{alertNodes.length} 条</span>
                   </div>
                   {alertNodes.length > 0 ? (
@@ -1114,7 +1128,7 @@ export default function DashboardClient({
                     ))
                   ) : (
                     <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm leading-7 text-slate-500">
-                      当前没有明显升温到需要单独盯住的条目。
+                      {alertBoard.emptyText}
                     </div>
                   )}
                 </div>

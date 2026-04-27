@@ -1531,11 +1531,12 @@ export default function PageClient({
     }
   }, [activeSignalId, markers]);
 
-  const alertNodes = useMemo(
+  const alertBoard = useMemo(
     () => {
-      const nodes = (state?.nodes || [])
-        .filter((node) => node.node_type === 'hotspot')
-        .filter((node) => isAlertBoardCandidate(node));
+      const candidateNodes = (state?.nodes || [])
+        .filter((node) => isAlertBoardCandidate(node))
+        .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score);
+      const nodes = candidateNodes.filter((node) => node.node_type === 'hotspot');
       const byLevel = {
         high: nodes
           .filter((node) => node.display_level === 'high')
@@ -1550,10 +1551,21 @@ export default function PageClient({
           .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score)
           .slice(0, 28),
       };
-      return [...byLevel.high, ...byLevel.elevated, ...byLevel.monitoring].slice(0, DASHBOARD_VIEW_LIMIT);
+      const hotspotNodes = [...byLevel.high, ...byLevel.elevated, ...byLevel.monitoring].slice(0, DASHBOARD_VIEW_LIMIT);
+      if (hotspotNodes.length > 0) {
+        return {
+          emptyText: '当前没有明显升温信号，普通监测继续留在地图和实时看板里。',
+          nodes: hotspotNodes,
+        };
+      }
+      return {
+        emptyText: '当前分类还没有需要单独盯住的条目。',
+        nodes: candidateNodes.slice(0, DASHBOARD_VIEW_LIMIT),
+      };
     },
     [state],
   );
+  const alertNodes = alertBoard.nodes;
 
   const mergedSignalPool = useMemo(() => {
     const merged = new Map<string, WorldStateResponse['top_signals'][number]>();
@@ -1966,7 +1978,7 @@ export default function PageClient({
                       </article>
                   )) : (
                     <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 p-4 text-sm leading-7 text-slate-500">
-                      当前没有明显升温信号，普通监测继续留在地图和实时看板里。
+                      {alertBoard.emptyText}
                     </div>
                   )}
                 </div>
