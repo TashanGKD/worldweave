@@ -627,7 +627,7 @@ export default function DashboardClient({
   const [state, setState] = useState<WorldDashboardResponse | null>(normalizedInitialState);
   const [subworlds, setSubworlds] = useState<WorldSubworld[]>(normalizedInitialSubworlds);
   const [questionPool, setQuestionPool] = useState<LiveBenchQuestionPreview[]>(normalizedInitialQuestionPool);
-  const [globeTimeMode, setGlobeTimeMode] = useState<'today' | 'memory30'>('memory30');
+  const [globeTimeMode, setGlobeTimeMode] = useState<'today' | 'memory30'>('today');
   const [activeSignalId, setActiveSignalId] = useState<string | null>(null);
   const [globeAutoPauseUntil, setGlobeAutoPauseUntil] = useState<number>(0);
   const [skillEntryCopied, setSkillEntryCopied] = useState(false);

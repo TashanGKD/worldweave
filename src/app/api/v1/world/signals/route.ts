@@ -35,7 +35,7 @@ function toSignalCard(signal: WorldEvidenceSignal) {
   return {
     id: signal.id,
     title: signal.display_title || signal.title,
-    summary: signal.display_summary || signal.summary || signal.urgency_reason || '',
+    summary: signal.summary || signal.display_summary || signal.urgency_reason || '',
     scene: signal.scene,
     display_level: signal.display_level,
     severity: signal.severity,
@@ -43,7 +43,9 @@ function toSignalCard(signal: WorldEvidenceSignal) {
     published_at: signal.published_at,
     updated_at: signal.published_at,
     tags: signal.tags || [],
+    source_name: signal.source_name || null,
     url: signal.source_url || null,
+    source_url: signal.source_url || null,
   };
 }
 

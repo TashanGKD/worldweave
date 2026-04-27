@@ -104,14 +104,14 @@ function toTopicLabArticle(input: {
   sourceFeedName: string;
 }): TopicLabSourceFeedArticle {
   const title = input.signal.display_title || input.signal.title || '世界脉络信号';
-  const description = input.signal.display_summary || input.signal.summary || input.signal.urgency_reason || '';
+  const description = input.signal.summary || input.signal.display_summary || input.signal.urgency_reason || '';
   const url =
     input.signal.source_url ||
     (input.origin ? `${input.origin}/?scene=${encodeURIComponent(input.signal.scene || 'global')}` : '');
   return {
     id: stableNumericId(input.signal.id),
     title,
-    source_feed_name: input.sourceFeedName,
+    source_feed_name: input.signal.source_name || input.sourceFeedName,
     source_type: input.sourceType,
     category: topicLabCategory(input.signal),
     url,
@@ -146,9 +146,11 @@ export async function GET(request: Request) {
     const sourceFeedName = url.searchParams.get('source_feed_name') || '世界脉络';
     const origin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
     const dashboard = await readDashboardForTopicLab(scene, request);
-    const signals = dedupeSignals([...(dashboard.top_signals || []), ...(dashboard.graph_signals || [])]).sort(
-      (left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime(),
-    );
+    const signals = dedupeSignals([
+      ...(dashboard.top_signals || []),
+      ...(dashboard.graph_signals || []),
+      ...(dashboard.knowledge_signals || []),
+    ]).sort((left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime());
     const filteredSignals = signals.filter((signal) => signalMatchesQuery(signal, query) && signalMatchesCategory(signal, category));
     const list = filteredSignals
       .map((signal) => toTopicLabArticle({ signal, origin, sourceType, sourceFeedName }))
