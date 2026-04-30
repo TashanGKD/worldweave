@@ -127,16 +127,19 @@ function previewTime(value: string | null | undefined) {
   return Number.isFinite(time) ? time : 0;
 }
 
+function resolvedPreviewTime(preview: LiveBenchQuestionPreview) {
+  const officialTime = previewTime(preview.official_resolved_at);
+  if (officialTime > 0 && officialTime <= Date.now()) return officialTime;
+  return previewTime(preview.resolve_at);
+}
+
 function sortQuestionPreviewsForApi(
   previews: LiveBenchQuestionPreview[],
   status?: 'active' | 'watchlist' | 'resolved',
 ) {
   return [...previews].sort((left, right) => {
     if (status === 'resolved') {
-      return (
-        previewTime(right.official_resolved_at || right.resolve_at) -
-        previewTime(left.official_resolved_at || left.resolve_at)
-      );
+      return resolvedPreviewTime(right) - resolvedPreviewTime(left);
     }
     if (status === 'active' || status === 'watchlist') {
       return previewTime(left.resolve_at) - previewTime(right.resolve_at);
@@ -146,10 +149,7 @@ function sortQuestionPreviewsForApi(
     const rightRank = rank[right.status] ?? 3;
     if (leftRank !== rightRank) return leftRank - rightRank;
     if (left.status === 'resolved' || right.status === 'resolved') {
-      return (
-        previewTime(right.official_resolved_at || right.resolve_at) -
-        previewTime(left.official_resolved_at || left.resolve_at)
-      );
+      return resolvedPreviewTime(right) - resolvedPreviewTime(left);
     }
     return previewTime(left.resolve_at) - previewTime(right.resolve_at);
   });
