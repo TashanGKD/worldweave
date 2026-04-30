@@ -132,7 +132,7 @@ function resolvedPreviewTime(preview: LiveBenchQuestionPreview) {
   if (officialTime > 0 && officialTime <= Date.now()) return officialTime;
   const resolveTime = previewTime(preview.resolve_at);
   if (resolveTime > 0 && resolveTime <= Date.now()) return resolveTime;
-  return previewTime(preview.updated_at);
+  return 0;
 }
 
 function sortQuestionPreviewsForApi(
