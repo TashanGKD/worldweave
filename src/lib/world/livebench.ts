@@ -3175,6 +3175,114 @@ function retainRecentOpenQuestions(previous: LiveQuestion[]) {
     .filter((question) => shouldKeepQuestionForArenaSync(question));
 }
 
+function applyPolymarketSnapshotToQuestion(question: LiveQuestion, snapshot: PolymarketMarketSnapshot): LiveQuestion {
+  const next: LiveQuestion = {
+    ...question,
+    source_question_id: snapshot.conditionId || question.source_question_id,
+    title: question.title || snapshot.title,
+    platform_probability_yes: snapshot.probabilityYes,
+    platform_probability_updated_at: nowIso(),
+    platform_commentary: snapshot.commentary.length ? snapshot.commentary : question.platform_commentary,
+    platform_participants: snapshot.participants.length ? snapshot.participants : question.platform_participants,
+    source_note: snapshot.sourceNote || question.source_note,
+    platform_context: snapshot.platformContext || question.platform_context,
+    updated_at: nowIso(),
+  };
+
+  if (snapshot.resolveAt) {
+    next.freeze_at = snapshot.resolveAt;
+    next.close_at = snapshot.resolveAt;
+    next.resolve_at = snapshot.resolveAt;
+  }
+
+  if (snapshot.officialOutcome) {
+    next.official_outcome = snapshot.officialOutcome;
+    next.official_resolved_at = snapshot.officialResolvedAt || snapshot.resolveAt || nowIso();
+  }
+
+  next.status = classifyQuestionStatus(next);
+  return next;
+}
+
+function mapManifoldResolutionToSide(resolution: unknown): LiveQuestionSide | null {
+  const text = String(resolution || '').trim().toUpperCase();
+  if (text === 'YES') return 'yes';
+  if (text === 'NO') return 'no';
+  return null;
+}
+
+async function refreshRetainedQuestionFromPlatform(question: LiveQuestion): Promise<LiveQuestion> {
+  if (question.official_outcome) return question;
+
+  if (question.source_platform === 'polymarket') {
+    const slug = polymarketSlugFromUrl(question.origin_url || question.platform_question_url || '');
+    if (!slug) return question;
+    try {
+      const snapshot = await fetchPolymarketSnapshotBySlug(slug);
+      return snapshot ? applyPolymarketSnapshotToQuestion(question, snapshot) : question;
+    } catch {
+      return question;
+    }
+  }
+
+  if (question.source_platform === 'manifold') {
+    const contractId = String(question.source_question_id || '').trim();
+    if (!contractId) return question;
+    try {
+      const item = await fetchJsonWithTimeout<Record<string, unknown>>(
+        `https://api.manifold.markets/v0/market/${encodeURIComponent(contractId)}`,
+        {
+          headers: { 'User-Agent': 'world-source-knowledge/1.0' },
+        },
+        10000,
+      );
+      if (!item) return question;
+
+      const probability = Number(item.probability);
+      const closeTime = Number(item.closeTime || item.resolutionTime || 0);
+      const officialOutcome = item.isResolved ? mapManifoldResolutionToSide(item.resolution) : null;
+      const next: LiveQuestion = {
+        ...question,
+        platform_probability_yes: Number.isFinite(probability) ? clamp(probability, 0.01, 0.99) : question.platform_probability_yes,
+        platform_probability_updated_at: item.lastUpdatedTime ? new Date(Number(item.lastUpdatedTime)).toISOString() : nowIso(),
+        updated_at: nowIso(),
+      };
+
+      if (closeTime > 0) {
+        const closeAt = new Date(closeTime).toISOString();
+        next.freeze_at = closeAt;
+        next.close_at = closeAt;
+        next.resolve_at = closeAt;
+      }
+      if (officialOutcome) {
+        next.official_outcome = officialOutcome;
+        next.official_resolved_at = item.resolutionTime ? new Date(Number(item.resolutionTime)).toISOString() : next.resolve_at || nowIso();
+      }
+
+      next.status = classifyQuestionStatus(next);
+      return next;
+    } catch {
+      return question;
+    }
+  }
+
+  return question;
+}
+
+async function refreshRetainedOpenQuestions(previous: LiveQuestion[]) {
+  const retained = retainRecentOpenQuestions(previous);
+  const refreshed = await Promise.all(retained.map((question) => refreshRetainedQuestionFromPlatform(question)));
+  return {
+    questions: refreshed,
+    resolvedCount: refreshed.filter((question) => Boolean(question.official_outcome)).length,
+    scheduleUpdatedCount: refreshed.filter(
+      (question, index) =>
+        !question.official_outcome &&
+        (question.resolve_at !== retained[index]?.resolve_at || question.close_at !== retained[index]?.close_at),
+    ).length,
+  };
+}
+
 function buildManualVerifiedQuestions() {
   return MANUAL_VERIFIED_QUESTION_SPECS.map((spec) => {
     const question: LiveQuestion = {
@@ -5676,7 +5784,7 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
   const manifoldFallback = buildDiscoveryFallbackQuestions(metaforecast.discoveries, 'manifold');
   const polymarketFallback = buildDiscoveryFallbackQuestions(metaforecast.discoveries, 'polymarket', polymarketSnapshotMap);
   const manualVerifiedQuestions = buildManualVerifiedQuestions();
-  const retainedOpenQuestions = retainRecentOpenQuestions(storeWithArchive.questions);
+  const retainedOpenQuestions = await refreshRetainedOpenQuestions(storeWithArchive.questions);
 
   const merged = new Map<string, LiveQuestion>();
   const semanticKeys = new Set<string>();
@@ -5687,7 +5795,7 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
     ...manifoldFallback,
     ...polymarketFallback,
     ...manualVerifiedQuestions,
-    ...retainedOpenQuestions,
+    ...retainedOpenQuestions.questions,
   ]) {
     const semanticKey = normalizeTag(`${question.title}|${question.region_hint}|${question.topic_bucket}`);
     if (semanticKeys.has(semanticKey)) continue;
@@ -5733,7 +5841,9 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
         `直连入池：Manifold ${manifold.length} 题、Polymarket ${polymarket.length} 题`,
         `聚合补位：Manifold ${manifoldFallback.length} 题、Polymarket ${polymarketFallback.length} 题`,
         manualVerifiedQuestions.length ? `人工核验已结算保留：${manualVerifiedQuestions.length} 题` : '',
-        retainedOpenQuestions.length ? `旧题保留：${retainedOpenQuestions.length} 题` : '',
+        retainedOpenQuestions.questions.length ? `旧题保留：${retainedOpenQuestions.questions.length} 题` : '',
+        retainedOpenQuestions.resolvedCount ? `旧题官方结算刷新：${retainedOpenQuestions.resolvedCount} 题` : '',
+        retainedOpenQuestions.scheduleUpdatedCount ? `旧题到期时间校正：${retainedOpenQuestions.scheduleUpdatedCount} 题` : '',
         retainedResolved.length ? `最近已结算保留：${retainedResolved.length} 题` : '',
         settlementPendingCount ? `到期待核票：${settlementPendingCount} 题` : '',
       ].filter(Boolean).join('；'),
