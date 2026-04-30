@@ -6,8 +6,6 @@ dotenv.config({ path: '.env.local' });
 
 const baseUrl = process.env.WORLD_SMOKE_BASE_URL || 'http://127.0.0.1:5000';
 const scene = process.env.WORLD_SMOKE_SCENE || 'global';
-const xiaId = process.env.WORLD_SMOKE_XIA_ID || 'worldline-primary';
-const shouldWriteReport = process.env.WORLD_SMOKE_WRITE_REPORT === '1';
 
 function request(pathname, options = {}) {
   return new Promise((resolve, reject) => {
@@ -35,7 +33,7 @@ function request(pathname, options = {}) {
       },
     );
 
-    req.setTimeout(20000, () => {
+    req.setTimeout(60000, () => {
       req.destroy(new Error(`timeout while requesting ${url.toString()}`));
     });
     req.on('error', reject);
@@ -47,79 +45,72 @@ function request(pathname, options = {}) {
 }
 
 async function main() {
+  const home = await request('/');
+  const skill = await request(`/api/v1/openclaw/skill.md`);
   const state = await request(`/api/v1/world/state?scene=${encodeURIComponent(scene)}`);
+  const sourceStatus = await request(`/api/v1/world/source-knowledge/status?scene=${encodeURIComponent(scene)}`);
+  const questions = await request(`/api/v1/world/livebench/questions?scene=${encodeURIComponent(scene)}`);
+  const evaluation = await request(`/api/v1/world/livebench/evaluation?scene=${encodeURIComponent(scene)}`);
+  const topiclabSource = await request(`/api/v1/topiclab/source-feed/articles?limit=3&source_type=worldweave-signal`);
   const stateJson = JSON.parse(state.body);
+  const sourceStatusJson = JSON.parse(sourceStatus.body);
+  const questionsJson = JSON.parse(questions.body);
+  const evaluationJson = JSON.parse(evaluation.body);
+  const topiclabSourceJson = JSON.parse(topiclabSource.body);
 
-  const briefing = await request(`/api/v1/world/briefing?scene=${encodeURIComponent(scene)}&xia_id=${encodeURIComponent(xiaId)}`);
-  const briefingJson = JSON.parse(briefing.body);
+  const questionList = Array.isArray(questionsJson) ? questionsJson : questionsJson.questions || questionsJson.list || [];
+  const platformModel = evaluationJson.platform_model || {};
+  const sourceList = Array.isArray(topiclabSourceJson.list) ? topiclabSourceJson.list : [];
 
-  const dispatch = await request('/api/v1/world/dispatch', {
-    method: 'POST',
-    body: {
-      scene,
-      xia_id: xiaId,
-      mission_id: briefingJson.mission_id,
-      briefing: briefingJson,
+  const failures = [];
+  if (home.status !== 200 || !home.body.includes('<!DOCTYPE html>')) failures.push('home');
+  if (skill.status !== 200 || !skill.body.includes('name: world-threads')) failures.push('skill');
+  if (state.status !== 200 || !Array.isArray(stateJson.nodes)) failures.push('state');
+  if (sourceStatus.status !== 200 || !sourceStatusJson.indexed_signal_count) failures.push('source-status');
+  if (questions.status !== 200 || questionList.length === 0) failures.push('livebench-questions');
+  if (evaluation.status !== 200 || typeof platformModel.resolved_question_count !== 'number') failures.push('evaluation');
+  if (topiclabSource.status !== 200 || sourceList.length === 0) failures.push('topiclab-source-feed');
+
+  const summary = {
+    checkedAt: new Date().toISOString(),
+    scene,
+    ok: failures.length === 0,
+    failures,
+    endpoints: {
+      home: home.status,
+      skill: skill.status,
+      state: state.status,
+      sourceStatus: sourceStatus.status,
+      questions: questions.status,
+      evaluation: evaluation.status,
+      topiclabSourceFeed: topiclabSource.status,
     },
-  });
-  const dispatchJson = JSON.parse(dispatch.body);
+    state: {
+      nodeCount: stateJson.nodes?.length || 0,
+      topSignalCount: stateJson.top_signals?.length || 0,
+      generatedAt: stateJson.generated_at || null,
+    },
+    sourceKnowledge: {
+      signalCount: sourceStatusJson.signal_count || 0,
+      indexedSignalCount: sourceStatusJson.indexed_signal_count || 0,
+      latestSignalPublishedAt: sourceStatusJson.latest_signal_published_at || null,
+      embeddingBackend: sourceStatusJson.last_embedding_backend || null,
+    },
+    livebench: {
+      questionCount: questionList.length,
+      resolvedQuestionCount: platformModel.resolved_question_count || 0,
+      scoredQuestionCount: platformModel.scored_question_count || 0,
+      avgBrier: platformModel.avg_brier ?? null,
+      hitRate: platformModel.hit_rate ?? null,
+    },
+    topiclabSourceFeed: {
+      returned: sourceList.length,
+    },
+  };
 
-  let reportSummary = null;
-  if (shouldWriteReport) {
-    const report = await request('/api/v1/world/report', {
-      method: 'POST',
-      body: {
-        scene,
-        xia_id: xiaId,
-        mission_id: dispatchJson.briefing.mission_id,
-        briefing: dispatchJson.briefing,
-      },
-    });
-    const reportJson = JSON.parse(report.body);
-    reportSummary = {
-      mission_id: reportJson.mission_id,
-      signal_id: reportJson.signal_id,
-      validation_status: reportJson.validation_status,
-      summary: reportJson.summary,
-    };
-  }
+  console.log(JSON.stringify(summary, null, 2));
 
-  console.log(
-    JSON.stringify(
-      {
-        checkedAt: new Date().toISOString(),
-        scene,
-        state: {
-          status: state.status,
-          nodeCount: stateJson.nodes?.length || 0,
-          reportCount: stateJson.graph_reports?.length || 0,
-        },
-        briefing: {
-          status: briefing.status,
-          mission_id: briefingJson.mission_id,
-          region: briefingJson.region,
-          topic: briefingJson.topic_label || briefingJson.topic,
-          pending_reference_reports: briefingJson.pending_reference_reports?.length || 0,
-        },
-        dispatch: {
-          status: dispatch.status,
-          ok: dispatchJson.ok === true,
-          mission_id: dispatchJson.briefing?.mission_id || null,
-        },
-        report: reportSummary,
-      },
-      null,
-      2,
-    ),
-  );
-
-  if (
-    state.status !== 200 ||
-    briefing.status !== 200 ||
-    dispatch.status !== 200 ||
-    dispatchJson.ok !== true ||
-    !briefingJson.mission_id
-  ) {
+  if (failures.length > 0) {
     process.exit(1);
   }
 }

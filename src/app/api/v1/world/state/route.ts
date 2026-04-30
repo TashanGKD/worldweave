@@ -100,6 +100,7 @@ export async function GET(request: Request) {
     const requestOrigin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
     const cachedState = await withCachedStateTimeout(getCachedWorldDashboardState(scene), null);
     const cachedStateRenderable = isRenderableDashboardState(cachedState);
+    const cachedStateFresh = isDashboardStateFresh(cachedState);
     if (!allowModelRefresh && cachedState && cachedStateRenderable) {
       return NextResponse.json(
         {
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
           headers: {
             'Cache-Control': 'no-store, max-age=0',
             'x-world-snapshot': '1',
-            ...(isDashboardStateFresh(cachedState) ? {} : { 'x-world-stale-snapshot': '1' }),
+            ...(cachedStateFresh ? {} : { 'x-world-stale-snapshot': '1' }),
           },
         },
       );

@@ -103,8 +103,8 @@
     "unstable": 74,
     "blocked_or_unknown": 15
   },
-  "hub_probe_ok_count": 73,
-  "hub_probe_error_count": 10,
+  "hub_probe_ok_count": 69,
+  "hub_probe_error_count": 14,
   "hub_scan_count": 75,
   "hub_scan_hits": [
     {

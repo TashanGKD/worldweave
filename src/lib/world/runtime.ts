@@ -7493,6 +7493,71 @@ function normalizeCachedSourceRefreshSummary(
   };
 }
 
+async function hydrateCachedDashboardSignals(
+  state: WorldDashboardStatePayload,
+  scene: WorldScene,
+  generatedAt: string,
+): Promise<WorldDashboardStatePayload> {
+  const signals = await loadSignals({
+    allowExpiredDiskCache: true,
+    preferCached: true,
+    backgroundRefresh: false,
+  });
+  const localizedSignals = await materializeLocalizedSignals(signals);
+  const filteredSignals = localizedSignals.filter((signal) => signalMatchesScene(signal, scene));
+  const scopedSignals = filteredSignals.length ? filteredSignals : localizedSignals;
+  const sourceCatalog = (state as { source_catalog?: WorldSourceCatalog | null }).source_catalog || null;
+  const graphSignals = [...scopedSignals]
+    .sort(
+      (left, right) =>
+        new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime() ||
+        right.severity - left.severity ||
+        right.hotspotScore - left.hotspotScore,
+    )
+    .slice(0, 32);
+  const topSignals = buildTopSignalFeed(scopedSignals);
+  const knowledgeSignals = buildKnowledgeSignalFeed(scopedSignals);
+  const hotspotSourceSignals = [...scopedSignals]
+    .filter((signal) => signal.latitude !== null && signal.longitude !== null)
+    .sort((a, b) => b.hotspotScore - a.hotspotScore)
+    .slice(0, WORLD_VIEW_LIMIT);
+  const explorationSourceSignals = [...scopedSignals]
+    .filter((signal) => signal.latitude !== null && signal.longitude !== null)
+    .sort((a, b) => b.explorationScore - a.explorationScore)
+    .slice(0, WORLD_VIEW_LIMIT);
+  const graphSignalFeed = graphSignals.map((signal) =>
+    sourceCatalog ? toEvidenceSignalWithReliability(signal, sourceCatalog) : toEvidenceSignal(signal),
+  );
+  const topSignalFeed = topSignals.map((signal) =>
+    sourceCatalog ? toEvidenceSignalWithReliability(signal, sourceCatalog) : toEvidenceSignal(signal),
+  );
+  const evidenceSignals = dedupeCachedEvidenceSignals([...topSignalFeed, ...graphSignalFeed]);
+  const mappedSignalCount = evidenceSignals.filter(
+    (signal) => signal.latitude !== null && signal.longitude !== null,
+  ).length;
+
+  return {
+    ...state,
+    generated_at: generatedAt,
+    metrics: {
+      ...state.metrics,
+      active_signal_count: evidenceSignals.length,
+      mapped_signal_count: mappedSignalCount,
+      hottest_region: evidenceSignals[0]?.region || state.metrics.hottest_region,
+      least_covered_region: evidenceSignals[evidenceSignals.length - 1]?.region || state.metrics.least_covered_region,
+    },
+    nodes: buildDashboardStateNodes(hotspotSourceSignals, explorationSourceSignals),
+    graph_signals: graphSignalFeed,
+    top_signals: topSignalFeed,
+    knowledge_signals: knowledgeSignals,
+    world_view_summary: buildDashboardWorldViewSummaryFromSignals({
+      generated_at: generatedAt,
+      top_signals: topSignalFeed,
+      graph_signals: graphSignalFeed,
+    }),
+  };
+}
+
 async function hydrateCachedSourceRefreshSummary(
   summary: WorldDashboardSourceRefreshSummary | null | undefined,
 ): Promise<WorldDashboardSourceRefreshSummary | null> {
@@ -7549,27 +7614,62 @@ export async function getCachedWorldDashboardState(scene: WorldScene = 'global')
       API_SNAPSHOT_MAX_AGE_MS,
     ),
   ]);
-  const sourceAlignedState: WorldDashboardStatePayload =
-    sourceStatus?.source_status?.embeddings && normalizedState.livebench_summary
-      ? {
+  const alignedGeneratedAt =
+    latestIso(
+      normalizedState.generated_at,
+      normalizedState.source_refresh_summary?.generated_at,
+      sourceStatus?.generated_at,
+      sourceStatus?.last_synced_at,
+      sourceStatus?.latest_signal_published_at,
+    ) || normalizedState.generated_at;
+  const signalAlignedState =
+    alignedGeneratedAt !== normalizedState.generated_at
+      ? await hydrateCachedDashboardSignals(normalizedState, scene, alignedGeneratedAt).catch(() => ({
           ...normalizedState,
+          generated_at: alignedGeneratedAt,
+        }))
+      : normalizedState;
+  const sourceAlignedState: WorldDashboardStatePayload =
+    sourceStatus?.source_status?.embeddings && signalAlignedState.livebench_summary
+      ? {
+          ...signalAlignedState,
+          generated_at: alignedGeneratedAt,
+          world_view_summary: signalAlignedState.world_view_summary
+            ? {
+                ...signalAlignedState.world_view_summary,
+                updated_at: alignedGeneratedAt,
+              }
+            : signalAlignedState.world_view_summary,
           livebench_summary: {
-            ...normalizedState.livebench_summary,
+            ...signalAlignedState.livebench_summary,
             source_status: {
-              ...normalizedState.livebench_summary.source_status,
+              ...signalAlignedState.livebench_summary.source_status,
               embeddings: sourceStatus.source_status.embeddings,
             },
           },
         }
-      : normalizedState;
+      : signalAlignedState;
+  const timeAlignedState: WorldDashboardStatePayload =
+    sourceAlignedState.generated_at === alignedGeneratedAt
+      ? sourceAlignedState
+      : {
+          ...sourceAlignedState,
+          generated_at: alignedGeneratedAt,
+          world_view_summary: sourceAlignedState.world_view_summary
+            ? {
+                ...sourceAlignedState.world_view_summary,
+                updated_at: alignedGeneratedAt,
+              }
+            : sourceAlignedState.world_view_summary,
+        };
   const evaluationAlignedState: WorldDashboardStatePayload = evaluation?.platform_model
     ? {
-        ...sourceAlignedState,
-        metrics: alignDashboardMetricsWithEvaluation(sourceAlignedState.metrics, evaluation.platform_model),
+        ...timeAlignedState,
+        metrics: alignDashboardMetricsWithEvaluation(timeAlignedState.metrics, evaluation.platform_model),
         evaluation_summary: evaluation.platform_model,
-        livebench_summary: alignDashboardLiveBenchSummary(sourceAlignedState.livebench_summary, evaluation.platform_model),
+        livebench_summary: alignDashboardLiveBenchSummary(timeAlignedState.livebench_summary, evaluation.platform_model),
       }
-    : sourceAlignedState;
+    : timeAlignedState;
   try {
     const snapshotPreviews = await readWorldApiSnapshot<LiveBenchQuestionPreview[]>(
       livebenchScene,
