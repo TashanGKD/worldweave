@@ -122,6 +122,39 @@ function sanitizeQuestionPreview(preview: LiveBenchQuestionPreview): LiveBenchQu
   };
 }
 
+function previewTime(value: string | null | undefined) {
+  const time = new Date(value || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+function sortQuestionPreviewsForApi(
+  previews: LiveBenchQuestionPreview[],
+  status?: 'active' | 'watchlist' | 'resolved',
+) {
+  return [...previews].sort((left, right) => {
+    if (status === 'resolved') {
+      return (
+        previewTime(right.official_resolved_at || right.resolve_at) -
+        previewTime(left.official_resolved_at || left.resolve_at)
+      );
+    }
+    if (status === 'active' || status === 'watchlist') {
+      return previewTime(left.resolve_at) - previewTime(right.resolve_at);
+    }
+    const rank: Record<string, number> = { active: 0, watchlist: 1, resolved: 2 };
+    const leftRank = rank[left.status] ?? 3;
+    const rightRank = rank[right.status] ?? 3;
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    if (left.status === 'resolved' || right.status === 'resolved') {
+      return (
+        previewTime(right.official_resolved_at || right.resolve_at) -
+        previewTime(left.official_resolved_at || left.resolve_at)
+      );
+    }
+    return previewTime(left.resolve_at) - previewTime(right.resolve_at);
+  });
+}
+
 function toXiaFacingQuestionPreview(preview: LiveBenchQuestionPreview) {
   const safePreview = sanitizeQuestionPreview(preview);
   return {
@@ -380,7 +413,8 @@ export async function GET(request: Request) {
       previews: LiveBenchQuestionPreview[],
       headers: Record<string, string>,
     ) => {
-      const responsePreviews = (limit ? previews.slice(0, limit) : previews).map(sanitizeQuestionPreview);
+      const sortedPreviews = sortQuestionPreviewsForApi(previews, normalizedStatus);
+      const responsePreviews = (limit ? sortedPreviews.slice(0, limit) : sortedPreviews).map(sanitizeQuestionPreview);
       return NextResponse.json(xiaFacing ? responsePreviews.map(toXiaFacingQuestionPreview) : responsePreviews, {
         headers: {
           'Cache-Control': 'no-store, max-age=0',
