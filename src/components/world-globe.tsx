@@ -160,6 +160,7 @@ export default function WorldGlobe({ markers, trails, activeMarkerId, onSelectMa
   const containerRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<GlobeInstance | null>(null);
   const resumeRotateTimerRef = useRef<number | null>(null);
+  const [globeReady, setGlobeReady] = useState(false);
   const [globeFailed, setGlobeFailed] = useState(false);
 
   const globeMarkers = useMemo<GlobeMarker[]>(
@@ -229,6 +230,7 @@ export default function WorldGlobe({ markers, trails, activeMarkerId, onSelectMa
       if (!containerRef.current || globeRef.current || globeFailed) return;
 
       try {
+        setGlobeReady(false);
         if (!hasWebGlSupport()) {
           throw new Error('WebGL unavailable');
         }
@@ -278,9 +280,13 @@ export default function WorldGlobe({ markers, trails, activeMarkerId, onSelectMa
         setSize();
         resizeObserver = new ResizeObserver(setSize);
         resizeObserver.observe(container);
+        if (mounted) {
+          setGlobeReady(true);
+        }
       } catch (error) {
         console.warn('[world-globe] failed to initialize globe, falling back to static view', error);
         if (mounted) {
+          setGlobeReady(false);
           setGlobeFailed(true);
         }
       }
@@ -531,6 +537,38 @@ export default function WorldGlobe({ markers, trails, activeMarkerId, onSelectMa
     <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(33,199,168,0.1)_0%,rgba(15,23,42,0)_28%),linear-gradient(180deg,#031018_0%,#07131c_100%)]">
       <div className="pointer-events-none absolute inset-0 opacity-70 [background-image:linear-gradient(rgba(33,199,168,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(33,199,168,0.08)_1px,transparent_1px)] [background-size:40px_40px]" />
       <div ref={containerRef} className="relative h-full w-full" />
+
+      {!globeReady ? (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[radial-gradient(circle_at_50%_42%,rgba(18,78,96,0.42)_0%,rgba(3,16,24,0.2)_54%,rgba(2,6,23,0.05)_100%)]">
+          <div className="relative aspect-square w-[72%] max-w-[34rem] rounded-full border border-emerald-300/24 bg-[radial-gradient(circle_at_44%_34%,rgba(45,212,191,0.2)_0%,rgba(8,47,73,0.24)_34%,rgba(2,6,23,0.94)_74%)] shadow-[0_0_80px_rgba(45,212,191,0.18)]">
+            <div className="absolute inset-[8%] rounded-full border border-emerald-200/10" />
+            <div className="absolute inset-[20%] rounded-full border border-emerald-200/10" />
+            <div className="absolute left-1/2 top-[7%] h-[86%] w-px -translate-x-1/2 bg-emerald-200/12" />
+            <div className="absolute left-[11%] top-1/2 h-px w-[78%] -translate-y-1/2 bg-emerald-200/12" />
+            {fallbackProjectedMarkers.slice(0, 18).map(({ marker, projection }) => {
+              const display = DISPLAY_LEVEL_COLORS[marker.displayLevel] || DISPLAY_LEVEL_COLORS.monitoring;
+              return (
+                <span
+                  key={`loading-${marker.id}`}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+                  style={{
+                    left: `${projection.x}%`,
+                    top: `${projection.y}%`,
+                    width: marker.displayLevel === 'high' ? 12 : 9,
+                    height: marker.displayLevel === 'high' ? 12 : 9,
+                    background: display.color,
+                    boxShadow: `0 0 18px ${display.glow}`,
+                    opacity: Math.max(0.46, marker.ageOpacity ?? 1),
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div className="absolute bottom-4 left-4 rounded-full border border-emerald-400/20 bg-slate-950/72 px-3.5 py-2 text-xs text-slate-200 shadow-[0_16px_36px_rgba(2,6,23,0.45)] backdrop-blur">
+            地图加载中 · 信号 {markers.length}
+          </div>
+        </div>
+      ) : null}
 
       <div className="absolute left-4 top-4 z-10 rounded-full border border-emerald-400/20 bg-slate-950/72 px-4 py-2.5 shadow-[0_16px_36px_rgba(2,6,23,0.45)] backdrop-blur">
         <div className="flex flex-wrap items-center gap-4 text-xs text-slate-200">

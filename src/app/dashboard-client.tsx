@@ -41,7 +41,24 @@ import type {
   WorldStateNode,
 } from '@/lib/world/types';
 
-const WorldGlobe = dynamic(() => import('@/components/world-globe'), { ssr: false });
+function WorldGlobeShell() {
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(18,78,96,0.42)_0%,rgba(3,16,24,0.2)_54%,rgba(2,6,23,0.96)_100%)]">
+      <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(rgba(33,199,168,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(33,199,168,0.08)_1px,transparent_1px)] [background-size:40px_40px]" />
+      <div className="absolute left-1/2 top-1/2 aspect-square w-[72%] max-w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-300/24 bg-[radial-gradient(circle_at_44%_34%,rgba(45,212,191,0.18)_0%,rgba(8,47,73,0.24)_34%,rgba(2,6,23,0.96)_74%)] shadow-[0_0_80px_rgba(45,212,191,0.18)]">
+        <div className="absolute inset-[8%] rounded-full border border-emerald-200/10" />
+        <div className="absolute inset-[20%] rounded-full border border-emerald-200/10" />
+        <div className="absolute left-1/2 top-[7%] h-[86%] w-px -translate-x-1/2 bg-emerald-200/12" />
+        <div className="absolute left-[11%] top-1/2 h-px w-[78%] -translate-y-1/2 bg-emerald-200/12" />
+      </div>
+      <div className="absolute bottom-4 left-4 rounded-full border border-emerald-400/20 bg-slate-950/72 px-3.5 py-2 text-xs text-slate-200 shadow-[0_16px_36px_rgba(2,6,23,0.45)] backdrop-blur">
+        地图加载中
+      </div>
+    </div>
+  );
+}
+
+const WorldGlobe = dynamic(() => import('@/components/world-globe'), { ssr: false, loading: WorldGlobeShell });
 
 const AUTO_REFRESH_MS = 60 * 1000;
 const INITIAL_BACKGROUND_REFRESH_DELAY_MS = 1800;
@@ -1194,7 +1211,11 @@ export default function DashboardClient({
                 <span className="text-xs text-slate-400">{markers.length} 个地图落点</span>
               </div>
 
-              <div className="mx-auto aspect-square w-full max-w-[560px] overflow-hidden rounded-[24px] border border-slate-200/80 2xl:max-w-[620px]">
+              <div
+                id="world-globe-shell"
+                className="mx-auto w-full shrink-0 overflow-hidden rounded-[24px] border border-slate-200/80"
+                style={{ height: 'clamp(360px, 39vw, 620px)', maxWidth: 'clamp(360px, 39vw, 620px)' }}
+              >
                 {/* 中间栏固定保留 3D 地球，左右信息都围绕它组织。 */}
                 <WorldGlobe
                   markers={markers}
