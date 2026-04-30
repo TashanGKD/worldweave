@@ -5,6 +5,7 @@ import argparse
 import os
 import posixpath
 import shlex
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -118,25 +119,33 @@ def iter_deploy_paths(include_zvec: bool) -> list[Path]:
     return items
 
 
+def iter_tracked_deploy_files(include_zvec: bool) -> list[Path]:
+    allowed_dirs = set(ROOT_DIRS + (OPTIONAL_ROOT_DIRS if include_zvec else []))
+    allowed_files = set(ROOT_FILES)
+    output = subprocess.check_output(["git", "ls-files", "-z"], cwd=ROOT)
+    files: list[Path] = []
+    for raw_item in output.decode("utf-8", "ignore").split("\0"):
+        if not raw_item:
+            continue
+        rel = Path(raw_item)
+        if should_skip(rel):
+            continue
+        if rel.as_posix() in allowed_files or (rel.parts and rel.parts[0] in allowed_dirs):
+            path = ROOT / rel
+            if path.is_file():
+                files.append(path)
+    return files
+
+
 def build_archive(include_zvec: bool) -> Path:
     fd, temp_name = tempfile.mkstemp(prefix="world-deploy-", suffix=".tar.gz")
     os.close(fd)
     archive_path = Path(temp_name)
 
     with tarfile.open(archive_path, "w:gz") as tar:
-        for item in iter_deploy_paths(include_zvec):
-            if item.is_file():
-                rel = item.relative_to(ROOT)
-                if should_skip(rel):
-                    continue
-                tar.add(item, arcname=rel.as_posix())
-                continue
-
-            for child in item.rglob("*"):
-                rel = child.relative_to(ROOT)
-                if should_skip(rel):
-                    continue
-                tar.add(child, arcname=rel.as_posix())
+        for item in iter_tracked_deploy_files(include_zvec):
+            rel = item.relative_to(ROOT)
+            tar.add(item, arcname=rel.as_posix())
 
     return archive_path
 
