@@ -3136,7 +3136,7 @@ function questionOriginRetentionKey(question: Pick<LiveQuestion, 'origin_url' | 
 }
 
 function isExternalLiveBenchQuestion(question: Pick<LiveQuestion, 'source_platform'>) {
-  return question.source_platform !== 'internal';
+  return question.source_platform !== 'internal' && question.source_platform !== 'polymarket';
 }
 
 function retainRecentResolvedQuestions(current: LiveQuestion[], previous: LiveQuestion[]) {
@@ -5748,47 +5748,9 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
     fetchMetaculusQuestions(),
     fetchMetaforecastDiscoveries(),
   ]);
-  const [manifold, polymarket] = await Promise.all([
-    fetchManifoldQuestions(),
-    fetchPolymarketQuestions(metaforecast.discoveries),
-  ]);
-  const polymarketSnapshotMap = new Map<string, PolymarketMarketSnapshot>();
-  for (const question of polymarket) {
-    const slug = polymarketSlugFromUrl(question.origin_url || question.platform_question_url || '');
-    if (!slug) continue;
-    polymarketSnapshotMap.set(slug, {
-      slug,
-      conditionId: question.source_question_id,
-      title: question.title,
-      resolveAt: question.resolve_at || null,
-      probabilityYes: question.platform_probability_yes,
-      officialOutcome: question.official_outcome || null,
-      officialResolvedAt: question.official_resolved_at || null,
-      commentary: question.platform_commentary || [],
-      participants: question.platform_participants || [],
-      sourceNote: question.source_note || 'Polymarket 官方市场补全。',
-      platformContext: question.platform_context || 'Polymarket 官方市场已补全平台信息。',
-    });
-  }
-  const missingPolymarketDiscoverySlugs = [...new Set(
-    metaforecast.discoveries
-      .filter((item) => item.platform_label === 'Polymarket')
-      .map((item) => polymarketSlugFromUrl(item.url))
-      .filter((slug): slug is string => typeof slug === 'string' && slug.length > 0)
-      .filter((slug) => !polymarketSnapshotMap.has(slug)),
-  )];
-  if (missingPolymarketDiscoverySlugs.length > 0) {
-    const fallbackSnapshots = await Promise.all(
-      missingPolymarketDiscoverySlugs.map((slug) => fetchPolymarketSnapshotBySlug(slug)),
-    );
-    fallbackSnapshots.forEach((snapshot) => {
-      if (!snapshot) return;
-      polymarketSnapshotMap.set(snapshot.slug, snapshot);
-    });
-  }
+  const manifold = await fetchManifoldQuestions();
   const manifoldFallback = buildDiscoveryFallbackQuestions(metaforecast.discoveries, 'manifold');
-  const polymarketFallback = buildDiscoveryFallbackQuestions(metaforecast.discoveries, 'polymarket', polymarketSnapshotMap);
-  const manualVerifiedQuestions = buildManualVerifiedQuestions();
+  const manualVerifiedQuestions = buildManualVerifiedQuestions().filter(isExternalLiveBenchQuestion);
   const retainedOpenQuestions = await refreshRetainedOpenQuestions(storeWithArchive.questions);
 
   const merged = new Map<string, LiveQuestion>();
@@ -5796,9 +5758,7 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
   for (const question of [
     ...metaculus.questions,
     ...manifold,
-    ...polymarket,
     ...manifoldFallback,
-    ...polymarketFallback,
     ...manualVerifiedQuestions,
     ...retainedOpenQuestions.questions,
   ]) {
@@ -5814,6 +5774,7 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
   }
 
   const questions = [...merged.values()]
+    .filter(isExternalLiveBenchQuestion)
     .filter((question) => filterQuestionTopic(question) && hasQuestionQuality(question))
     .map((question) => {
       const resolvedQuestion = applyManualVerifiedOutcome(question);
@@ -5843,8 +5804,8 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
       metaculus: metaculus.status,
       metaforecast: [
         metaforecast.status,
-        `直连入池：Manifold ${manifold.length} 题、Polymarket ${polymarket.length} 题`,
-        `聚合补位：Manifold ${manifoldFallback.length} 题、Polymarket ${polymarketFallback.length} 题`,
+        `直连入池：Manifold ${manifold.length} 题`,
+        `聚合补位：Manifold ${manifoldFallback.length} 题`,
         manualVerifiedQuestions.length ? `人工核验已结算保留：${manualVerifiedQuestions.length} 题` : '',
         retainedOpenQuestions.questions.length ? `旧题保留：${retainedOpenQuestions.questions.length} 题` : '',
         retainedOpenQuestions.resolvedCount ? `旧题官方结算刷新：${retainedOpenQuestions.resolvedCount} 题` : '',
