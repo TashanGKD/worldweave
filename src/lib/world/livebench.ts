@@ -3271,11 +3271,7 @@ async function refreshRetainedQuestionFromPlatform(question: LiveQuestion): Prom
 
 async function refreshRetainedOpenQuestions(previous: LiveQuestion[]) {
   const retained = retainRecentOpenQuestions(previous);
-  const refreshed = await Promise.all(
-    retained.map((question) =>
-      isLiveBenchSettlementPending(question) ? refreshRetainedQuestionFromPlatform(question) : Promise.resolve(question),
-    ),
-  );
+  const refreshed = await Promise.all(retained.map((question) => refreshRetainedQuestionFromPlatform(question)));
   return {
     questions: refreshed,
     resolvedCount: refreshed.filter((question) => Boolean(question.official_outcome)).length,

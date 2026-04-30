@@ -1,8 +1,8 @@
 {
   "markdown": "C:\\Users\\16571\\Documents\\Codex\\2026-04-18-host-lighthouse-beijing-hostname-49-233\\world\\research\\skill-aggregator-index.md",
   "total_urls": 83,
-  "ok_count": 69,
-  "error_count": 14,
+  "ok_count": 73,
+  "error_count": 10,
   "results": [
     {
       "url": "https://www.clawhub.com/skills",
@@ -62,10 +62,10 @@
     },
     {
       "url": "https://skills.re/skills",
-      "status": 200,
-      "ok": true,
-      "content_type": "text/html; charset=utf-8",
-      "title": "Browse Registry | AI Agent Skills Registry"
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
+      "title": ""
     },
     {
       "url": "https://codeagentskills.com/en",
@@ -90,10 +90,10 @@
     },
     {
       "url": "https://www.skillszoo.com/",
-      "status": 200,
-      "ok": true,
-      "content_type": "text/html; charset=utf-8",
-      "title": "SkillsZoo - Agent Skills Marketplace"
+      "status": null,
+      "ok": false,
+      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
+      "title": ""
     },
     {
       "url": "https://skillx.one/",
@@ -118,10 +118,10 @@
     },
     {
       "url": "https://skillsauth.com/",
-      "status": null,
-      "ok": false,
-      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
-      "title": ""
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "SkillsAuth — Verified AI Agent Skills Marketplace"
     },
     {
       "url": "https://www.bogen.ai/skills/",
@@ -167,10 +167,10 @@
     },
     {
       "url": "https://www.openagentskill.com/",
-      "status": null,
-      "ok": false,
-      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
-      "title": ""
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "Open Agent Skill — The Open Marketplace for AI Agent Skills"
     },
     {
       "url": "https://llmskills.org/",
@@ -258,10 +258,10 @@
     },
     {
       "url": "https://www.agentskills.in/marketplace",
-      "status": null,
-      "ok": false,
-      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
-      "title": ""
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "AI Skills Marketplace — Browse 175,000+ Skills for Cursor, Claude, Copilot | Agent Skills"
     },
     {
       "url": "https://skillhub.club/",
@@ -377,17 +377,17 @@
     },
     {
       "url": "https://www.skillsbento.com/",
-      "status": null,
-      "ok": false,
-      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
-      "title": ""
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "skillsbento — Agent Skills Marketplace for Claude"
     },
     {
       "url": "https://skillshop.sh/",
-      "status": null,
-      "ok": false,
-      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
-      "title": ""
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "SkillShop.sh"
     },
     {
       "url": "https://aiagentskills.net/",
@@ -461,10 +461,10 @@
     },
     {
       "url": "https://github.com/sickn33/antigravity-awesome-skills",
-      "status": null,
-      "ok": false,
-      "error": "<urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1016)>",
-      "title": ""
+      "status": 200,
+      "ok": true,
+      "content_type": "text/html; charset=utf-8",
+      "title": "GitHub - sickn33/antigravity-awesome-skills: Installable GitHub library of 1,400+ agentic skills for Claude Code, Cursor, Codex CLI, Gemini CLI, Antigravity, and more. Includes installer CLI, bundles, workflows, and official/community skill collections. · GitHub"
     },
     {
       "url": "https://github.com/skillmatic-ai/awesome-agent-skills",
