@@ -2825,7 +2825,7 @@ async function fetchMetaforecastDiscoveries(): Promise<{ discoveries: Metaforeca
     }
 
     const filtered = discoveries
-      .filter((item) => /^(Polymarket|Manifold Markets|Metaculus)$/i.test(item.platform_label))
+      .filter((item) => /^(Manifold Markets|Metaculus)$/i.test(item.platform_label))
       .filter((item) => matchesTopicText(item.title, item.description))
       .filter((item) => hasQuestionQualityText(item.title));
 
