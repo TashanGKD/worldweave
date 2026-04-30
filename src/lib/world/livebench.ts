@@ -3215,7 +3215,8 @@ async function refreshRetainedQuestionFromPlatform(question: LiveQuestion): Prom
   if (question.official_outcome) return question;
 
   if (question.source_platform === 'polymarket') {
-    const slug = polymarketSlugFromUrl(question.origin_url || question.platform_question_url || '');
+    const slug =
+      polymarketSlugFromUrl(question.origin_url || '') || polymarketSlugFromUrl(question.platform_question_url || '');
     if (!slug) return question;
     try {
       const snapshot = await fetchPolymarketSnapshotBySlug(slug);
