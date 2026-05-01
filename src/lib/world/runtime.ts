@@ -7498,9 +7498,12 @@ async function hydrateCachedSourceRefreshSummary(
 ): Promise<WorldDashboardSourceRefreshSummary | null> {
   const normalized = normalizeCachedSourceRefreshSummary(summary) || null;
   if (!normalized) return null;
-  const [refreshJob, governance] = await Promise.all([
+  const [refreshJob, governance, skillhubSnapshot, sourceSkillSnapshot, repoDiscoverySnapshot] = await Promise.all([
     readSourceRefreshJobStatus(),
     buildSourceGovernanceState().catch(() => null),
+    readSkillHubSnapshotSummary(),
+    readSourceSkillSnapshotSummary(),
+    readRepoDiscoverySnapshotSummary(),
   ]);
   return {
     ...normalized,
@@ -7509,7 +7512,13 @@ async function hydrateCachedSourceRefreshSummary(
       governance?.generated_at,
       refreshJob?.finished_at,
       refreshJob?.started_at,
+      skillhubSnapshot.last_refreshed_at,
+      sourceSkillSnapshot.last_refreshed_at,
+      repoDiscoverySnapshot.last_refreshed_at,
     ) || normalized.generated_at,
+    skillhub_snapshot: skillhubSnapshot,
+    source_skill_snapshot: sourceSkillSnapshot,
+    repo_discovery_snapshot: repoDiscoverySnapshot,
     monitor_runtime: governance
       ? {
           ...normalized.monitor_runtime,

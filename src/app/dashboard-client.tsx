@@ -594,7 +594,22 @@ function sourceRuntimeHeadline(
   if (!summary) return '信源摘要还在同步。';
   const resolved = evaluation?.resolved_question_count ?? livebench?.resolved_question_count ?? 0;
   const active = evaluation?.active_question_count ?? livebench?.active_question_count ?? 0;
-  return `本次看板校验完成，监测池 ${summary.monitor_runtime.monitor_source_count} 条，高质量 ${summary.monitor_runtime.high_quality_source_count} 条，题池已结算 ${resolved} 道、跟踪 ${active} 道。`;
+  const job = summary.refresh_job;
+  const status = job?.running ? '正在校验' : job && !job.ok ? '部分完成' : '完成';
+  return `本次看板校验${status}，监测池 ${summary.monitor_runtime.monitor_source_count} 条，高质量 ${summary.monitor_runtime.high_quality_source_count} 条，题池已结算 ${resolved} 道、跟踪 ${active} 道。`;
+}
+
+function latestSourceRefreshTime(...values: Array<string | null | undefined>) {
+  let latest: string | null = null;
+  let latestMs = 0;
+  for (const value of values) {
+    if (!value) continue;
+    const ms = new Date(value).getTime();
+    if (!Number.isFinite(ms) || ms <= latestMs) continue;
+    latest = value;
+    latestMs = ms;
+  }
+  return formatTime(latest);
 }
 
 function sourceRuntimeSupport(
@@ -609,7 +624,9 @@ function sourceRuntimeSupport(
   const jobLine = job
     ? job.running
       ? '巡检任务正在运行。'
-      : `巡检任务 ${job.ok ? '已完成' : '未完成'}，最近结束 ${formatTime(job.finished_at)}。`
+      : job.ok
+        ? `巡检任务已完成，最近结束 ${formatTime(job.finished_at)}。`
+        : `巡检任务部分完成，最近结束 ${formatTime(job.finished_at)}；失败源保留旧缓存，等待下轮重试。`
     : '';
   return [
     `最近一轮变动 ${summary.monitor_runtime.changed_source_count} 条，临时降权 ${summary.monitor_runtime.cooling_down_count} 条，待补位 ${summary.monitor_runtime.next_batch_count} 条。`,
@@ -1024,9 +1041,14 @@ export default function DashboardClient({
                       <div className="mt-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
                         <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">入口刷新</p>
+                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">入口池</p>
                             <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {formatTime(sourceRefreshSummary?.skillhub_snapshot?.last_refreshed_at)}
+                              {latestSourceRefreshTime(
+                                sourceRefreshSummary?.skillhub_snapshot?.last_refreshed_at,
+                                sourceRefreshSummary?.source_skill_snapshot?.last_refreshed_at,
+                                sourceRefreshSummary?.monitor_runtime.latest_poll_finished_at,
+                                sourceRefreshSummary?.refresh_job?.finished_at,
+                              )}
                             </span>
                           </div>
                           <p className="mt-1 text-[12px] leading-5 text-slate-900">
@@ -1036,9 +1058,12 @@ export default function DashboardClient({
 
                         <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">目录扩充</p>
+                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">目录候选</p>
                             <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {formatTime(sourceRefreshSummary?.repo_discovery_snapshot?.last_refreshed_at)}
+                              {latestSourceRefreshTime(
+                                sourceRefreshSummary?.repo_discovery_snapshot?.last_refreshed_at,
+                                sourceRefreshSummary?.refresh_job?.finished_at,
+                              )}
                             </span>
                           </div>
                           <p className="mt-1 text-[12px] leading-5 text-slate-900">

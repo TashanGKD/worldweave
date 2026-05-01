@@ -22,6 +22,7 @@ DEFAULT_USER = "ubuntu"
 DEFAULT_KEY = Path.home() / ".ssh" / "id_rsa_lighthouse"
 DEFAULT_REMOTE_ROOT = "/home/ubuntu/world"
 DEFAULT_PM2_APP = "xia-report-world"
+DEFAULT_REFRESH_PM2_APP = "world-source-refresh"
 
 ROOT_DIRS = [
     "src",
@@ -89,6 +90,11 @@ def parse_args() -> argparse.Namespace:
         "--pm2-app",
         default=os.environ.get("WORLD_DEPLOY_PM2_APP", DEFAULT_PM2_APP),
         help="PM2 application name",
+    )
+    parser.add_argument(
+        "--refresh-pm2-app",
+        default=os.environ.get("WORLD_DEPLOY_REFRESH_PM2_APP", DEFAULT_REFRESH_PM2_APP),
+        help="PM2 application name for the recurring source refresh worker",
     )
     parser.add_argument(
         "--include-zvec",
@@ -235,6 +241,13 @@ def main() -> int:
             f"npx --yes pm2 start ecosystem.config.js --only {args.pm2_app} --update-env)"
         )
         run_remote(client, f"bash -lc {shlex.quote(restart_cmd)}", timeout=600)
+        refresh_cmd = (
+            f"export PATH=$HOME/bin:$PATH && cd {args.remote_root} && "
+            f"(npx --yes pm2 describe {args.refresh_pm2_app} >/dev/null 2>&1 && "
+            f"npx --yes pm2 restart {args.refresh_pm2_app} --update-env || "
+            f"npx --yes pm2 start ecosystem.config.js --only {args.refresh_pm2_app} --update-env)"
+        )
+        run_remote(client, f"bash -lc {shlex.quote(refresh_cmd)}", timeout=600)
         run_remote(client, f"bash -lc {shlex.quote(f'cd {args.remote_root} && npx --yes pm2 save')}", timeout=300)
 
         for url in [

@@ -1,20 +1,41 @@
 module.exports = {
-  apps: [{
-    name: 'xia-report-world',
-    script: './scripts/start.sh',
-    cwd: '/home/ubuntu/world',
-    instances: 1,
-    autorestart: true,
-    restart_delay: 5000,
-    watch: false,
-    max_memory_restart: '1G',
-    env_file: '/home/ubuntu/world/.env.local',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 5000,
+  apps: [
+    {
+      name: 'xia-report-world',
+      script: './scripts/start.sh',
+      cwd: '/home/ubuntu/world',
+      instances: 1,
+      autorestart: true,
+      restart_delay: 5000,
+      watch: false,
+      max_memory_restart: '1G',
+      env_file: '/home/ubuntu/world/.env.local',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 5000,
+      },
+      error_file: '/home/ubuntu/world/logs/pm2-error.log',
+      out_file: '/home/ubuntu/world/logs/pm2-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     },
-    error_file: '/home/ubuntu/world/logs/pm2-error.log',
-    out_file: '/home/ubuntu/world/logs/pm2-out.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-  }]
+    {
+      name: 'world-source-refresh',
+      script: './scripts/world-source-refresh.mjs',
+      args: '--loop --interval-minutes 30 --timeout-minutes 20 --include-heavy-world-sync',
+      cwd: '/home/ubuntu/world',
+      instances: 1,
+      autorestart: true,
+      restart_delay: 10000,
+      watch: false,
+      max_memory_restart: '1G',
+      env_file: '/home/ubuntu/world/.env.local',
+      env: {
+        NODE_ENV: 'production',
+        WORLD_BATCH_REFRESH_BASE_URL: 'http://127.0.0.1:5000',
+      },
+      error_file: '/home/ubuntu/world/logs/source-refresh-error.log',
+      out_file: '/home/ubuntu/world/logs/source-refresh-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    },
+  ],
 };
