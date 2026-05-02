@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { ArrowRight, Link2, MapPin, Radio, RefreshCw } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -669,10 +669,34 @@ export default function DashboardClient({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasUsefulStateRef = useRef(hasUsefulDashboardState(normalizedInitialState));
+  const worldMapPanelRef = useRef<HTMLDivElement | null>(null);
+  const [worldMapPanelHeight, setWorldMapPanelHeight] = useState<number | null>(null);
+  const sidePanelStyle = worldMapPanelHeight
+    ? ({ '--world-map-panel-height': `${worldMapPanelHeight}px` } as CSSProperties)
+    : undefined;
 
   useEffect(() => {
     hasUsefulStateRef.current = hasUsefulDashboardState(state);
   }, [state]);
+
+  useEffect(() => {
+    const panel = worldMapPanelRef.current;
+    if (!panel) return;
+
+    const updatePanelHeight = () => {
+      setWorldMapPanelHeight(Math.ceil(panel.getBoundingClientRect().height));
+    };
+
+    updatePanelHeight();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updatePanelHeight);
+      return () => window.removeEventListener('resize', updatePanelHeight);
+    }
+
+    const observer = new ResizeObserver(updatePanelHeight);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, []);
 
   const loadDashboard = useCallback(async (nextScene: WorldScene, options: { manual?: boolean; background?: boolean } = {}) => {
     if (!options.background) setLoading(true);
@@ -1132,8 +1156,8 @@ export default function DashboardClient({
           </Card>
         ) : null}
 
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(260px,0.82fr)_minmax(560px,1.46fr)_minmax(300px,0.9fr)] xl:items-stretch 2xl:grid-cols-[minmax(340px,0.9fr)_minmax(680px,1.35fr)_minmax(420px,0.95fr)]">
-          <Card className={`${shellCardClass()} xl:h-[900px] 2xl:h-[940px]`}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(260px,0.82fr)_minmax(560px,1.46fr)_minmax(300px,0.9fr)] xl:items-start 2xl:grid-cols-[minmax(340px,0.9fr)_minmax(680px,1.35fr)_minmax(420px,0.95fr)]">
+          <Card className={`${shellCardClass()} xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
             <CardContent className="flex h-full min-h-0 flex-col gap-3 p-3">
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
                 <div className="space-y-2">
@@ -1178,7 +1202,7 @@ export default function DashboardClient({
             </CardContent>
           </Card>
 
-          <Card id="world-map-panel" className={`${shellCardClass()} xl:h-[900px] 2xl:h-[940px]`}>
+          <Card id="world-map-panel" ref={worldMapPanelRef} className={shellCardClass()}>
             <CardContent className="flex h-full min-h-0 flex-col p-3">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
                 <div>
@@ -1239,7 +1263,7 @@ export default function DashboardClient({
               <div
                 id="world-globe-shell"
                 className="mx-auto w-full shrink-0 overflow-hidden rounded-[24px] border border-slate-200/80"
-                style={{ height: 'clamp(360px, 39vw, 620px)', maxWidth: 'clamp(360px, 39vw, 620px)' }}
+                style={{ height: 'clamp(400px, 42vw, 680px)', maxWidth: 'clamp(400px, 42vw, 680px)' }}
               >
                 {/* 中间栏固定保留 3D 地球，左右信息都围绕它组织。 */}
                 <WorldGlobe
@@ -1319,7 +1343,7 @@ export default function DashboardClient({
             </CardContent>
           </Card>
 
-          <Card id="arena-panel" className={`${shellCardClass()} xl:h-[900px] 2xl:h-[940px]`}>
+          <Card id="arena-panel" className={`${shellCardClass()} xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
             <CardHeader className="border-b border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,0.82))] py-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-1">
