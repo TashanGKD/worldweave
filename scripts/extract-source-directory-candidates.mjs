@@ -19,6 +19,11 @@ const SOURCES = [
     url: 'https://raw.githubusercontent.com/georgezouq/awesome-ai-in-finance/main/README.md',
     kind: 'finance-ai-directory',
   },
+  {
+    collection: 'awesome-rss-feeds',
+    url: 'https://raw.githubusercontent.com/xiangyugongzuoliu/awesome-rss-feeds/main/LIST.md',
+    kind: 'rss-directory',
+  },
 ];
 
 const PUBLIC_APIS_TARGET_SECTIONS = new Set([
@@ -96,6 +101,13 @@ function sourceRoleForAwesomeFinance(section) {
   return 'method-reference';
 }
 
+function sourceRoleForAwesomeRssFeeds(section) {
+  if (/财经|投资|金融|市场/i.test(section)) return 'market-signal';
+  if (/AI|科技|技术|开发|安全|数据/i.test(section)) return 'hotspot-discovery';
+  if (/学术|科学|论文|研究/i.test(section)) return 'macro-regulatory';
+  return 'source-discovery';
+}
+
 function parsePublicApis(markdown) {
   const rows = [];
   let section = null;
@@ -160,10 +172,49 @@ function parseAwesomeFinance(markdown) {
   return rows;
 }
 
+function parseAwesomeRssFeeds(markdown) {
+  const rows = [];
+  let section = null;
+  let sectionDescription = '';
+  for (const rawLine of markdown.split(/\r?\n/)) {
+    const heading = rawLine.match(/^##\s+(.+?)\s*$/);
+    if (heading) {
+      section = stripMarkdown(heading[1]);
+      sectionDescription = '';
+      continue;
+    }
+    if (!section) continue;
+    const quote = rawLine.match(/^>\s+(.+?)\s*$/);
+    if (quote) {
+      sectionDescription = stripMarkdown(quote[1]);
+      continue;
+    }
+    const line = rawLine.trim();
+    if (!/^[-*]\s+\[/.test(line)) continue;
+    const link = extractMarkdownLink(line);
+    const feedMatch = line.match(/`([^`]+)`/);
+    if (!link || !feedMatch?.[1]) continue;
+    const feedUrl = feedMatch[1].trim();
+    if (!/^https?:\/\//i.test(feedUrl)) continue;
+    rows.push({
+      collection: 'awesome-rss-feeds',
+      section,
+      name: link.name,
+      url: feedUrl,
+      description: sectionDescription ? `${sectionDescription}；主页：${link.url}` : `RSS 订阅源；主页：${link.url}`,
+      auth: 'No',
+      https: feedUrl.startsWith('https://') ? 'Yes' : 'Unknown',
+      source_role: sourceRoleForAwesomeRssFeeds(section),
+      admission: 'candidate-rss',
+    });
+  }
+  return rows;
+}
+
 function rankCandidate(candidate) {
   let score = 0;
-  if (candidate.admission === 'candidate-no-key' || candidate.admission === 'candidate-source') score += 4;
-  if (/api|data|feed|rss|market|news|filing|price|quote|weather|government|SEC|exchange/i.test(`${candidate.name} ${candidate.description}`)) score += 3;
+  if (candidate.admission === 'candidate-no-key' || candidate.admission === 'candidate-source' || candidate.admission === 'candidate-rss') score += 4;
+  if (/api|data|feed|rss|atom|market|news|filing|price|quote|weather|government|SEC|exchange/i.test(`${candidate.name} ${candidate.description} ${candidate.url}`)) score += 3;
   if (/github\.com|docs|api|data|gov|finance|weather|coin|sec/i.test(candidate.url)) score += 2;
   if (/No/i.test(candidate.auth)) score += 1;
   return score;
@@ -177,8 +228,9 @@ function toMarkdown(candidates, meta) {
     '',
     '说明：本文件只记录“从目录中拆出的候选入口”。目录本身不进入实时信号，只有后续验证过的 API / RSS / 数据集 / 官方文档才进入正式信源池。',
     '',
-    `- public-apis 候选：${meta.by_collection['public-apis'] || 0}`,
-    `- awesome-ai-in-finance 候选：${meta.by_collection['awesome-ai-in-finance'] || 0}`,
+    ...Object.entries(meta.by_collection)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([collection, count]) => `- ${collection} 候选：${count}`),
     '',
     '| collection | section | name | role | admission | url | description |',
     '|---|---|---|---|---|---|---|',
@@ -202,6 +254,7 @@ async function main() {
   const candidates = [
     ...parsePublicApis(fetched.find((item) => item.collection === 'public-apis')?.markdown || ''),
     ...parseAwesomeFinance(fetched.find((item) => item.collection === 'awesome-ai-in-finance')?.markdown || ''),
+    ...parseAwesomeRssFeeds(fetched.find((item) => item.collection === 'awesome-rss-feeds')?.markdown || ''),
   ]
     .map((candidate) => ({ ...candidate, score: rankCandidate(candidate) }))
     .sort((a, b) => b.score - a.score || a.collection.localeCompare(b.collection) || a.name.localeCompare(b.name));
