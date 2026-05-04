@@ -41,6 +41,46 @@ set -a && source .env.local && set +a
 pm2 restart xia-report-world --update-env
 ```
 
+## Web And Refresh Worker
+
+Run the public web process as a cache-first service. It should serve pages and API snapshots, not perform heavy external source crawling.
+
+Recommended public web environment:
+
+```bash
+WORLD_WEB_ENABLE_HEAVY_REFRESH=0
+NODE_OPTIONS=--max-old-space-size=2048
+```
+
+The source refresh daemon manages its own internal worker by default. Start it as usual:
+
+```bash
+pnpm source:refresh:daemon
+```
+
+By default this starts an internal worker at `http://127.0.0.1:5020` with heavy refresh enabled, then points the refresh loop at that worker. Override only when needed:
+
+```bash
+WORLD_SOURCE_REFRESH_WORKER_PORT=5020
+WORLD_SOURCE_REFRESH_MANAGE_WORKER=1
+WORLD_BATCH_REFRESH_BASE_URL=http://127.0.0.1:5020
+```
+
+In TopicLab or Docker Compose deployments, do not point heavy refresh at the public `worldweave` web service. Run the refresh service with `node scripts/world-source-refresh-daemon.mjs` and let it start its own internal worker. If `WORLD_BATCH_REFRESH_BASE_URL=http://worldweave:3020` is set in the refresh service, heavy source sync will be deferred by the public web process and the background refresh will not perform the intended sync.
+
+Why this matters:
+
+- catalog RSS/API responses are untrusted external input
+- oversized responses are rejected before being decoded into JS strings
+- catalog fetches are concurrency-limited
+- if a future source still behaves badly, only the worker process should be at risk, not the public web process
+
+## Source Directory Refresh
+
+`pnpm source:directory` refreshes directory-style candidate sources, including `public-apis`, `awesome-ai-in-finance`, and `awesome-rss-feeds`.
+
+On some Windows operations hosts, Node `fetch()` can fail against `raw.githubusercontent.com` before TLS is established while PowerShell can still fetch the same URL through the system network stack. The directory refresh script retries Node fetches and then falls back to PowerShell on Windows. This fallback is only for the directory refresh utility; runtime catalog ingestion still enforces response-size and concurrency guards.
+
 ## Curl Caveat
 
 This machine may have local proxy variables enabled. Plain `curl` can look broken even when the app is healthy.

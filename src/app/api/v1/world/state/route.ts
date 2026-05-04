@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 
 import { resolveRequestOrigin } from '@/lib/request-origin';
-import { getCachedWorldDashboardState, getWorldDashboardState, isRenderableDashboardState } from '@/lib/world/runtime';
+import {
+  getCachedWorldDashboardState,
+  getWorldDashboardState,
+  isRenderableDashboardState,
+  isWorldRuntimeHeavyRefreshEnabled,
+} from '@/lib/world/runtime';
 import type { WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -94,8 +99,8 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const scene = (url.searchParams.get('scene') as WorldScene | null) || 'global';
-    const allowModelRefresh =
-      url.searchParams.get('batch') === '1' || request.headers.get('x-world-batch-refresh') === '1';
+    const batchRequested = url.searchParams.get('batch') === '1' || request.headers.get('x-world-batch-refresh') === '1';
+    const allowModelRefresh = batchRequested && isWorldRuntimeHeavyRefreshEnabled();
     const timeoutMs = allowModelRefresh ? 120000 : STATE_TIMEOUT_MS;
     const requestOrigin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
     const cachedState = await withCachedStateTimeout(getCachedWorldDashboardState(scene), null);

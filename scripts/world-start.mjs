@@ -20,11 +20,13 @@ const port = process.env.PORT || process.env.DEPLOY_RUN_PORT || '5000';
 const host = process.env.HOST || process.env.WORLD_HOST || '0.0.0.0';
 const buildId = path.join(process.cwd(), '.next', 'BUILD_ID');
 const cacheDir = path.join(process.cwd(), '.cache');
-const servicePidFile = path.join(cacheDir, 'world-start-current.pid');
-const wrapperPidFile = path.join(cacheDir, 'world-start-wrapper.pid');
+const pidPrefix = process.env.WORLD_START_PID_PREFIX || 'world-start';
+const servicePidFile = path.join(cacheDir, `${pidPrefix}-current.pid`);
+const wrapperPidFile = path.join(cacheDir, `${pidPrefix}-wrapper.pid`);
+const defaultOldSpaceSize = process.env.WORLD_WEB_ENABLE_HEAVY_REFRESH === '1' ? '3072' : '2048';
 const worldNodeOptions = process.env.NODE_OPTIONS?.includes('--max-old-space-size')
   ? process.env.NODE_OPTIONS
-  : [process.env.NODE_OPTIONS, '--max-old-space-size=8192'].filter(Boolean).join(' ');
+  : [process.env.NODE_OPTIONS, `--max-old-space-size=${defaultOldSpaceSize}`].filter(Boolean).join(' ');
 
 async function runNodeScript(scriptArgs) {
   await new Promise((resolve, reject) => {
