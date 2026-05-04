@@ -922,6 +922,8 @@ const PUBLIC_ANCHOR_COOLDOWN_THRESHOLD = 2;
 const SELECTED_SOURCE_COOLDOWN_MS = 20 * 60 * 1000;
 const SELECTED_SOURCE_COOLDOWN_THRESHOLD = 2;
 const SOURCE_FEED_SOURCE_LIMIT = 3;
+const CATALOG_SOURCE_FETCH_CONCURRENCY = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_FETCH_CONCURRENCY', 12, 1, 64);
+const CATALOG_SOURCE_MAX_RESPONSE_BYTES = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_MAX_RESPONSE_BYTES', 1024 * 1024, 64 * 1024, 8 * 1024 * 1024);
 const SIGNALS_CACHE_TTL_MS = 5 * 60 * 1000;
 const MARKET_SNAPSHOT_CACHE_TTL_MS = 2 * 60 * 1000;
 const WEEKLY_PREDICTION_WINDOW_DAYS = 7;
@@ -939,6 +941,16 @@ const batchModelRefreshContext = new AsyncLocalStorage<boolean>();
 const GRAPH_METADATA_BACKFILL_LIMIT = 120;
 const GRAPH_METADATA_BATCH_SIZE = 3;
 const RESEARCH_ROOT = path.join(process.cwd(), 'research');
+
+function resolveRuntimeInteger(envKey: string, fallback: number, min: number, max: number): number {
+  const raw = Number(process.env[envKey]);
+  if (!Number.isFinite(raw)) return fallback;
+  return Math.min(Math.max(Math.floor(raw), min), max);
+}
+
+export function isWorldRuntimeHeavyRefreshEnabled(): boolean {
+  return process.env.WORLD_WEB_ENABLE_HEAVY_REFRESH === '1' || process.env.WORLD_ENABLE_HEAVY_REFRESH === '1';
+}
 
 function isBatchModelRefreshAllowed(options?: { allowModelRefresh?: boolean }) {
   return (
@@ -5968,6 +5980,72 @@ async function loadSelectedHighQualityRows(): Promise<SignalRow[]> {
   return rows;
 }
 
+async function mapSettledWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>,
+): Promise<Array<PromiseSettledResult<R>>> {
+  const results = new Array<PromiseSettledResult<R>>(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(concurrency, 1), items.length);
+
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        try {
+          results[index] = { status: 'fulfilled', value: await mapper(items[index], index) };
+        } catch (reason) {
+          results[index] = { status: 'rejected', reason };
+        }
+      }
+    }),
+  );
+
+  return results;
+}
+
+async function readResponseTextWithLimit(response: Response, maxBytes: number): Promise<string> {
+  const contentLength = Number(response.headers.get('content-length') || 0);
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    throw new Error(`response too large (${contentLength} bytes > ${maxBytes} bytes)`);
+  }
+
+  if (!response.body) {
+    return response.text();
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        throw new Error(`response too large (${totalBytes} bytes > ${maxBytes} bytes)`);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder('utf-8').decode(merged);
+}
+
 async function loadCatalogSourceRows(): Promise<SignalRow[]> {
   const runtime = getRuntimeStore();
   const headers = {
@@ -5983,8 +6061,10 @@ async function loadCatalogSourceRows(): Promise<SignalRow[]> {
     return !health || health.cooldownUntil <= now;
   });
 
-  const settled = await Promise.allSettled(
-    activeSources.map(async (source) => {
+  const settled = await mapSettledWithConcurrency(
+    activeSources,
+    CATALOG_SOURCE_FETCH_CONCURRENCY,
+    async (source) => {
       const response = await fetch(source.url, {
         headers,
         signal: AbortSignal.timeout(8000),
@@ -5993,7 +6073,7 @@ async function loadCatalogSourceRows(): Promise<SignalRow[]> {
         throw new Error(`HTTP ${response.status}`);
       }
       const contentType = response.headers.get('content-type') || '';
-      const rawText = await response.text();
+      const rawText = await readResponseTextWithLimit(response, CATALOG_SOURCE_MAX_RESPONSE_BYTES);
       const payload =
         source.source_type === 'rss' ||
         source.source_type === 'atom' ||
@@ -6009,7 +6089,7 @@ async function loadCatalogSourceRows(): Promise<SignalRow[]> {
                 }
               })();
       return normalizeCatalogStructuredSnapshot(source, payload);
-    }),
+    },
   );
 
   const rows: SignalRow[] = [];
@@ -6812,6 +6892,7 @@ async function loadSignals(options: LoadSignalsOptions = {}): Promise<WorldSigna
   const allowExpiredDiskCache = options.allowExpiredDiskCache ?? false;
   const preferCached = options.preferCached ?? false;
   const backgroundRefresh = options.backgroundRefresh ?? false;
+  const effectiveBackgroundRefresh = backgroundRefresh && isWorldRuntimeHeavyRefreshEnabled();
   const allowModelRefresh = isBatchModelRefreshAllowed(options);
 
   if (runtime.signalsCache && runtime.signalsCache.expiresAt > now) {
@@ -6824,14 +6905,14 @@ async function loadSignals(options: LoadSignalsOptions = {}): Promise<WorldSigna
       expiresAt: now + SIGNALS_CACHE_TTL_MS,
       signals: diskCachedSignals,
     };
-    if (preferCached && backgroundRefresh) {
+    if (preferCached && effectiveBackgroundRefresh) {
       void refreshSignals(runtime, { allowModelRefresh });
     }
     return diskCachedSignals;
   }
 
   if (preferCached && runtime.signalsCache?.signals?.length) {
-    if (backgroundRefresh) {
+    if (effectiveBackgroundRefresh) {
       void refreshSignals(runtime, { allowModelRefresh });
     }
     return runtime.signalsCache.signals;

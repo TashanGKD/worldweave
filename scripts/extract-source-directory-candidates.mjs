@@ -1,5 +1,7 @@
 import fs from 'node:fs/promises';
+import { execFile } from 'node:child_process';
 import path from 'node:path';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -50,22 +52,70 @@ const AWESOME_FINANCE_TARGET_SECTIONS = new Set([
   'Exchange API',
 ]);
 
+const DIRECTORY_FETCH_ATTEMPTS = 3;
+const DIRECTORY_FETCH_RETRY_DELAY_MS = 1500;
+const execFileAsync = promisify(execFile);
+
 function normalizeRoot() {
   return path.resolve(root);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function describeFetchError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const cause = error instanceof Error && error.cause instanceof Error ? `; cause=${error.cause.message}` : '';
+  return `${message}${cause}`;
+}
+
+async function fetchTextWithWindowsFallback(url) {
+  if (process.platform !== 'win32') return null;
+  const script = [
+    "$ProgressPreference = 'SilentlyContinue'",
+    "$headers = @{ Accept = 'text/plain, text/markdown;q=0.9, */*;q=0.1'; 'User-Agent' = 'world-source-directory-refresh/1.0' }",
+    "(Invoke-WebRequest -Uri $args[0] -Headers $headers -TimeoutSec 45).Content",
+  ].join('; ');
+  const { stdout } = await execFileAsync(
+    'powershell',
+    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script, url],
+    { maxBuffer: 10 * 1024 * 1024 },
+  );
+  return stdout;
+}
+
 async function fetchText(url) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: 'text/plain, text/markdown;q=0.9, */*;q=0.1',
-      'User-Agent': 'world-source-directory-refresh/1.0',
-    },
-    signal: AbortSignal.timeout(30000),
-  });
-  if (!response.ok) {
-    throw new Error(`${url} returned ${response.status}`);
+  let lastError = null;
+  for (let attempt = 1; attempt <= DIRECTORY_FETCH_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Accept: 'text/plain, text/markdown;q=0.9, */*;q=0.1',
+          'User-Agent': 'world-source-directory-refresh/1.0',
+        },
+        signal: AbortSignal.timeout(30000),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.text();
+    } catch (error) {
+      lastError = error;
+      if (attempt < DIRECTORY_FETCH_ATTEMPTS) {
+        await sleep(DIRECTORY_FETCH_RETRY_DELAY_MS * attempt);
+      }
+    }
   }
-  return response.text();
+  try {
+    const fallbackText = await fetchTextWithWindowsFallback(url);
+    if (fallbackText !== null) return fallbackText;
+  } catch (error) {
+    throw new Error(
+      `failed to fetch ${url} after ${DIRECTORY_FETCH_ATTEMPTS} attempts and Windows fallback: ${describeFetchError(error)}`,
+    );
+  }
+  throw new Error(`failed to fetch ${url} after ${DIRECTORY_FETCH_ATTEMPTS} attempts: ${describeFetchError(lastError)}`);
 }
 
 function stripMarkdown(value) {

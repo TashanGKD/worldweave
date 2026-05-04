@@ -48,6 +48,21 @@ pnpm deploy:remote -- --include-zvec
 
 Use `--include-zvec` only when the vendored `zvec/` tree itself changed.
 
+## TopicLab Submodule Rollout
+
+When WorldWeave is embedded by `Tashan-TopicLab`, merging a WorldWeave PR is not enough to update production. TopicLab must update its `worldweave` submodule pointer after the WorldWeave change has landed on `worldweave/main`.
+
+TopicLab rollout rules:
+
+- keep the public WorldWeave web service cache-first with `WORLD_WEB_ENABLE_HEAVY_REFRESH=0`
+- run source refresh as a separate background service
+- make the refresh service run `node scripts/world-source-refresh-daemon.mjs`
+- do not set `WORLD_BATCH_REFRESH_BASE_URL=http://worldweave:3020` for that daemon-managed refresh service
+- keep the TopicLab PR limited to the submodule pointer and required deployment adapter changes
+- verify the public host after deploy, especially `/worldweave/`, `/api/v1/openclaw/skill.md`, `/info/source`, and `/info/source-list`
+
+The expected TopicLab shape is one deployable stack with separate web and refresh processes, not a second manually managed WorldWeave deployment.
+
 ## Why `--update-env` Matters
 
 The runtime used to inherit outer shell variables that could silently redirect Anthropic-compatible requests to the wrong provider.
