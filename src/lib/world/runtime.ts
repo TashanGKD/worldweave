@@ -7978,6 +7978,7 @@ function buildDashboardLiveBenchSummary(arena: LiveBenchArenaState | null | unde
     window_days: arena.watchlist_window_days,
     active_question_count: arena.active_questions.length,
     watchlist_question_count: arena.watchlist_questions.length,
+    open_question_count: arena.active_questions.length + arena.watchlist_questions.length,
     resolved_question_count: arena.resolved_questions.length,
     settlement_pending_count: arena.settlement_pending_count || 0,
     current_question_count: arena.active_questions.length + arena.watchlist_questions.length,
@@ -7987,6 +7988,7 @@ function buildDashboardLiveBenchSummary(arena: LiveBenchArenaState | null | unde
       metaforecast: arena.source_status.metaforecast,
       embeddings: arena.source_status.embeddings,
     },
+    source_health: arena.source_health,
     synthetic_participant_count: getLiveBenchParticipantRoster().length,
     synthetic_refresh_minutes: 30,
     resolved_backfill_enabled: true,
@@ -8001,8 +8003,16 @@ function alignDashboardLiveBenchSummary(
   return {
     ...summary,
     active_question_count: platformModel.active_question_count,
+    watchlist_question_count: platformModel.watchlist_question_count ?? summary.watchlist_question_count,
+    open_question_count:
+      platformModel.open_question_count ??
+      platformModel.current_question_count ??
+      platformModel.active_question_count + (platformModel.watchlist_question_count ?? summary.watchlist_question_count),
     resolved_question_count: platformModel.resolved_question_count,
-    current_question_count: platformModel.active_question_count + platformModel.resolved_question_count,
+    current_question_count:
+      platformModel.open_question_count ??
+      platformModel.current_question_count ??
+      platformModel.active_question_count + (platformModel.watchlist_question_count ?? summary.watchlist_question_count),
   };
 }
 

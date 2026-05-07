@@ -10,6 +10,7 @@ const SOURCE_STATUS_FAST_TIMEOUT_MS = 2500;
 const SOURCE_STATUS_FRESH_TIMEOUT_MS = 45000;
 const SOURCE_STATUS_SNAPSHOT_MAX_AGE_MS = 90 * 60 * 1000;
 const SOURCE_STATUS_STALE_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const SOURCE_LATEST_SIGNAL_STALE_HOURS = 48;
 
 function timeout<T>(ms: number, value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
@@ -18,6 +19,33 @@ function timeout<T>(ms: number, value: T): Promise<T> {
 function isStateFresh(state: WorldSourceKnowledgeState | null, maxAgeMs: number) {
   const timestamp = state?.generated_at ? new Date(state.generated_at).getTime() : NaN;
   return Number.isFinite(timestamp) && Date.now() - timestamp <= maxAgeMs;
+}
+
+function fallbackFreshness(latestSignalPublishedAt: string | null) {
+  if (!latestSignalPublishedAt) {
+    return {
+      latest_signal_age_hours: null,
+      freshness_status: 'unknown' as const,
+      issues: ['信源知识库还没有可用的 latest_signal_published_at。'],
+    };
+  }
+  const ageHours = (Date.now() - Date.parse(latestSignalPublishedAt)) / 3600000;
+  if (!Number.isFinite(ageHours)) {
+    return {
+      latest_signal_age_hours: null,
+      freshness_status: 'unknown' as const,
+      issues: ['latest_signal_published_at 无法解析。'],
+    };
+  }
+  const roundedAgeHours = Number(ageHours.toFixed(2));
+  return {
+    latest_signal_age_hours: roundedAgeHours,
+    freshness_status: roundedAgeHours > SOURCE_LATEST_SIGNAL_STALE_HOURS ? ('stale' as const) : ('fresh' as const),
+    issues:
+      roundedAgeHours > SOURCE_LATEST_SIGNAL_STALE_HOURS
+        ? [`最新 signal 已经 ${roundedAgeHours} 小时未更新，超过 ${SOURCE_LATEST_SIGNAL_STALE_HOURS} 小时健康线。`]
+        : [],
+  };
 }
 
 async function readFallbackSourceStatus(scene: WorldScene): Promise<WorldSourceKnowledgeState | null> {
@@ -67,6 +95,8 @@ async function readFallbackSourceStatus(scene: WorldScene): Promise<WorldSourceK
     const unstable = refresh.outputs?.connectivity_counts?.unstable || 0;
     const blocked = refresh.outputs?.connectivity_counts?.blocked_or_unknown || 0;
     const runtimeFailures = refresh.self_healing?.runtime_failure_count || 0;
+    const latestSignalPublishedAt = timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : null;
+    const freshness = fallbackFreshness(latestSignalPublishedAt);
     return {
       generated_at: state.last_source_knowledge_synced_at || refresh.finished_at || new Date().toISOString(),
       scene,
@@ -77,7 +107,7 @@ async function readFallbackSourceStatus(scene: WorldScene): Promise<WorldSourceK
       zvec_group_count: backendCounts.size,
       last_synced_at: state.last_source_knowledge_synced_at || refresh.finished_at || null,
       last_embedding_backend: primaryBackend,
-      latest_signal_published_at: timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : null,
+      latest_signal_published_at: latestSignalPublishedAt,
       oldest_signal_published_at: timestamps.length ? new Date(Math.min(...timestamps)).toISOString() : null,
       source_status: {
         embeddings:
@@ -92,8 +122,12 @@ async function readFallbackSourceStatus(scene: WorldScene): Promise<WorldSourceK
         context_ready_skill_count: refresh.outputs?.coverage?.high_value_total || 0,
         weak_signal_skill_count: unstable,
         blocked_skill_count: blocked,
+        ...freshness,
         next_batch: [],
-        note: '完整信源状态正在刷新，当前返回最近一次落盘的信源知识库简报。',
+        note:
+          freshness.freshness_status === 'stale'
+            ? '完整信源状态正在刷新，但最近一次落盘 signal 已偏旧；需要检查后台 source refresh。'
+            : '完整信源状态正在刷新，当前返回最近一次落盘的信源知识库简报。',
       },
       governance: {
         generated_at: refresh.finished_at || new Date().toISOString(),

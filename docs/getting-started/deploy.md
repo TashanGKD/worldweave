@@ -58,8 +58,9 @@ TopicLab rollout rules:
 - run source refresh as a separate background service
 - make the refresh service run `node scripts/world-source-refresh-daemon.mjs`
 - do not set `WORLD_BATCH_REFRESH_BASE_URL=http://worldweave:3020` for that daemon-managed refresh service
+- configure `MINIMAX_API_KEY`, `METASO_API_KEY`, and `METACULUS_API_TOKEN` as environment secrets; do not commit real keys
 - keep the TopicLab PR limited to the submodule pointer and required deployment adapter changes
-- verify the public host after deploy, especially `/worldweave/`, `/api/v1/openclaw/skill.md`, `/info/source`, and `/info/source-list`
+- verify the public host after deploy, especially `/worldweave/`, `/api/v1/openclaw/skill.md`, `/api/v1/source-feed/articles?source_type=worldweave-signal`, `/info/source`, and `/info/source-list`
 
 The expected TopicLab shape is one deployable stack with separate web and refresh processes, not a second manually managed WorldWeave deployment.
 

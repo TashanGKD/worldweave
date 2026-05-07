@@ -132,6 +132,14 @@ Recommended backend shape:
 
 This mirrors the old TopicLab pattern: one source-feed API, multiple upstream source channels, one downstream topic/discussion system.
 
+Public TopicLab verification should use the TopicLab boundary:
+
+```text
+/api/v1/source-feed/articles?source_type=worldweave-signal
+```
+
+`/api/v1/topiclab/source-feed/articles` is the WorldWeave-mounted upstream route. It is valid behind `WORLDWEAVE_BASE_URL`, but it is not the public root path on the TopicLab backend.
+
 ### Integration Checklist
 
 Use this as the handoff checklist before deploying the TopicLab side:

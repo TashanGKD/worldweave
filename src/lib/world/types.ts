@@ -816,6 +816,9 @@ export interface LiveBenchPlatformModelSummary {
   formal_participant_count: number;
   synthetic_scored_question_count: number;
   active_question_count: number;
+  watchlist_question_count?: number;
+  open_question_count?: number;
+  current_question_count?: number;
   avg_brier: number | null;
   formal_avg_brier: number | null;
   source_formal_avg_brier: number | null;
@@ -826,6 +829,29 @@ export interface LiveBenchPlatformModelSummary {
   formal_scoring_coverage_rate: number;
   source_formal_scoring_coverage_rate: number;
   calibration: LiveBenchCalibrationBucket[];
+}
+
+export interface LiveBenchSourceHealth {
+  status: 'ok' | 'degraded';
+  total_question_count: number;
+  open_question_count: number;
+  active_question_count: number;
+  watchlist_question_count: number;
+  resolved_question_count: number;
+  settlement_pending_count: number;
+  metaculus_configured: boolean;
+  metaforecast_candidate_count: number;
+  metaforecast_scanned_count: number;
+  metaforecast_platform_candidate_count: number;
+  manifold_direct_count: number;
+  manifold_fallback_count: number;
+  polymarket_direct_count: number;
+  retained_open_count: number;
+  retained_resolved_count: number;
+  min_open_question_count: number;
+  min_total_question_count: number;
+  issues: string[];
+  note: string;
 }
 
 export interface LiveBenchEvaluation {
@@ -889,6 +915,7 @@ export interface LiveBenchArenaState {
     metaforecast: string;
     embeddings: string;
   };
+  source_health?: LiveBenchSourceHealth;
   active_window_days: number;
   watchlist_window_days: number;
   sticky_question: LiveQuestionSnapshot | null;
@@ -964,6 +991,7 @@ export interface WorldDashboardLiveBenchSummary {
   window_days: number;
   active_question_count: number;
   watchlist_question_count: number;
+  open_question_count?: number;
   resolved_question_count: number;
   settlement_pending_count: number;
   current_question_count: number;
@@ -977,6 +1005,7 @@ export interface WorldDashboardLiveBenchSummary {
     metaforecast: string;
     embeddings: string;
   };
+  source_health?: LiveBenchSourceHealth;
   synthetic_participant_count: number;
   synthetic_refresh_minutes: number;
   resolved_backfill_enabled: boolean;
@@ -1005,6 +1034,9 @@ export interface WorldSourceKnowledgeState {
     context_ready_skill_count: number;
     weak_signal_skill_count: number;
     blocked_skill_count: number;
+    latest_signal_age_hours?: number | null;
+    freshness_status?: 'fresh' | 'stale' | 'unknown';
+    issues?: string[];
     next_batch: WorldSourceCatalogIntakeCandidate[];
     note: string;
   };

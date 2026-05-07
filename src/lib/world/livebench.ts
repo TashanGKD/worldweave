@@ -21,6 +21,7 @@ import type {
   LiveBenchQuestionPreview,
   LiveBenchResolvedQuestionSeriesItem,
   LiveBenchSettlementScore,
+  LiveBenchSourceHealth,
   LiveQuestion,
   LiveQuestionDebateSide,
   LiveQuestionModeratorView,
@@ -62,6 +63,8 @@ const LIVEBENCH_RESOLVED_CANDIDATE_LIMIT = 64;
 const LIVEBENCH_WATCHLIST_CANDIDATE_LIMIT = 160;
 const LIVEBENCH_RECENTLY_RESOLVED_WINDOW_DAYS = 30;
 const LIVEBENCH_QUESTION_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+const LIVEBENCH_MIN_OPEN_QUESTION_COUNT = 20;
+const LIVEBENCH_MIN_TOTAL_QUESTION_COUNT = 40;
 const SYNTHETIC_XIA_VOTE_WINDOW_MS = 30 * 60 * 1000;
 const SYNTHETIC_XIA_PARTICIPANTS = [
   {
@@ -187,6 +190,7 @@ type LiveBenchStore = {
     metaforecast: string;
     embeddings: string;
   };
+  source_health?: LiveBenchSourceHealth;
   questions: LiveQuestion[];
   votes: LiveVote[];
   chunks: SourceEmbeddingChunk[];
@@ -283,6 +287,22 @@ const MANIFOLD_DISCOVERY_TERMS = [
   'Ukraine',
   'chip',
   'supply chain',
+  'Taiwan',
+  'China',
+  'South China Sea',
+  'Red Sea',
+  'OPEC',
+  'Fed',
+  'interest rates',
+  'inflation',
+  'CPI',
+  'GDP',
+  'recession',
+  'election',
+  'sanction',
+  'export controls',
+  'datacenter',
+  'AI compute',
 ] as const;
 const MANIFOLD_COMMENT_SYNC_LIMIT = 6;
 const STRATEGIC_MARKET_DISCOVERY_TERMS = [
@@ -328,6 +348,31 @@ const STRATEGIC_MARKET_DISCOVERY_TERMS = [
   'cpu',
   'datacenter',
   'supply chain',
+  'taiwan',
+  'china',
+  'south china sea',
+  'red sea',
+  'suez',
+  'opec',
+  'export controls',
+  'sanction',
+  'interest rate',
+  'fed',
+  'federal reserve',
+  'inflation',
+  'cpi',
+  'gdp',
+  'recession',
+  'election',
+  'bond yield',
+  'treasury',
+  'dollar',
+  'rare earth',
+  'lithium',
+  'copper',
+  'datacenter',
+  'ai compute',
+  'compute cluster',
 ] as const;
 
 type InternalQuestionTemplate = {
@@ -2212,11 +2257,13 @@ function questionTopicProfileForText(text: string) {
     (has('brent') && (has('crude') || has('oil') || has('barrel')));
   const shippingLike =
     containsTerm(haystack, 'strait of hormuz') ||
+    containsTerm(haystack, 'red sea') ||
+    containsTerm(haystack, 'suez') ||
     containsTerm(haystack, 'shipping traffic') ||
     containsTerm(haystack, 'portwatch') ||
     containsTerm(haystack, 'ship transit') ||
     containsTerm(haystack, 'transit through') ||
-    ((has('shipping') || has('tanker') || has('vessel') || has('ship')) && (has('hormuz') || has('strait')));
+    ((has('shipping') || has('tanker') || has('vessel') || has('ship')) && (has('hormuz') || has('strait') || has('red sea')));
   const frontierAiLike =
     has('openai') ||
     has('anthropic') ||
@@ -2249,13 +2296,32 @@ function questionTopicProfileForText(text: string) {
     containsTerm(haystack, 'withdraws from lebanon') ||
     containsTerm(haystack, 'withdrawal from lebanon') ||
     containsTerm(haystack, 'hezbollah') ||
+    containsTerm(haystack, 'south china sea') ||
+    containsTerm(haystack, 'taiwan strait') ||
+    containsTerm(haystack, 'export controls') ||
     (has('israel') && has('iran')) ||
     (has('israel') && has('lebanon')) ||
+    (has('china') && has('taiwan')) ||
+    (has('china') && has('u.s.')) ||
     (has('u.s.') && has('iran')) ||
     (containsTerm(haystack, 'united states') && has('iran')) ||
     (has('iran') && (has('uae') || has('u.s.') || containsTerm(haystack, 'united states')));
   const publicHealthLike =
     has('virus') || has('outbreak') || has('disease') || has('clinical') || has('biosecurity') || has('疫情');
+  const macroPolicyLike =
+    containsTerm(haystack, 'federal reserve') ||
+    containsTerm(haystack, 'interest rate') ||
+    containsTerm(haystack, 'bond yield') ||
+    containsTerm(haystack, 'treasury yield') ||
+    containsTerm(haystack, 'inflation') ||
+    has('cpi') ||
+    has('gdp') ||
+    has('recession') ||
+    has('election') ||
+    has('opec') ||
+    containsTerm(haystack, 'rare earth') ||
+    has('lithium') ||
+    has('copper');
 
   if (oilLike) {
     return { bucket: 'oil-price', label: '油价' };
@@ -2274,6 +2340,9 @@ function questionTopicProfileForText(text: string) {
   }
   if (publicHealthLike) {
     return { bucket: 'public-health', label: '公共卫生' };
+  }
+  if (macroPolicyLike) {
+    return { bucket: 'macro-policy', label: '宏观 / 政策' };
   }
   return { bucket: 'other', label: '其他' };
 }
@@ -2315,10 +2384,10 @@ function matchesTopicText(title: string, description = '') {
       haystack,
     );
   const strategicSignal =
-    /(openai|anthropic|claude|gemini|google|microsoft|meta|nvidia|nvda|tsmc|gpu|chip|semiconductor|hbm|dram|oil|crude|wti|brent|shipping|ship|port|hormuz|iran|israel|ukraine|tariff|sanction|nuclear|missile|drone|supply chain|supply-chain|invasion|military|ai model|frontier model|app store|government contract|projectile|uae|united states|u\.s\.|virus|outbreak|disease|clinical|biosecurity|疫情)/i.test(
+    /(openai|anthropic|claude|gemini|google|microsoft|meta|nvidia|nvda|tsmc|gpu|chip|semiconductor|hbm|dram|oil|crude|wti|brent|shipping|ship|port|hormuz|red sea|suez|iran|israel|ukraine|taiwan|china|south china sea|tariff|sanction|export control|nuclear|missile|drone|supply chain|supply-chain|invasion|military|ai model|frontier model|app store|government contract|projectile|uae|united states|u\.s\.|virus|outbreak|disease|clinical|biosecurity|federal reserve|interest rate|inflation|cpi|gdp|recession|election|opec|rare earth|lithium|copper|疫情)/i.test(
       haystack,
     );
-  return !blocked && profile.bucket !== 'other' && strategicSignal;
+  return !blocked && (profile.bucket !== 'other' || matchesStrategicMarketDiscovery(haystack)) && strategicSignal;
 }
 
 function extractCommentPlainText(value: unknown): string {
@@ -2800,7 +2869,12 @@ async function fetchMetaforecastGraphql<T>(query: string, timeoutMs = 15000): Pr
   return payload?.data || null;
 }
 
-async function fetchMetaforecastDiscoveries(): Promise<{ discoveries: MetaforecastDiscovery[]; status: string }> {
+async function fetchMetaforecastDiscoveries(): Promise<{
+  discoveries: MetaforecastDiscovery[];
+  status: string;
+  scanned_count: number;
+  platform_candidate_count: number;
+}> {
   try {
     const discoveries: MetaforecastDiscovery[] = [];
     let afterCursor: string | null = null;
@@ -2828,6 +2902,14 @@ async function fetchMetaforecastDiscoveries(): Promise<{ discoveries: Metaforeca
         }`,
       );
       if (!data?.questions?.edges?.length) {
+        if (page === 0) {
+          return {
+            discoveries: [],
+            scanned_count: 0,
+            platform_candidate_count: 0,
+            status: 'Metaforecast GraphQL 未返回可解析题目数据，可能被上游安全检查或网络策略拦截',
+          };
+        }
         break;
       }
 
@@ -2859,8 +2941,8 @@ async function fetchMetaforecastDiscoveries(): Promise<{ discoveries: Metaforeca
       page += 1;
     }
 
-    const filtered = discoveries
-      .filter((item) => /^(Manifold Markets|Metaculus)$/i.test(item.platform_label))
+    const platformCandidates = discoveries.filter((item) => /^(Manifold Markets|Metaculus|Polymarket)$/i.test(item.platform_label));
+    const filtered = platformCandidates
       .filter((item) => matchesTopicText(item.title, item.description))
       .filter((item) => hasQuestionQualityText(item.title));
 
@@ -2875,13 +2957,17 @@ async function fetchMetaforecastDiscoveries(): Promise<{ discoveries: Metaforeca
 
     return {
       discoveries: filtered,
+      scanned_count: scannedCount,
+      platform_candidate_count: platformCandidates.length,
       status: filtered.length
-        ? `Metaforecast GraphQL 已直连，扫描 ${scannedCount} 条后筛到相关候选 ${filtered.length} 题${parts.length ? `（${parts.join('，')}）` : ''}`
-        : `Metaforecast GraphQL 已直连，但扫描最近 ${scannedCount} 条后还没有筛到相关候选题`,
+        ? `Metaforecast GraphQL 已直连，扫描 ${scannedCount} 条、平台候选 ${platformCandidates.length} 条后筛到相关候选 ${filtered.length} 题${parts.length ? `（${parts.join('，')}）` : ''}`
+        : `Metaforecast GraphQL 已直连，但扫描最近 ${scannedCount} 条、平台候选 ${platformCandidates.length} 条后还没有筛到相关候选题`,
     };
   } catch (error) {
     return {
       discoveries: [],
+      scanned_count: 0,
+      platform_candidate_count: 0,
       status: `Metaforecast GraphQL 失败：${error instanceof Error ? error.message : String(error)}`,
     };
   }
@@ -3171,7 +3257,7 @@ function questionOriginRetentionKey(question: Pick<LiveQuestion, 'origin_url' | 
 }
 
 function isExternalLiveBenchQuestion(question: Pick<LiveQuestion, 'source_platform'>) {
-  return question.source_platform !== 'internal' && question.source_platform !== 'polymarket';
+  return question.source_platform !== 'internal';
 }
 
 function retainRecentResolvedQuestions(current: LiveQuestion[], previous: LiveQuestion[]) {
@@ -3470,10 +3556,15 @@ async function fetchPolymarketSnapshotBySlug(slug: string): Promise<PolymarketMa
 
 async function fetchManifoldQuestions(): Promise<LiveQuestion[]> {
   try {
-    const urls = MANIFOLD_DISCOVERY_TERMS.flatMap((term) => [
-      `https://api.manifold.markets/v0/search-markets?limit=40&term=${encodeURIComponent(term)}&contractType=BINARY&filter=open&sort=newest`,
-      `https://api.manifold.markets/v0/search-markets?limit=40&term=${encodeURIComponent(term)}&contractType=BINARY&sort=newest`,
-    ]);
+    const openUrls = MANIFOLD_DISCOVERY_TERMS.map(
+      (term) =>
+        `https://api.manifold.markets/v0/search-markets?limit=30&term=${encodeURIComponent(term)}&contractType=BINARY&filter=open&sort=newest`,
+    );
+    const supplementalUrls = MANIFOLD_DISCOVERY_TERMS.map(
+      (term) =>
+        `https://api.manifold.markets/v0/search-markets?limit=20&term=${encodeURIComponent(term)}&contractType=BINARY&sort=newest`,
+    );
+    const urls = [...openUrls, ...supplementalUrls];
     const payloads: Array<Array<Record<string, unknown>> | null> = [];
     for (const url of urls) {
       const payload = await fetchJsonWithTimeout<Array<Record<string, unknown>>>(
@@ -3485,7 +3576,7 @@ async function fetchManifoldQuestions(): Promise<LiveQuestion[]> {
       );
       payloads.push(payload);
       const currentCount = payloads.reduce((sum, item) => sum + (Array.isArray(item) ? item.length : 0), 0);
-      if (currentCount >= 240) {
+      if (currentCount >= 900 && payloads.length >= MANIFOLD_DISCOVERY_TERMS.length) {
         break;
       }
     }
@@ -3851,7 +3942,8 @@ function questionAnchorTerms(question: LiveQuestion) {
     'shipping-flow': ['shipping', 'hormuz', 'strait', 'tanker', 'vessel', 'transit', 'portwatch'],
     'chip-supply': ['nvidia', 'nvda', 'gpu', 'hbm', 'dram', 'chip', 'semiconductor', 'server', 'datacenter'],
     'frontier-ai': ['openai', 'anthropic', 'claude', 'gemini', 'model', 'launch', 'release', 'app'],
-    'geopolitical-escalation': ['iran', 'uae', 'projectile', 'missile', 'invasion', 'nuclear', 'weapon'],
+    'geopolitical-escalation': ['iran', 'uae', 'taiwan', 'china', 'projectile', 'missile', 'invasion', 'nuclear', 'weapon'],
+    'macro-policy': ['fed', 'inflation', 'cpi', 'gdp', 'recession', 'election', 'opec', 'treasury', 'copper'],
   };
   const preferred = new Set(preferredByTopic[profile] || []);
   return questionKeyTerms(question).filter((term) => preferred.has(term) || term.length >= 6);
@@ -5706,7 +5798,10 @@ export function buildLiveBenchEvaluationFromArena(
     source_formal_vote_count: sourceFormalVoteCount,
     formal_participant_count: formalScorecards.length,
     synthetic_scored_question_count: resolvedSeries.filter((item) => item.scored && !item.formal_scored).length,
-    active_question_count: arena.active_questions.length + arena.watchlist_questions.length,
+    active_question_count: arena.active_questions.length,
+    watchlist_question_count: arena.watchlist_questions.length,
+    open_question_count: arena.active_questions.length + arena.watchlist_questions.length,
+    current_question_count: arena.active_questions.length + arena.watchlist_questions.length,
     avg_brier:
       brierItems.length > 0
         ? Number((brierItems.reduce((sum, item) => sum + (item.brier_score ?? 0), 0) / brierItems.length).toFixed(4))
@@ -5770,6 +5865,65 @@ export function buildLiveBenchQuestionDetailFromSnapshot(
   };
 }
 
+function buildLiveBenchSourceHealth(input: {
+  questions: LiveQuestion[];
+  metaculusStatus: string;
+  metaforecastCandidateCount: number;
+  metaforecastScannedCount: number;
+  metaforecastPlatformCandidateCount: number;
+  manifoldDirectCount: number;
+  manifoldFallbackCount: number;
+  polymarketDirectCount: number;
+  retainedOpenCount: number;
+  retainedResolvedCount: number;
+  settlementPendingCount: number;
+}): LiveBenchSourceHealth {
+  const activeQuestionCount = input.questions.filter((question) => question.status === 'active').length;
+  const watchlistQuestionCount = input.questions.filter((question) => question.status === 'watchlist').length;
+  const resolvedQuestionCount = input.questions.filter((question) => question.status === 'resolved').length;
+  const openQuestionCount = activeQuestionCount + watchlistQuestionCount;
+  const metaculusConfigured = !/未配置\s+METACULUS_API_TOKEN/.test(input.metaculusStatus);
+  const issues: string[] = [];
+
+  if (!metaculusConfigured) issues.push('METACULUS_API_TOKEN 未配置，Metaculus 题池没有参与补位。');
+  if (input.metaforecastScannedCount === 0) {
+    issues.push('Metaforecast 没有返回可解析题目数据，可能被上游安全检查或网络策略拦截。');
+  } else if (input.metaforecastCandidateCount === 0) {
+    issues.push(`Metaforecast 已扫描 ${input.metaforecastScannedCount} 条，但相关候选为 0。`);
+  }
+  if (openQuestionCount < LIVEBENCH_MIN_OPEN_QUESTION_COUNT) {
+    issues.push(`open question 只有 ${openQuestionCount} 题，低于 ${LIVEBENCH_MIN_OPEN_QUESTION_COUNT} 题健康线。`);
+  }
+  if (input.questions.length < LIVEBENCH_MIN_TOTAL_QUESTION_COUNT) {
+    issues.push(`总题池只有 ${input.questions.length} 题，低于 ${LIVEBENCH_MIN_TOTAL_QUESTION_COUNT} 题健康线。`);
+  }
+
+  return {
+    status: issues.length ? 'degraded' : 'ok',
+    total_question_count: input.questions.length,
+    open_question_count: openQuestionCount,
+    active_question_count: activeQuestionCount,
+    watchlist_question_count: watchlistQuestionCount,
+    resolved_question_count: resolvedQuestionCount,
+    settlement_pending_count: input.settlementPendingCount,
+    metaculus_configured: metaculusConfigured,
+    metaforecast_candidate_count: input.metaforecastCandidateCount,
+    metaforecast_scanned_count: input.metaforecastScannedCount,
+    metaforecast_platform_candidate_count: input.metaforecastPlatformCandidateCount,
+    manifold_direct_count: input.manifoldDirectCount,
+    manifold_fallback_count: input.manifoldFallbackCount,
+    polymarket_direct_count: input.polymarketDirectCount,
+    retained_open_count: input.retainedOpenCount,
+    retained_resolved_count: input.retainedResolvedCount,
+    min_open_question_count: LIVEBENCH_MIN_OPEN_QUESTION_COUNT,
+    min_total_question_count: LIVEBENCH_MIN_TOTAL_QUESTION_COUNT,
+    issues,
+    note: issues.length
+      ? 'LiveBench 可运行，但题源覆盖不足；需要优先补齐上游 token、检查 Metaforecast 过滤命中，并确认后台刷新是否持续产出。'
+      : 'LiveBench 题池规模和上游覆盖当前处于健康线以上。',
+  };
+}
+
 async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Promise<LiveBenchStore> {
   const archive = await readRetainedLiveBenchArchive();
   const storeWithArchive = mergeRetainedArchiveIntoStore(store, archive);
@@ -5784,6 +5938,7 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
     fetchMetaforecastDiscoveries(),
   ]);
   const manifold = await fetchManifoldQuestions();
+  const polymarket = await fetchPolymarketQuestions(metaforecast.discoveries);
   const manifoldFallback = buildDiscoveryFallbackQuestions(metaforecast.discoveries, 'manifold');
   const manualVerifiedQuestions = buildManualVerifiedQuestions().filter(isExternalLiveBenchQuestion);
   const retainedOpenQuestions = await refreshRetainedOpenQuestions(storeWithArchive.questions);
@@ -5793,6 +5948,7 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
   for (const question of [
     ...metaculus.questions,
     ...manifold,
+    ...polymarket,
     ...manifoldFallback,
     ...manualVerifiedQuestions,
     ...retainedOpenQuestions.questions,
@@ -5827,6 +5983,19 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
     });
   const settlementPendingCount = questions.filter((question) => isLiveBenchSettlementPending(question)).length;
   const validQuestionIds = new Set(questions.map((question) => question.question_id));
+  const sourceHealth = buildLiveBenchSourceHealth({
+    questions,
+    metaculusStatus: metaculus.status,
+    metaforecastCandidateCount: metaforecast.discoveries.length,
+    metaforecastScannedCount: metaforecast.scanned_count,
+    metaforecastPlatformCandidateCount: metaforecast.platform_candidate_count,
+    manifoldDirectCount: manifold.length,
+    manifoldFallbackCount: manifoldFallback.length,
+    polymarketDirectCount: polymarket.length,
+    retainedOpenCount: retainedOpenQuestions.questions.length,
+    retainedResolvedCount: retainedResolved.length,
+    settlementPendingCount,
+  });
 
   return {
     ...storeWithArchive,
@@ -5840,6 +6009,7 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
       metaforecast: [
         metaforecast.status,
         `直连入池：Manifold ${manifold.length} 题`,
+        `直连入池：Polymarket ${polymarket.length} 题`,
         `聚合补位：Manifold ${manifoldFallback.length} 题`,
         manualVerifiedQuestions.length ? `人工核验已结算保留：${manualVerifiedQuestions.length} 题` : '',
         retainedOpenQuestions.questions.length ? `旧题保留：${retainedOpenQuestions.questions.length} 题` : '',
@@ -5849,6 +6019,7 @@ async function syncQuestions(store: LiveBenchStore, _signals: WorldSignal[]): Pr
         settlementPendingCount ? `到期待核票：${settlementPendingCount} 题` : '',
       ].filter(Boolean).join('；'),
     },
+    source_health: sourceHealth,
   };
 }
 
@@ -6711,6 +6882,7 @@ export async function buildLiveBenchArenaState(
       ...store.source_status,
       embeddings: withZvecCoverageStatus(store.source_status.embeddings, store.chunks),
     },
+    source_health: store.source_health,
     active_window_days: ACTIVE_WINDOW_DAYS,
     watchlist_window_days: WATCHLIST_WINDOW_DAYS,
     sticky_question: sortedActive[0] || sortedWatchlist[0] || sortedResolved[0] || null,
@@ -6761,7 +6933,9 @@ export async function syncLiveBenchQuestions(signals: WorldSignal[]) {
       ...store.source_status,
       embeddings: withZvecCoverageStatus(store.source_status.embeddings, store.chunks),
     },
+    source_health: store.source_health,
     question_count: store.questions.length,
+    open_question_count: activeCount + watchlistCount,
     active_question_count: activeCount,
     watchlist_question_count: watchlistCount,
     resolved_question_count: resolvedCount,
@@ -6996,6 +7170,7 @@ export async function getLiveBenchEvaluationFromStore(scene: WorldScene): Promis
       ...store.source_status,
       embeddings: withZvecCoverageStatus(store.source_status.embeddings, store.chunks),
     },
+    source_health: store.source_health,
     active_window_days: ACTIVE_WINDOW_DAYS,
     watchlist_window_days: WATCHLIST_WINDOW_DAYS,
     sticky_question: activeQuestions[0] || watchlistQuestions[0] || resolvedQuestions[0] || null,

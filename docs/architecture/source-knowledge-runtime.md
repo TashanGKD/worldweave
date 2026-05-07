@@ -69,6 +69,12 @@
 - `livebench/*` 是题池消费层
 - `state` 是聚合读接口
 
+健康字段要直接看结构化值，不只看接口是否 200：
+
+- `source_health.freshness_status` 表示信源是否还在产出新 signal，`stale` 说明后台刷新需要排查。
+- `livebench.source_health.open_question_count` 表示当前 active + watchlist 题数。
+- `livebench.source_health.issues` 会直接列出 Metaculus token 缺失、Metaforecast 被拦截、题池低于健康线等问题。
+
 ## 归零时应该清什么
 
 归零的目标不是删除研究资料，而是清掉运行时残留：
