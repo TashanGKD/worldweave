@@ -605,8 +605,15 @@ function preferStableYearText(generated: string | null | undefined, fallback: st
 }
 
 function translateEntityNameToZh(value: string) {
-  let compact = compactText(value, 120).replace(/^the\s+/i, '');
+  let compact = compactText(value, 220).replace(/^the\s+/i, '');
   const knownMap: Array<[RegExp, string]> = [
+    [/\bUS lift its naval blockade of the 霍尔木兹海峡/i, '美国解除对霍尔木兹海峡的海上封锁'],
+    [/\bUS lift its naval blockade of the Strait of Hormuz\b/i, '美国解除对霍尔木兹海峡的海上封锁'],
+    [/\bUS, Israel and\/or one of the non-Iranian Gulf states occupy Larak Island \(Iran\)/i, '美国、以色列或非伊朗海湾国家占领伊朗拉腊克岛'],
+    [/\bIran charges "?霍尔木兹海峡 fees"?/i, '伊朗收取“霍尔木兹海峡通行费”'],
+    [/\bIran charges "?Strait of Hormuz fees"?/i, '伊朗收取“霍尔木兹海峡通行费”'],
+    [/\bStrait of Hormuz fully reopen to unrestricted commercial shipping\b/i, '霍尔木兹海峡完全恢复不受限制的商业航运'],
+    [/\bfully reopen to unrestricted commercial shipping\b/i, '完全恢复不受限制的商业航运'],
     [/\bUS and Iran agree to a ceasefire\b/i, '美国和伊朗达成停火'],
     [/\bUnited States attack Iran\b/i, '美国攻击伊朗'],
     [/\bU\.S\. attack Iran\b/i, '美国攻击伊朗'],
@@ -635,7 +642,12 @@ function translateEntityNameToZh(value: string) {
     [/\bUAE\b/i, '阿联酋'],
     [/\bUnited States\b/i, '美国'],
     [/\bU\.S\.\b/i, '美国'],
+    [/\bUSA\b/i, '美国'],
+    [/\bUS\b/i, '美国'],
+    [/\bSpot Price\b/i, '现货价格'],
     [/\bup or down\b/i, '涨还是跌'],
+    [/\bcost more than\b/i, '高于'],
+    [/\bclose above\b/i, '收盘高于'],
     [/\bbe released\b/i, '发布'],
     [/\bhas been lifted\b/i, '已解除'],
   ];
@@ -654,6 +666,29 @@ function translateEntityNameToZh(value: string) {
     .replace(/\bUS\/Israel and Iran\b/giu, '美国或以色列与伊朗');
   compact = compact.replace(/英伟达（英伟达（NVDA））/g, '英伟达（NVDA）');
   return compact;
+}
+
+function cleanQuestionTitleForUi(value: string) {
+  let cleaned = translateEntityNameToZh(value)
+    .replace(/(WTI 原油|布伦特原油)(?:\s+原油)+/giu, '$1')
+    .replace(/(WTI 原油|布伦特原油)\s+现货价格/giu, '$1 现货价格')
+    .replace(/原油\s+油价/giu, '原油价格')
+    .replace(/伊朗收取“霍尔木兹海峡通行费” on (.+?)会发生吗？$/iu, (_match, date) => `在 ${translateEnglishDateToZh(date)} 时，伊朗会收取“霍尔木兹海峡通行费”吗？`)
+    .replace(/\s+是否会发生？$/u, '会发生吗？')
+    .replace(/\s*会发生吗？会发生吗？$/u, '会发生吗？')
+    .replace(/([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])/gu, '$1$2')
+    .replace(/\s+/g, ' ')
+    .trim();
+  cleaned = cleaned.replace(
+    /^(WTI 原油|布伦特原油)\s+高于\s+\$?([\d.]+)\/barrel before (.+?)(?:\?|$).*会发生吗？$/iu,
+    (_match, commodity, price, date) => `在 ${translateEnglishDateToZh(date)} 之前，${commodity}会高于每桶 ${price} 美元吗？`,
+  );
+  if (/(WTI|布伦特|原油|油价|现货价格)/i.test(cleaned)) {
+    cleaned = cleaned
+      .replace(/会高于\s+([\d.]+)\s+吗？?$/u, '会高于 $1 美元吗？')
+      .replace(/会低于\s+([\d.]+)\s+吗？?$/u, '会低于 $1 美元吗？');
+  }
+  return compactText(cleaned, 220);
 }
 
 function discussionSpeakerLabel(vote: LiveVote) {
@@ -4587,7 +4622,7 @@ function fallbackQuestionTitleZh(question: LiveQuestion): string {
   const raw = String(question.title || '').replace(/\s+/g, ' ').trim();
   const base = compactText(raw, 220);
   if (!base) return '这道题在问什么';
-  if (/[\u4e00-\u9fa5]/.test(base)) return base;
+  if (/[\u4e00-\u9fa5]/.test(base)) return cleanQuestionTitleForUi(base);
   const hormuzReturn = base.match(/^Will shipping traffic through the Strait of Hormuz return to normal before (.+?)\?$/i);
   if (hormuzReturn) {
     return `在 ${translateEnglishDateToZh(hormuzReturn[1])} 之前，霍尔木兹海峡的航运流量会恢复到正常水平吗？`;
@@ -5278,7 +5313,7 @@ function evidenceCountsFromReferences(references: LiveQuestionReference[]) {
 }
 
 function preferredQuestionTitleForUi(question: LiveQuestion) {
-  const localized = compactText(question.title_zh || '', 180);
+  const localized = cleanQuestionTitleForUi(question.title_zh || '');
   const raw = String(question.title || '').replace(/\s+/g, ' ').trim();
   const communityPrediction = raw.match(
     /^Will the community prediction be (higher|lower) than ([\d.]+)% on (.+?) for the Metaculus question "(.+?)"\?$/i,
@@ -5298,7 +5333,7 @@ function preferredQuestionTitleForUi(question: LiveQuestion) {
   ) {
     return localized;
   }
-  return fallbackQuestionTitleZh(question);
+  return cleanQuestionTitleForUi(fallbackQuestionTitleZh(question));
 }
 
 function buildQuestionPreview(snapshot: LiveQuestionSnapshot): LiveBenchQuestionPreview {
