@@ -1486,6 +1486,26 @@ export default function PageClient({
     };
   }, [loadDashboard, scene]);
 
+  useEffect(() => {
+    if (globeTimeMode !== 'today') return;
+    const todayStart = startOfToday();
+    const nodes = state?.nodes || [];
+    const hasTodayMarkers = nodes.some((node) => {
+      if (node.node_type !== 'hotspot' || node.geo.lat === null || node.geo.lng === null) return false;
+      const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
+      return new Date(timestamp).getTime() >= todayStart;
+    });
+    if (hasTodayMarkers) return;
+    const hasMemoryMarkers = nodes.some((node) => {
+      if (node.node_type !== 'hotspot' || node.geo.lat === null || node.geo.lng === null) return false;
+      const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
+      return Date.now() - new Date(timestamp).getTime() <= GLOBE_MEMORY_DAYS * 86400000;
+    });
+    if (hasMemoryMarkers) {
+      setGlobeTimeMode('memory30');
+    }
+  }, [globeTimeMode, state]);
+
   const markers = useMemo(
     () => {
       const todayStart = startOfToday();
@@ -1533,9 +1553,19 @@ export default function PageClient({
 
   const alertBoard = useMemo(
     () => {
-      const candidateNodes = (state?.nodes || [])
+      const allNodes = state?.nodes || [];
+      const freshCandidates = allNodes
         .filter((node) => isAlertBoardCandidate(node))
         .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score);
+      const candidateNodes =
+        freshCandidates.length > 0
+          ? freshCandidates
+          : allNodes
+              .filter((node) => {
+                const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
+                return Date.now() - new Date(timestamp).getTime() <= GLOBE_MEMORY_DAYS * 86400000;
+              })
+              .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score);
       const nodes = candidateNodes.filter((node) => node.node_type === 'hotspot');
       const byLevel = {
         high: nodes

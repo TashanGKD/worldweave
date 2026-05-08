@@ -805,6 +805,26 @@ export default function DashboardClient({
     };
   }, [loadDashboard, scene]);
 
+  useEffect(() => {
+    if (globeTimeMode !== 'today') return;
+    const todayStart = startOfToday();
+    const nodes = state?.nodes || [];
+    const hasTodayMarkers = nodes.some((node) => {
+      if (node.geo.lat === null || node.geo.lng === null) return false;
+      const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
+      return new Date(timestamp).getTime() >= todayStart;
+    });
+    if (hasTodayMarkers) return;
+    const hasMemoryMarkers = nodes.some((node) => {
+      if (node.geo.lat === null || node.geo.lng === null) return false;
+      const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
+      return Date.now() - new Date(timestamp).getTime() <= GLOBE_MEMORY_DAYS * 86400000;
+    });
+    if (hasMemoryMarkers) {
+      setGlobeTimeMode('memory30');
+    }
+  }, [globeTimeMode, state]);
+
   const markers = useMemo(() => {
     const todayStart = startOfToday();
     return (state?.nodes || [])
@@ -861,22 +881,33 @@ export default function DashboardClient({
   }, [globeAutoPauseUntil, markers]);
 
   const alertBoard = useMemo(() => {
-    const candidates = (state?.nodes || [])
+    const nodes = state?.nodes || [];
+    const freshCandidates = nodes
       .filter((node) => isAlertBoardCandidate(node))
       .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score);
+    const staleFallbackCandidates =
+      freshCandidates.length > 0
+        ? []
+        : nodes
+            .filter((node) => {
+              const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
+              return Date.now() - new Date(timestamp).getTime() <= GLOBE_MEMORY_DAYS * 86400000;
+            })
+            .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score);
+    const candidates = freshCandidates.length > 0 ? freshCandidates : staleFallbackCandidates;
     const highNodes = candidates.filter((node) => node.node_type === 'hotspot' && node.severity >= 4).slice(0, 12);
     if (highNodes.length > 0) {
       return {
-        title: '红色热点',
+        title: freshCandidates.length > 0 ? '红色热点' : '近 30 天热点',
         titleClassName: 'text-red-500',
-        emptyText: '当前没有明显升温到需要单独盯住的条目。',
+        emptyText: '近 30 天内还没有可展示的热点条目。',
         nodes: highNodes,
       };
     }
     return {
-      title: '当前信号',
+      title: freshCandidates.length > 0 ? '当前信号' : '近 30 天信号',
       titleClassName: 'text-slate-500',
-      emptyText: '当前分类还没有需要单独盯住的条目。',
+      emptyText: '近 30 天内还没有可展示的信号条目。',
       nodes: candidates.slice(0, 12),
     };
   }, [state]);
