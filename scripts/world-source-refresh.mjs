@@ -16,6 +16,7 @@ const outPath = path.join(cacheDir, 'world-source-refresh.out.log');
 const errPath = path.join(cacheDir, 'world-source-refresh.err.log');
 const apiSnapshotPath = path.join(cacheDir, 'world-api-snapshots.json');
 const API_SNAPSHOT_VERSION = 1;
+const SOURCE_LATEST_SIGNAL_STALE_HOURS = Number(process.env.WORLD_SOURCE_LATEST_SIGNAL_STALE_HOURS || 48);
 
 function parseArgs(argv) {
   const args = {
@@ -198,6 +199,67 @@ async function callWorldEndpoint(baseUrl, method, pathname, timeoutMs = 120000, 
   }
 }
 
+async function fetchWorldJson(baseUrl, pathname, timeoutMs = 45000, batchHeader = false) {
+  const startedAt = Date.now();
+  try {
+    const response = await fetch(`${baseUrl}${pathname}`, {
+      headers: {
+        Accept: 'application/json',
+        ...(batchHeader ? { 'x-world-batch-refresh': '1' } : {}),
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    let data = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+    return {
+      ok: response.ok,
+      status: response.status,
+      duration_ms: Date.now() - startedAt,
+      data,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: null,
+      duration_ms: Date.now() - startedAt,
+      data: null,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+function summarizeSourceFreshness(payload) {
+  const health = payload?.source_health && typeof payload.source_health === 'object' ? payload.source_health : {};
+  const latestSignalPublishedAt =
+    typeof payload?.latest_signal_published_at === 'string' ? payload.latest_signal_published_at : null;
+  let latestSignalAgeHours =
+    typeof health.latest_signal_age_hours === 'number' ? health.latest_signal_age_hours : null;
+  if (latestSignalAgeHours === null && latestSignalPublishedAt) {
+    const age = (Date.now() - Date.parse(latestSignalPublishedAt)) / 36e5;
+    latestSignalAgeHours = Number.isFinite(age) ? Number(age.toFixed(2)) : null;
+  }
+  const freshnessStatus =
+    typeof health.freshness_status === 'string'
+      ? health.freshness_status
+      : latestSignalAgeHours === null
+        ? 'unknown'
+        : latestSignalAgeHours > SOURCE_LATEST_SIGNAL_STALE_HOURS
+          ? 'stale'
+          : 'fresh';
+  return {
+    latest_signal_published_at: latestSignalPublishedAt,
+    latest_signal_age_hours: latestSignalAgeHours,
+    freshness_status: freshnessStatus,
+    stale:
+      freshnessStatus === 'stale' ||
+      (typeof latestSignalAgeHours === 'number' && latestSignalAgeHours > SOURCE_LATEST_SIGNAL_STALE_HOURS),
+  };
+}
+
 async function warmWorldCaches(args) {
   if (args.skipWorldWarm) {
     return { skipped: true, reason: 'skip-world-warm' };
@@ -330,6 +392,7 @@ async function runSourceRefreshRemediation(args, warmStatus) {
     shrink_guard: parseLatestSignalShrink(),
     runtime_failure_count: 0,
     failure_groups: null,
+    source_freshness: null,
     notes: [],
   };
   let governance = null;
@@ -371,6 +434,31 @@ async function runSourceRefreshRemediation(args, warmStatus) {
   remediation.runtime_failure_count = Number(governancePayload?.runtime_failure_count || 0);
   remediation.failure_groups = classifyRuntimeFailures(governancePayload);
 
+  const sourceStatusPayload = await fetchWorldJson(
+    args.worldBaseUrl,
+    '/api/v1/world/source-knowledge/status?scene=global&fresh=1',
+    45000,
+    true,
+  );
+  const sourceFreshnessCheckFailed = !sourceStatusPayload.ok || !sourceStatusPayload.data;
+  if (!sourceFreshnessCheckFailed) {
+    remediation.source_freshness = summarizeSourceFreshness(sourceStatusPayload.data);
+    remediation.actions.push({
+      action: 'source-freshness-check',
+      ok: !remediation.source_freshness.stale,
+      status: sourceStatusPayload.status,
+      latest_signal_age_hours: remediation.source_freshness.latest_signal_age_hours,
+      freshness_status: remediation.source_freshness.freshness_status,
+    });
+  } else {
+    remediation.actions.push({
+      action: 'source-freshness-check',
+      ok: false,
+      status: sourceStatusPayload.status,
+      error: sourceStatusPayload.error || 'source status payload unavailable',
+    });
+  }
+
   const sourceStatusBusy =
     status &&
     !status.ok &&
@@ -391,6 +479,8 @@ async function runSourceRefreshRemediation(args, warmStatus) {
     !sourceStatusBusy &&
     (remediation.runtime_failure_count > 0 ||
       Boolean(remediation.shrink_guard) ||
+      sourceFreshnessCheckFailed ||
+      Boolean(remediation.source_freshness?.stale) ||
       warmStatus?.ok === false);
   if (needsSync) {
     const syncResult = await callWorldEndpoint(
@@ -406,9 +496,32 @@ async function runSourceRefreshRemediation(args, warmStatus) {
       ok: syncResult.ok,
       status: syncResult.status,
       duration_ms: syncResult.duration_ms,
-      reason: remediation.shrink_guard ? 'shrunken-refresh-or-runtime-failure' : 'runtime-failure',
+      reason: remediation.source_freshness?.stale
+        ? 'stale-latest-signal'
+        : sourceFreshnessCheckFailed
+          ? 'source-freshness-unavailable'
+        : remediation.shrink_guard
+          ? 'shrunken-refresh-or-runtime-failure'
+          : 'runtime-failure',
     });
     remediation.ok = remediation.ok && syncResult.ok;
+    if (syncResult.ok) {
+      const afterSyncStatus = await fetchWorldJson(
+        args.worldBaseUrl,
+        '/api/v1/world/source-knowledge/status?scene=global&fresh=1',
+        45000,
+        true,
+      );
+      const afterFreshness = afterSyncStatus.ok && afterSyncStatus.data ? summarizeSourceFreshness(afterSyncStatus.data) : null;
+      remediation.actions.push({
+        action: 'source-freshness-after-sync',
+        ok: afterFreshness ? !afterFreshness.stale : false,
+        status: afterSyncStatus.status,
+        latest_signal_age_hours: afterFreshness?.latest_signal_age_hours ?? null,
+        freshness_status: afterFreshness?.freshness_status || 'unknown',
+      });
+      remediation.source_freshness = afterFreshness || remediation.source_freshness;
+    }
   }
 
   if (remediation.failure_groups?.price?.length) {
@@ -423,6 +536,12 @@ async function runSourceRefreshRemediation(args, warmStatus) {
   if (remediation.shrink_guard) {
     remediation.notes.push(
       `检测到缩水刷新 ${remediation.shrink_guard.previous_count} -> ${remediation.shrink_guard.attempted_count}，已保留旧缓存${sourceStatusBusy ? '，等待下轮补跑' : '并触发补跑'}。`,
+    );
+  }
+  if (remediation.source_freshness?.stale) {
+    remediation.ok = false;
+    remediation.notes.push(
+      `最新 signal 已经 ${remediation.source_freshness.latest_signal_age_hours ?? 'unknown'} 小时未更新；daemon 已触发补跑，但仍需检查信源生成链路和运行时密钥。`,
     );
   }
   return remediation;
