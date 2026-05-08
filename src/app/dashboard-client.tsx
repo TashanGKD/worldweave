@@ -36,6 +36,7 @@ import type {
   WorldDashboardLiveBenchSummary,
   WorldDashboardSourceRefreshSummary,
   WorldScene,
+  WorldSourceKnowledgeState,
   WorldSourceReliability,
   WorldStateMetrics,
   WorldStateNode,
@@ -66,6 +67,20 @@ const DASHBOARD_CACHE_TTL_MS = 10 * 60 * 1000;
 const DASHBOARD_CACHE_VERSION = 2;
 const DASHBOARD_CACHE_PREFIX = `world-v2:${DASHBOARD_CACHE_VERSION}:dashboard`;
 const GLOBE_MEMORY_DAYS = 30;
+
+type EmptySignalCheckStatus = 'checking' | 'fresh' | 'stale' | 'deferred' | 'error';
+
+type EmptySignalCheck = {
+  status: EmptySignalCheckStatus;
+  checkedAt: string;
+  reason: string;
+  message: string;
+  latestSignalPublishedAt?: string | null;
+  latestSignalAgeHours?: number | null;
+  freshnessStatus?: string | null;
+  syncDeferred?: boolean;
+  syncStatus?: number | null;
+};
 
 type WorldSubworld = {
   key: WorldScene;
@@ -646,6 +661,45 @@ function livebenchPoolHeadline(summary: WorldDashboardLiveBenchSummary | null | 
   return `最近 30 天窗口里有 ${summary.current_question_count} 道题在跟踪，已核票 ${summary.resolved_question_count} 道。`;
 }
 
+function summarizeEmptySignalCheck(
+  statusPayload: WorldSourceKnowledgeState | null,
+  statusOk: boolean,
+  syncPayload: { deferred?: boolean } | null,
+  syncStatus: number | null,
+  reason: string,
+): EmptySignalCheck {
+  const freshnessStatus = statusPayload?.source_health?.freshness_status || null;
+  const latestSignalAgeHours = statusPayload?.source_health?.latest_signal_age_hours ?? null;
+  const latestSignalPublishedAt = statusPayload?.latest_signal_published_at || null;
+  const syncDeferred = Boolean(syncPayload?.deferred);
+  const status: EmptySignalCheckStatus = !statusOk
+    ? 'error'
+    : freshnessStatus === 'fresh'
+      ? 'fresh'
+      : syncDeferred
+        ? 'deferred'
+        : 'stale';
+  const message =
+    status === 'fresh'
+      ? '前台为空，但信源健康检查显示最新 signal 仍在健康线内；需要继续检查前端过滤条件。'
+      : status === 'deferred'
+        ? '前台为空，已请求信源检查；公网 Web 已把 heavy sync 交给后台 refresh daemon。'
+        : status === 'error'
+          ? '前台为空，信源健康检查未返回可用结果；已请求后台刷新链路检查。'
+          : '前台为空，信源健康检查显示最新 signal 已过期；已请求后台刷新链路补跑。';
+  return {
+    status,
+    checkedAt: new Date().toISOString(),
+    reason,
+    message,
+    latestSignalPublishedAt,
+    latestSignalAgeHours,
+    freshnessStatus,
+    syncDeferred,
+    syncStatus,
+  };
+}
+
 export default function DashboardClient({
   initialScene = 'global',
   initialState = null,
@@ -668,7 +722,9 @@ export default function DashboardClient({
   const [loading, setLoading] = useState(!hasUsefulDashboardState(normalizedInitialState));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emptySignalCheck, setEmptySignalCheck] = useState<EmptySignalCheck | null>(null);
   const hasUsefulStateRef = useRef(hasUsefulDashboardState(normalizedInitialState));
+  const emptySignalCheckKeyRef = useRef<string | null>(null);
   const worldMapPanelRef = useRef<HTMLDivElement | null>(null);
   const [worldMapPanelHeight, setWorldMapPanelHeight] = useState<number | null>(null);
   const sidePanelStyle = worldMapPanelHeight
@@ -805,26 +861,6 @@ export default function DashboardClient({
     };
   }, [loadDashboard, scene]);
 
-  useEffect(() => {
-    if (globeTimeMode !== 'today') return;
-    const todayStart = startOfToday();
-    const nodes = state?.nodes || [];
-    const hasTodayMarkers = nodes.some((node) => {
-      if (node.geo.lat === null || node.geo.lng === null) return false;
-      const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
-      return new Date(timestamp).getTime() >= todayStart;
-    });
-    if (hasTodayMarkers) return;
-    const hasMemoryMarkers = nodes.some((node) => {
-      if (node.geo.lat === null || node.geo.lng === null) return false;
-      const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
-      return Date.now() - new Date(timestamp).getTime() <= GLOBE_MEMORY_DAYS * 86400000;
-    });
-    if (hasMemoryMarkers) {
-      setGlobeTimeMode('memory30');
-    }
-  }, [globeTimeMode, state]);
-
   const markers = useMemo(() => {
     const todayStart = startOfToday();
     return (state?.nodes || [])
@@ -881,37 +917,86 @@ export default function DashboardClient({
   }, [globeAutoPauseUntil, markers]);
 
   const alertBoard = useMemo(() => {
-    const nodes = state?.nodes || [];
-    const freshCandidates = nodes
+    const candidates = (state?.nodes || [])
       .filter((node) => isAlertBoardCandidate(node))
       .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score);
-    const staleFallbackCandidates =
-      freshCandidates.length > 0
-        ? []
-        : nodes
-            .filter((node) => {
-              const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
-              return Date.now() - new Date(timestamp).getTime() <= GLOBE_MEMORY_DAYS * 86400000;
-            })
-            .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score);
-    const candidates = freshCandidates.length > 0 ? freshCandidates : staleFallbackCandidates;
     const highNodes = candidates.filter((node) => node.node_type === 'hotspot' && node.severity >= 4).slice(0, 12);
     if (highNodes.length > 0) {
       return {
-        title: freshCandidates.length > 0 ? '红色热点' : '近 30 天热点',
+        title: '红色热点',
         titleClassName: 'text-red-500',
-        emptyText: '近 30 天内还没有可展示的热点条目。',
+        emptyText: '当前没有明显升温到需要单独盯住的条目。',
         nodes: highNodes,
       };
     }
     return {
-      title: freshCandidates.length > 0 ? '当前信号' : '近 30 天信号',
+      title: '当前信号',
       titleClassName: 'text-slate-500',
-      emptyText: '近 30 天内还没有可展示的信号条目。',
+      emptyText: '当前分类还没有需要单独盯住的条目。',
       nodes: candidates.slice(0, 12),
     };
   }, [state]);
   const alertNodes = alertBoard.nodes;
+
+  useEffect(() => {
+    if (!state || loading) return;
+    const missing = [
+      markers.length === 0 ? `地图落点为 0（${globeTimeMode === 'today' ? '今天' : '近 30 天'}）` : null,
+      alertNodes.length === 0 ? '当前信号列表为 0' : null,
+    ].filter(Boolean) as string[];
+    if (missing.length === 0) {
+      emptySignalCheckKeyRef.current = null;
+      setEmptySignalCheck(null);
+      return;
+    }
+
+    const checkKey = `${scene}:${globeTimeMode}:${state.generated_at}:${markers.length}:${alertNodes.length}`;
+    if (emptySignalCheckKeyRef.current === checkKey) return;
+    emptySignalCheckKeyRef.current = checkKey;
+    let cancelled = false;
+    const reason = missing.join('；');
+    setEmptySignalCheck({
+      status: 'checking',
+      checkedAt: new Date().toISOString(),
+      reason,
+      message: '前台没有显示足够信号，正在检查信源刷新状态。',
+    });
+
+    void (async () => {
+      let statusPayload: WorldSourceKnowledgeState | null = null;
+      let statusOk = false;
+      let syncPayload: { deferred?: boolean } | null = null;
+      let syncStatus: number | null = null;
+      try {
+        const stamp = Date.now();
+        const statusResponse = await fetch(`/api/v1/world/source-knowledge/status?scene=${scene}&fresh=1&_=${stamp}`, {
+          cache: 'no-store',
+          headers: { 'x-world-empty-dashboard-check': '1' },
+        });
+        statusOk = statusResponse.ok;
+        statusPayload = (await statusResponse.json().catch(() => null)) as WorldSourceKnowledgeState | null;
+        const freshnessStatus = statusPayload?.source_health?.freshness_status;
+        if (!statusOk || freshnessStatus !== 'fresh') {
+          const syncResponse = await fetch(`/api/v1/world/source-knowledge/sync?scene=${scene}&batch=1&_=${Date.now()}`, {
+            method: 'POST',
+            cache: 'no-store',
+            headers: { 'x-world-batch-refresh': '1', 'x-world-empty-dashboard-check': '1' },
+          });
+          syncStatus = syncResponse.status;
+          syncPayload = (await syncResponse.json().catch(() => null)) as { deferred?: boolean } | null;
+        }
+      } catch {
+        statusOk = false;
+      }
+      if (!cancelled) {
+        setEmptySignalCheck(summarizeEmptySignalCheck(statusPayload, statusOk, syncPayload, syncStatus, reason));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [alertNodes.length, globeTimeMode, loading, markers.length, scene, state]);
 
   const markerLevelCounts = useMemo(
     () =>
@@ -1184,6 +1269,29 @@ export default function DashboardClient({
         {error ? (
           <Card className="rounded-[24px] border-red-200 bg-red-50/90 shadow-[0_14px_30px_rgba(239,68,68,0.08)]">
             <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
+          </Card>
+        ) : null}
+
+        {emptySignalCheck ? (
+          <Card className="rounded-[24px] border-amber-200 bg-amber-50/90 shadow-[0_14px_30px_rgba(245,158,11,0.08)]">
+            <CardContent className="flex flex-col gap-2 p-4 text-sm leading-6 text-amber-900 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-semibold">
+                  {emptySignalCheck.status === 'checking' ? '信源检查中' : '前台空状态已触发检查'}
+                </p>
+                <p className="text-amber-800">{emptySignalCheck.message}</p>
+                <p className="text-xs text-amber-700">
+                  原因：{emptySignalCheck.reason}
+                  {emptySignalCheck.latestSignalAgeHours != null
+                    ? `；最新 signal ${emptySignalCheck.latestSignalAgeHours} 小时前`
+                    : ''}
+                  {emptySignalCheck.syncStatus ? `；sync=${emptySignalCheck.syncStatus}` : ''}
+                </p>
+              </div>
+              <div className="shrink-0 rounded-full border border-amber-200 bg-white/70 px-3 py-1 text-xs text-amber-700">
+                {emptySignalCheck.status === 'checking' ? 'checking' : emptySignalCheck.freshnessStatus || emptySignalCheck.status}
+              </div>
+            </CardContent>
           </Card>
         ) : null}
 
