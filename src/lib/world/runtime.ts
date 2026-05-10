@@ -6691,6 +6691,7 @@ type LoadSignalsOptions = {
   preferCached?: boolean;
   backgroundRefresh?: boolean;
   allowModelRefresh?: boolean;
+  forceRefresh?: boolean;
 };
 
 async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOptions, 'allowModelRefresh'> = {}): Promise<WorldSignal[]> {
@@ -6894,6 +6895,11 @@ async function loadSignals(options: LoadSignalsOptions = {}): Promise<WorldSigna
   const backgroundRefresh = options.backgroundRefresh ?? false;
   const effectiveBackgroundRefresh = backgroundRefresh && isWorldRuntimeHeavyRefreshEnabled();
   const allowModelRefresh = isBatchModelRefreshAllowed(options);
+  const forceRefresh = options.forceRefresh === true;
+
+  if (forceRefresh) {
+    return refreshSignals(runtime, { allowModelRefresh });
+  }
 
   if (runtime.signalsCache && runtime.signalsCache.expiresAt > now) {
     return runtime.signalsCache.signals;
@@ -8889,9 +8895,7 @@ export async function syncWorldSourceKnowledge(
   clearSourceCatalogCache();
   const allowModelRefresh = isBatchModelRefreshAllowed(options);
   const signals = await loadSignals({
-    allowExpiredDiskCache: true,
-    preferCached: true,
-    backgroundRefresh: true,
+    forceRefresh: true,
     allowModelRefresh,
   });
   const localizedSignals = await materializeLocalizedSignals(signals);
@@ -8929,9 +8933,7 @@ export async function syncWorldLiveBenchArena(
   clearSourceCatalogCache();
   const allowModelRefresh = isBatchModelRefreshAllowed(options);
   const signals = await loadSignals({
-    allowExpiredDiskCache: true,
-    preferCached: true,
-    backgroundRefresh: false,
+    forceRefresh: true,
     allowModelRefresh,
   });
   const localizedSignals = await materializeLocalizedSignals(signals);
