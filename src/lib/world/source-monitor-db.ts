@@ -32,7 +32,7 @@ function getPool() {
       connectionString,
       max: 2,
       idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 5_000,
+      connectionTimeoutMillis: 30_000,
     });
   }
   return pool;
@@ -180,9 +180,46 @@ export async function persistWorldSourceMonitorSnapshot(input: {
       ],
     );
 
-    for (const signal of input.signals) {
+    const signalRows = input.signals.map((signal) => ({
+      signal_id: signal.id,
+      scene: signal.scene || input.scene,
+      title: signal.title || signal.displayTitle || 'untitled signal',
+      source_name: signal.sourceName || null,
+      source_url: signal.sourceUrl || null,
+      published_at: optionalIso(signal.publishedAt),
+      observed_at: optionalIso(signal.observedAt),
+      display_level: signal.displayLevel || null,
+      severity: signal.severity ?? null,
+      relevance_score: signal.relevanceScore ?? null,
+      latitude: signal.latitude ?? null,
+      longitude: signal.longitude ?? null,
+      tags: signal.tags || [],
+      alignment_tags: signal.alignmentTags || [],
+      payload: signal,
+    }));
+    if (signalRows.length > 0) {
       await activePool.query(
         `
+          WITH signal_rows AS (
+            SELECT *
+            FROM jsonb_to_recordset($1::jsonb) AS signal(
+              signal_id TEXT,
+              scene TEXT,
+              title TEXT,
+              source_name TEXT,
+              source_url TEXT,
+              published_at TIMESTAMPTZ,
+              observed_at TIMESTAMPTZ,
+              display_level TEXT,
+              severity DOUBLE PRECISION,
+              relevance_score DOUBLE PRECISION,
+              latitude DOUBLE PRECISION,
+              longitude DOUBLE PRECISION,
+              tags TEXT[],
+              alignment_tags TEXT[],
+              payload JSONB
+            )
+          )
           INSERT INTO world_source_signals (
             signal_id,
             scene,
@@ -200,10 +237,23 @@ export async function persistWorldSourceMonitorSnapshot(input: {
             alignment_tags,
             payload
           )
-          VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-            $11, $12, $13, $14, $15::jsonb
-          )
+          SELECT
+            signal_id,
+            scene,
+            title,
+            source_name,
+            source_url,
+            published_at,
+            observed_at,
+            display_level,
+            severity,
+            relevance_score,
+            latitude,
+            longitude,
+            tags,
+            alignment_tags,
+            payload
+          FROM signal_rows
           ON CONFLICT (signal_id) DO UPDATE SET
             scene = EXCLUDED.scene,
             title = EXCLUDED.title,
@@ -221,23 +271,7 @@ export async function persistWorldSourceMonitorSnapshot(input: {
             last_seen_at = NOW(),
             payload = EXCLUDED.payload
         `,
-        [
-          signal.id,
-          signal.scene || input.scene,
-          signal.title || signal.displayTitle || 'untitled signal',
-          signal.sourceName || null,
-          signal.sourceUrl || null,
-          optionalIso(signal.publishedAt),
-          optionalIso(signal.observedAt),
-          signal.displayLevel || null,
-          signal.severity ?? null,
-          signal.relevanceScore ?? null,
-          signal.latitude ?? null,
-          signal.longitude ?? null,
-          signal.tags || [],
-          signal.alignmentTags || [],
-          JSON.stringify(signal),
-        ],
+        [JSON.stringify(signalRows)],
       );
     }
   } catch (error) {
