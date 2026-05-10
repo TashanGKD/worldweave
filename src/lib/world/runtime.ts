@@ -62,6 +62,7 @@ import {
   toPublicLiveBenchArenaState,
   withLiveBenchRemoteModelRefresh,
 } from './livebench';
+import { persistWorldSourceMonitorSnapshot } from './source-monitor-db';
 import { getWorldSourceKnowledgeState, syncWorldSourceKnowledgeState } from './source-knowledge';
 import { clearSourceCatalogCache, loadRuntimeCatalogSources, loadSourceCatalog } from './source-catalog';
 
@@ -8909,12 +8910,20 @@ export async function syncWorldSourceKnowledge(
     getWorldState(scene, { forceCatalogRefresh: true, allowModelRefresh }),
     sleep(SOURCE_KNOWLEDGE_SYNC_DASHBOARD_TIMEOUT_MS).then(() => null),
   ]);
+  const source_refresh_summary =
+    (state as { source_refresh_summary?: WorldDashboardSourceRefreshSummary } | null)?.source_refresh_summary || null;
+  await persistWorldSourceMonitorSnapshot({
+    scene,
+    sourceKnowledge: source_knowledge,
+    sourceRefreshSummary: source_refresh_summary,
+    signals: localizedSignals,
+  });
   return {
     ok: true,
     scene,
     source_knowledge,
     source_health: state?.source_health || source_knowledge.source_health,
-    source_refresh_summary: (state as { source_refresh_summary?: unknown } | null)?.source_refresh_summary || null,
+    source_refresh_summary,
     livebench_summary: (state as { livebench_summary?: unknown } | null)?.livebench_summary || null,
     source_catalog: (state as { source_catalog?: unknown } | null)?.source_catalog || null,
     livebench_arena: (state as { livebench_arena?: unknown } | null)?.livebench_arena || null,

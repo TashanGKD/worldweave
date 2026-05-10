@@ -129,6 +129,124 @@ function writeStatus(status) {
   fs.writeFileSync(statusPath, `${JSON.stringify(status, null, 2)}\n`, 'utf8');
 }
 
+let refreshDbPool = null;
+let refreshDbSchemaReady = null;
+
+async function getRefreshDbPool() {
+  if (!process.env.DATABASE_URL) return null;
+  if (!refreshDbPool) {
+    const { Pool } = await import('pg');
+    refreshDbPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 1,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 5_000,
+    });
+  }
+  return refreshDbPool;
+}
+
+async function ensureRefreshRunSchema(pool) {
+  if (!refreshDbSchemaReady) {
+    refreshDbSchemaReady = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS world_source_refresh_runs (
+          started_at TIMESTAMPTZ PRIMARY KEY,
+          finished_at TIMESTAMPTZ NULL,
+          recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          ok BOOLEAN NOT NULL DEFAULT FALSE,
+          running BOOLEAN NOT NULL DEFAULT FALSE,
+          timed_out BOOLEAN NOT NULL DEFAULT FALSE,
+          exit_code INTEGER NULL,
+          duration_ms INTEGER NULL,
+          report_date TEXT NULL,
+          world_base_url TEXT NULL,
+          latest_signal_published_at TIMESTAMPTZ NULL,
+          latest_signal_age_hours DOUBLE PRECISION NULL,
+          freshness_status TEXT NULL,
+          payload JSONB NOT NULL
+        )
+      `);
+      await pool.query(`
+        CREATE INDEX IF NOT EXISTS world_source_refresh_runs_finished_idx
+          ON world_source_refresh_runs (finished_at DESC NULLS LAST)
+      `);
+    })().catch((error) => {
+      refreshDbSchemaReady = null;
+      throw error;
+    });
+  }
+  await refreshDbSchemaReady;
+}
+
+async function persistRefreshRunStatus(status) {
+  const pool = await getRefreshDbPool();
+  if (!pool) return;
+  try {
+    await ensureRefreshRunSchema(pool);
+    const freshness =
+      status.self_healing?.source_freshness ||
+      status.world_cache_refresh?.endpoints?.find((endpoint) => endpoint.snapshot_key === 'source_status')?.snapshot_summary ||
+      null;
+    await pool.query(
+      `
+        INSERT INTO world_source_refresh_runs (
+          started_at,
+          finished_at,
+          ok,
+          running,
+          timed_out,
+          exit_code,
+          duration_ms,
+          report_date,
+          world_base_url,
+          latest_signal_published_at,
+          latest_signal_age_hours,
+          freshness_status,
+          payload
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb)
+        ON CONFLICT (started_at) DO UPDATE SET
+          finished_at = EXCLUDED.finished_at,
+          recorded_at = NOW(),
+          ok = EXCLUDED.ok,
+          running = EXCLUDED.running,
+          timed_out = EXCLUDED.timed_out,
+          exit_code = EXCLUDED.exit_code,
+          duration_ms = EXCLUDED.duration_ms,
+          report_date = EXCLUDED.report_date,
+          world_base_url = EXCLUDED.world_base_url,
+          latest_signal_published_at = EXCLUDED.latest_signal_published_at,
+          latest_signal_age_hours = EXCLUDED.latest_signal_age_hours,
+          freshness_status = EXCLUDED.freshness_status,
+          payload = EXCLUDED.payload
+      `,
+      [
+        status.started_at || nowIso(),
+        status.finished_at || null,
+        Boolean(status.ok),
+        Boolean(status.running),
+        Boolean(status.timed_out),
+        Number.isInteger(status.exit_code) ? status.exit_code : null,
+        Number.isFinite(status.duration_ms) ? status.duration_ms : null,
+        status.report_date || null,
+        status.world_cache_refresh?.base_url || null,
+        freshness?.latest_signal_published_at || null,
+        Number.isFinite(freshness?.latest_signal_age_hours) ? freshness.latest_signal_age_hours : null,
+        freshness?.freshness_status || null,
+        JSON.stringify(status),
+      ],
+    );
+  } catch (error) {
+    append(errPath, `\n[${nowIso()}] source refresh db status write failed: ${error instanceof Error ? error.message : String(error)}\n`);
+  }
+}
+
+async function writeStatusWithMonitor(status) {
+  writeStatus(status);
+  await persistRefreshRunStatus(status);
+}
+
 function writeApiSnapshot(scene, key, data) {
   const now = nowIso();
   let payload = null;
@@ -563,7 +681,7 @@ async function runOnce(args) {
     command: ['node', 'scripts/world-source-refresh.mjs'],
     outputs: collectOutputs(reportDate),
   };
-  writeStatus(baseStatus);
+  await writeStatusWithMonitor(baseStatus);
   append(outPath, `\n[${startedAt}] WorldWeave runtime refresh start\n`);
 
   let exitCode = 0;
@@ -590,7 +708,7 @@ async function runOnce(args) {
   status.duration_ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
   status.ok = status.ok && (status.world_cache_refresh.skipped || status.world_cache_refresh.ok !== false);
   status.ok = status.ok && status.self_healing.ok !== false;
-  writeStatus(status);
+  await writeStatusWithMonitor(status);
   append(outPath, `\n[${finishedAt}] source refresh finish ok=${status.ok} exit=${exitCode} timed_out=${timedOut}\n`);
   return status;
 }
@@ -605,7 +723,7 @@ async function main() {
       const failedAt = nowIso();
       const message = error instanceof Error ? error.stack || error.message : String(error);
       append(errPath, `\n[${failedAt}] source refresh iteration failed: ${message}\n`);
-      writeStatus({
+      await writeStatusWithMonitor({
         kind: 'world-source-refresh',
         started_at: failedAt,
         finished_at: failedAt,
@@ -622,9 +740,9 @@ async function main() {
   } while (true);
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   append(errPath, `\n[${nowIso()}] fatal: ${error instanceof Error ? error.stack || error.message : String(error)}\n`);
-  writeStatus({
+  await writeStatusWithMonitor({
     kind: 'world-source-refresh',
     started_at: nowIso(),
     finished_at: nowIso(),
