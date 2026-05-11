@@ -19,11 +19,13 @@ let schemaReady: Promise<void> | null = null;
 let disabledNoticePrinted = false;
 
 function getPool() {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env.WORLDWEAVE_DATABASE_URL || process.env.DATABASE_URL;
   if (!connectionString) {
     if (!disabledNoticePrinted) {
       disabledNoticePrinted = true;
-      console.info('[source-monitor-db] DATABASE_URL is not set; skipping Postgres monitor persistence.');
+      console.info(
+        '[source-monitor-db] WORLDWEAVE_DATABASE_URL/DATABASE_URL is not set; skipping Postgres monitor persistence.',
+      );
     }
     return null;
   }

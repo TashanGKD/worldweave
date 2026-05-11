@@ -133,11 +133,12 @@ let refreshDbPool = null;
 let refreshDbSchemaReady = null;
 
 async function getRefreshDbPool() {
-  if (!process.env.DATABASE_URL) return null;
+  const connectionString = process.env.WORLDWEAVE_DATABASE_URL || process.env.DATABASE_URL;
+  if (!connectionString) return null;
   if (!refreshDbPool) {
     const { Pool } = await import('pg');
     refreshDbPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString,
       max: 1,
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 30_000,

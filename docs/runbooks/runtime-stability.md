@@ -62,7 +62,7 @@ NODE_OPTIONS=--max-old-space-size=2048
 MINIMAX_API_KEY=...
 METASO_API_KEY=...
 METACULUS_API_TOKEN=...
-DATABASE_URL=...
+WORLDWEAVE_DATABASE_URL=...
 ```
 
 The source refresh daemon manages its own internal worker by default. Start it as usual:
@@ -81,7 +81,7 @@ WORLD_BATCH_REFRESH_BASE_URL=http://127.0.0.1:5020
 
 In TopicLab or Docker Compose deployments, do not point heavy refresh at the public `worldweave` web service. Run the refresh service with `node scripts/world-source-refresh-daemon.mjs` and let it start its own internal worker. If `WORLD_BATCH_REFRESH_BASE_URL=http://worldweave:3020` is set in the refresh service, heavy source sync will be deferred by the public web process and the background refresh will not perform the intended sync.
 
-When `DATABASE_URL` is set, WorldWeave also writes source monitoring data to Postgres:
+When `WORLDWEAVE_DATABASE_URL` is set, WorldWeave also writes source monitoring data to Postgres. `DATABASE_URL` remains a compatibility fallback for standalone WorldWeave deployments, but TopicLab deployments should use `WORLDWEAVE_DATABASE_URL` so the TopicLab backend database is not changed:
 
 - `world_source_refresh_runs`: one row per daemon iteration, including `ok`, `running`, `finished_at`, `duration_ms`, and latest signal freshness fields when available.
 - `world_source_monitor_snapshots`: one row per successful source-knowledge sync, including signal counts, latest signal time, freshness status, source health counts, and the full JSON payload.
