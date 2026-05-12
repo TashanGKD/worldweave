@@ -65,6 +65,7 @@ import {
 import { persistWorldSourceMonitorSnapshot } from './source-monitor-db';
 import { getWorldSourceKnowledgeState, syncWorldSourceKnowledgeState } from './source-knowledge';
 import { clearSourceCatalogCache, loadRuntimeCatalogSources, loadSourceCatalog } from './source-catalog';
+import type { RuntimeCatalogSource } from './source-catalog';
 
 type SignalRow = {
   id: string;
@@ -900,11 +901,11 @@ const DEFAULT_WORLDLINE_ID = 'worldline-primary';
 const DEFAULT_INFORMATION_COLLECTION_BASE_URL = '';
 const MINIMAX_BASE_URL = resolveMiniMaxBaseUrl();
 const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-M2.5';
-const TRANSLATION_BATCH_SIZE = 4;
-const VISIBLE_TRANSLATION_BATCH_SIZE = 24;
-const TRANSLATION_PRIME_LIMIT = 18;
-const ALIGNMENT_BATCH_SIZE = 3;
-const ALIGNMENT_PRIME_LIMIT = 6;
+const TRANSLATION_BATCH_SIZE = resolveRuntimeInteger('WORLD_TRANSLATION_BATCH_SIZE', 2, 1, 8);
+const VISIBLE_TRANSLATION_BATCH_SIZE = resolveRuntimeInteger('WORLD_VISIBLE_TRANSLATION_BATCH_SIZE', 12, 1, 48);
+const TRANSLATION_PRIME_LIMIT = resolveRuntimeInteger('WORLD_TRANSLATION_PRIME_LIMIT', 8, 0, 48);
+const ALIGNMENT_BATCH_SIZE = resolveRuntimeInteger('WORLD_ALIGNMENT_BATCH_SIZE', 2, 1, 8);
+const ALIGNMENT_PRIME_LIMIT = resolveRuntimeInteger('WORLD_ALIGNMENT_PRIME_LIMIT', 4, 0, 24);
 const MINIMAX_RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
 const MINIMAX_DEFAULT_TIMEOUT_MS = 35000;
 const MINIMAX_DEFAULT_RETRY_LIMIT = 3;
@@ -923,7 +924,8 @@ const PUBLIC_ANCHOR_COOLDOWN_THRESHOLD = 2;
 const SELECTED_SOURCE_COOLDOWN_MS = 20 * 60 * 1000;
 const SELECTED_SOURCE_COOLDOWN_THRESHOLD = 2;
 const SOURCE_FEED_SOURCE_LIMIT = 3;
-const CATALOG_SOURCE_FETCH_CONCURRENCY = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_FETCH_CONCURRENCY', 12, 1, 64);
+const CATALOG_SOURCE_FETCH_CONCURRENCY = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_FETCH_CONCURRENCY', 6, 1, 64);
+const CATALOG_SOURCE_REFRESH_BATCH_SIZE = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_REFRESH_BATCH_SIZE', 120, 1, 1000);
 const CATALOG_SOURCE_MAX_RESPONSE_BYTES = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_MAX_RESPONSE_BYTES', 1024 * 1024, 64 * 1024, 8 * 1024 * 1024);
 const SIGNALS_CACHE_TTL_MS = 5 * 60 * 1000;
 const MARKET_SNAPSHOT_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -931,6 +933,7 @@ const WEEKLY_PREDICTION_WINDOW_DAYS = 7;
 const TRANSLATION_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-translation-cache.json');
 const ALIGNMENT_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-alignment-cache.json');
 const SIGNAL_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-signal-cache.json');
+const CATALOG_SOURCE_CURSOR_FILE = path.join(process.cwd(), '.cache', 'world-catalog-source-cursor.json');
 const DASHBOARD_SNAPSHOT_FILE = path.join(process.cwd(), '.cache', 'world-dashboard-snapshot.json');
 const LATEST_WORLD_STATE_FILE = path.join(process.cwd(), '.cache', 'latest-world-state.json');
 const SOURCE_REFRESH_STATUS_FILE = path.join(process.cwd(), '.cache', 'world-source-refresh-status.json');
@@ -947,6 +950,23 @@ function resolveRuntimeInteger(envKey: string, fallback: number, min: number, ma
   const raw = Number(process.env[envKey]);
   if (!Number.isFinite(raw)) return fallback;
   return Math.min(Math.max(Math.floor(raw), min), max);
+}
+
+async function readRuntimeJson<T>(filePath: string): Promise<T | null> {
+  try {
+    return JSON.parse(await fs.readFile(filePath, 'utf-8')) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function writeRuntimeJson(filePath: string, payload: unknown): Promise<void> {
+  try {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8');
+  } catch (error) {
+    console.warn('[runtime] failed to persist runtime json:', error instanceof Error ? error.message : String(error));
+  }
 }
 
 export function isWorldRuntimeHeavyRefreshEnabled(): boolean {
@@ -6047,6 +6067,34 @@ async function readResponseTextWithLimit(response: Response, maxBytes: number): 
   return new TextDecoder('utf-8').decode(merged);
 }
 
+async function selectCatalogSourceRefreshBatch(sources: RuntimeCatalogSource[]): Promise<RuntimeCatalogSource[]> {
+  if (sources.length <= CATALOG_SOURCE_REFRESH_BATCH_SIZE) {
+    return sources;
+  }
+
+  const cursor = await readRuntimeJson<{ nextIndex?: number; sourceCount?: number }>(CATALOG_SOURCE_CURSOR_FILE);
+  const startIndex =
+    cursor?.sourceCount === sources.length && Number.isFinite(cursor.nextIndex)
+      ? Math.min(Math.max(Math.floor(cursor.nextIndex || 0), 0), sources.length - 1)
+      : 0;
+  const selected: RuntimeCatalogSource[] = [];
+  for (let offset = 0; offset < CATALOG_SOURCE_REFRESH_BATCH_SIZE; offset += 1) {
+    selected.push(sources[(startIndex + offset) % sources.length]);
+  }
+  const nextIndex = (startIndex + CATALOG_SOURCE_REFRESH_BATCH_SIZE) % sources.length;
+  await writeRuntimeJson(CATALOG_SOURCE_CURSOR_FILE, {
+    updated_at: new Date().toISOString(),
+    sourceCount: sources.length,
+    batchSize: CATALOG_SOURCE_REFRESH_BATCH_SIZE,
+    previousIndex: startIndex,
+    nextIndex,
+  });
+  console.log(
+    `[loadCatalogSourceRows] refreshing catalog source batch ${startIndex}-${(startIndex + selected.length - 1) % sources.length} of ${sources.length}`,
+  );
+  return selected;
+}
+
 async function loadCatalogSourceRows(): Promise<SignalRow[]> {
   const runtime = getRuntimeStore();
   const headers = {
@@ -6061,9 +6109,10 @@ async function loadCatalogSourceRows(): Promise<SignalRow[]> {
     const health = runtime.selectedSourceHealth.get(`catalog:${source.skill_name}:${source.source_name}`);
     return !health || health.cooldownUntil <= now;
   });
+  const batchedSources = await selectCatalogSourceRefreshBatch(activeSources);
 
   const settled = await mapSettledWithConcurrency(
-    activeSources,
+    batchedSources,
     CATALOG_SOURCE_FETCH_CONCURRENCY,
     async (source) => {
       const response = await fetch(source.url, {
@@ -6095,7 +6144,7 @@ async function loadCatalogSourceRows(): Promise<SignalRow[]> {
 
   const rows: SignalRow[] = [];
   settled.forEach((item, index) => {
-    const source = activeSources[index];
+    const source = batchedSources[index];
     const healthKey = `catalog:${source.skill_name}:${source.source_name}`;
     if (item.status === 'fulfilled') {
       rows.push(...item.value);

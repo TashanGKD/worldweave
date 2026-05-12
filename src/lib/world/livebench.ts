@@ -48,9 +48,10 @@ const AGGREGATE_CALIBRATION_RANGES = [
   [0.8, 1.00001],
 ] as const;
 const LIVEBENCH_SYNC_INTERVAL_MS = 60 * 60 * 1000;
-const SOURCE_KNOWLEDGE_SYNC_INTERVAL_MS = 15 * 60 * 1000;
+const SOURCE_KNOWLEDGE_SYNC_INTERVAL_MS = resolveLiveBenchInteger('WORLD_SOURCE_KNOWLEDGE_SYNC_INTERVAL_MINUTES', 30, 5, 180) * 60 * 1000;
 const LIVEBENCH_EMBED_DIMENSIONS = 96;
-const LIVEBENCH_EMBED_BATCH_SIZE = 5;
+const LIVEBENCH_EMBED_BATCH_SIZE = resolveLiveBenchInteger('WORLD_SOURCE_KNOWLEDGE_EMBED_BATCH_SIZE', 3, 1, 16);
+const SOURCE_KNOWLEDGE_EMBED_MAX_PENDING = resolveLiveBenchInteger('WORLD_SOURCE_KNOWLEDGE_EMBED_MAX_PENDING', 60, 0, 1000);
 const LIVEBENCH_ZVEC_TOP_K = 6;
 const LIVEBENCH_ZVEC_QUERY_LIMIT = 48;
 const LIVEBENCH_REFERENCE_LIMIT = 10;
@@ -83,6 +84,12 @@ const SYNTHETIC_XIA_PARTICIPANTS = [
   },
 ] as const;
 const SYNTHETIC_XIA_ID_SET = new Set<string>(SYNTHETIC_XIA_PARTICIPANTS.map((persona) => persona.id));
+
+function resolveLiveBenchInteger(envKey: string, fallback: number, min: number, max: number): number {
+  const raw = Number(process.env[envKey]);
+  if (!Number.isFinite(raw)) return fallback;
+  return Math.min(Math.max(Math.floor(raw), min), max);
+}
 
 export function getLiveBenchParticipantRoster() {
   return SYNTHETIC_XIA_PARTICIPANTS.map((persona) => ({
@@ -6143,8 +6150,18 @@ async function buildChunks(store: LiveBenchStore, signals: WorldSignal[]): Promi
     pendingCandidates.push(candidate);
   }
 
-  for (let index = 0; index < pendingCandidates.length; index += LIVEBENCH_EMBED_BATCH_SIZE) {
-    const batch = pendingCandidates.slice(index, index + LIVEBENCH_EMBED_BATCH_SIZE);
+  const deferredCandidateCount =
+    SOURCE_KNOWLEDGE_EMBED_MAX_PENDING > 0 ? Math.max(pendingCandidates.length - SOURCE_KNOWLEDGE_EMBED_MAX_PENDING, 0) : 0;
+  const pendingBudget =
+    SOURCE_KNOWLEDGE_EMBED_MAX_PENDING > 0 ? pendingCandidates.slice(0, SOURCE_KNOWLEDGE_EMBED_MAX_PENDING) : pendingCandidates;
+  if (deferredCandidateCount > 0) {
+    console.log(
+      `[source.knowledge] deferring ${deferredCandidateCount} embedding candidates; processing ${pendingBudget.length} this cycle`,
+    );
+  }
+
+  for (let index = 0; index < pendingBudget.length; index += LIVEBENCH_EMBED_BATCH_SIZE) {
+    const batch = pendingBudget.slice(index, index + LIVEBENCH_EMBED_BATCH_SIZE);
     const embeddedBatch = await embedTexts(batch.map((item) => item.text));
     batch.forEach((candidate, batchIndex) => {
       const embedded = embeddedBatch[batchIndex];
@@ -6187,7 +6204,7 @@ async function buildChunks(store: LiveBenchStore, signals: WorldSignal[]): Promi
               ? `${backend} 正在驱动信源知识向量库，个别信源条目在失败时会退回本地 hash`
               : `${backend} 正在为最近 30 天逐条信源提供向量召回`
             : embeddingFallbackStatusMessage()
-        ) + zvecStatus,
+        ) + (deferredCandidateCount ? `；本轮按预算延后 ${deferredCandidateCount} 条新增信源向量，后续刷新继续补齐` : '') + zvecStatus,
     },
   };
 }

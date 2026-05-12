@@ -35,6 +35,7 @@ const workerBaseUrl = `http://${workerHost}:${workerPort}`;
 const configuredBaseUrl = (process.env.WORLD_BATCH_REFRESH_BASE_URL || '').replace(/\/+$/, '');
 const refreshBaseUrl = configuredBaseUrl || (manageWorker ? workerBaseUrl : 'http://127.0.0.1:5000');
 const workerStartupDelayMs = Number(process.env.WORLD_SOURCE_REFRESH_WORKER_STARTUP_DELAY_MS || 12000);
+const restartDelayMs = Number(process.env.WORLD_SOURCE_REFRESH_RESTART_DELAY_MS || 5000);
 
 const out = openLog(outPath);
 const err = openLog(errPath);
@@ -44,13 +45,16 @@ function withNodeOption(baseValue, option) {
   return [baseValue, option].filter(Boolean).join(' ');
 }
 
+let stopping = false;
 let worker = null;
-if (manageWorker && !configuredBaseUrl) {
+let child = null;
+
+function startWorker() {
+  if (!manageWorker || configuredBaseUrl || stopping) return null;
   const workerOut = openLog(workerOutPath);
   const workerErr = openLog(workerErrPath);
   worker = spawn(process.execPath, [path.join(root, 'scripts', 'world-start.mjs')], {
     cwd: root,
-    detached: true,
     env: {
       ...process.env,
       HOST: workerHost,
@@ -69,45 +73,71 @@ if (manageWorker && !configuredBaseUrl) {
     outPath,
     `\n[${new Date().toISOString()}] source refresh worker started pid=${worker.pid} base=${workerBaseUrl} port=${workerPort}\n`,
   );
-  worker.unref();
+  worker.on('exit', (code, signal) => {
+    append(
+      outPath,
+      `[${new Date().toISOString()}] source refresh worker exited code=${code ?? 'null'} signal=${signal ?? 'null'}\n`,
+    );
+    worker = null;
+    if (!stopping) {
+      setTimeout(() => startWorker(), restartDelayMs);
+    }
+  });
+  return worker;
 }
+
+startWorker();
 
 if (worker && workerStartupDelayMs > 0) {
   append(outPath, `[${new Date().toISOString()}] waiting ${workerStartupDelayMs}ms for source refresh worker readiness\n`);
   await new Promise((resolve) => setTimeout(resolve, workerStartupDelayMs));
 }
 
-const child = spawn(
-  process.execPath,
-  [
-    path.join(root, 'scripts', 'world-source-refresh.mjs'),
-    '--loop',
-    '--interval-minutes',
-    intervalMinutes,
-    '--timeout-minutes',
-    timeoutMinutes,
-    '--include-heavy-world-sync',
-    '--world-base-url',
-    refreshBaseUrl,
-  ],
-  {
-    cwd: root,
-    detached: true,
-    env: {
-      ...process.env,
-      WORLD_BATCH_REFRESH_BASE_URL: refreshBaseUrl,
+function startRefreshLoop() {
+  if (stopping) return null;
+  child = spawn(
+    process.execPath,
+    [
+      path.join(root, 'scripts', 'world-source-refresh.mjs'),
+      '--loop',
+      '--interval-minutes',
+      intervalMinutes,
+      '--timeout-minutes',
+      timeoutMinutes,
+      '--include-heavy-world-sync',
+      '--world-base-url',
+      refreshBaseUrl,
+    ],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        WORLD_BATCH_REFRESH_BASE_URL: refreshBaseUrl,
+      },
+      stdio: ['ignore', out, err],
+      windowsHide: true,
     },
-    stdio: ['ignore', out, err],
-    windowsHide: true,
-  },
-);
+  );
 
-fs.writeFileSync(pidPath, `${child.pid}\n`, 'utf8');
-append(
-  outPath,
-  `[${new Date().toISOString()}] source refresh daemon started pid=${child.pid} interval=${intervalMinutes} timeout=${timeoutMinutes} base=${refreshBaseUrl}\n`,
-);
-child.unref();
+  fs.writeFileSync(pidPath, `${child.pid}\n`, 'utf8');
+  append(
+    outPath,
+    `[${new Date().toISOString()}] source refresh loop started pid=${child.pid} interval=${intervalMinutes} timeout=${timeoutMinutes} base=${refreshBaseUrl}\n`,
+  );
+  child.on('exit', (code, signal) => {
+    append(
+      outPath,
+      `[${new Date().toISOString()}] source refresh loop exited code=${code ?? 'null'} signal=${signal ?? 'null'}\n`,
+    );
+    child = null;
+    if (!stopping) {
+      setTimeout(() => startRefreshLoop(), restartDelayMs);
+    }
+  });
+  return child;
+}
+
+startRefreshLoop();
 
 console.log(
   JSON.stringify(
@@ -119,6 +149,7 @@ console.log(
       refreshBaseUrl,
       workerManaged: Boolean(worker),
       workerStartupDelayMs,
+      restartDelayMs,
       pidPath,
       workerPidPath: worker ? workerPidPath : null,
       outPath,
@@ -128,3 +159,21 @@ console.log(
     2,
   ),
 );
+
+function stopProcess(processRef, label) {
+  if (!processRef || processRef.killed) return;
+  append(outPath, `[${new Date().toISOString()}] stopping ${label} pid=${processRef.pid}\n`);
+  processRef.kill('SIGTERM');
+}
+
+function shutdown() {
+  stopping = true;
+  stopProcess(child, 'source refresh loop');
+  stopProcess(worker, 'source refresh worker');
+  setTimeout(() => process.exit(0), 1500).unref();
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+await new Promise(() => {});
