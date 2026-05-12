@@ -28,7 +28,7 @@ import type {
 const WorldGlobe = dynamic(() => import('@/components/world-globe'), { ssr: false });
 const AUTO_REFRESH_MS = 60 * 1000;
 const DASHBOARD_CACHE_TTL_MS = 10 * 60 * 1000;
-const DASHBOARD_CACHE_VERSION = 7;
+const DASHBOARD_CACHE_VERSION = 8;
 const DASHBOARD_CACHE_PREFIX = `world-threads:v${DASHBOARD_CACHE_VERSION}:dashboard`;
 const LEGACY_DASHBOARD_CACHE_PREFIX = 'world-threads:dashboard:';
 const DASHBOARD_VIEW_LIMIT = 100;
@@ -95,6 +95,7 @@ type WorldStateResponse = {
   graph_signals: Array<{
     id: string;
     title: string;
+    summary?: string;
     display_title: string;
     display_summary: string;
     scene: WorldScene;
@@ -120,6 +121,7 @@ type WorldStateResponse = {
   top_signals: Array<{
     id: string;
     title: string;
+    summary?: string;
     display_title: string;
     display_summary: string;
     scene: WorldScene;
@@ -145,6 +147,7 @@ type WorldStateResponse = {
   knowledge_signals: Array<{
     id: string;
     title: string;
+    summary?: string;
     display_title: string;
     display_summary: string;
     scene: WorldScene;
@@ -241,13 +244,10 @@ type PageClientProps = {
 };
 
 const DEFAULT_SUBWORLDS: WorldSubworld[] = [
-  { key: 'global', title: '主世界', summary: '观察全部信号与世界标点。', signal_count: 0, matched_tags: [], recommended_bundles: [] },
-  { key: 'war', title: '冲突', summary: '冲突、外交、军事与制裁链条。', signal_count: 0, matched_tags: ['war'], recommended_bundles: [] },
-  { key: 'technology', title: '科技', summary: '模型、论文、芯片与实验室。', signal_count: 0, matched_tags: ['technology'], recommended_bundles: [] },
-  { key: 'capacity', title: '产能与供应链', summary: '能源、航运、制造与物流联动。', signal_count: 0, matched_tags: ['capacity'], recommended_bundles: [] },
-  { key: 'finance', title: '市场', summary: '市场、监管、财报、宏观与政策定价。', signal_count: 0, matched_tags: ['finance'], recommended_bundles: [] },
-  { key: 'health', title: '公共卫生', summary: '疫情、疾病、临床与生物安全。', signal_count: 0, matched_tags: ['health'], recommended_bundles: [] },
-  { key: 'weak-signal', title: '弱信号', summary: '社媒、论坛、预测市场与早期回响。', signal_count: 0, matched_tags: ['social'], recommended_bundles: [] },
+  { key: 'global', title: '全部信号', summary: '观察全部信号与世界标点。', signal_count: 0, matched_tags: [], recommended_bundles: [] },
+  { key: 'geo-politics-daily', title: '国际时政日报', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', signal_count: 0, matched_tags: ['geopolitics', 'war', 'policy'], recommended_bundles: [] },
+  { key: 'technology-daily', title: '科技日报', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', signal_count: 0, matched_tags: ['technology', 'research', 'chip'], recommended_bundles: [] },
+  { key: 'ai-daily', title: 'AI日报', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', signal_count: 0, matched_tags: ['ai', 'llm', 'agent', 'aihot'], recommended_bundles: [] },
 ];
 
 function asArray<T>(value: T[] | null | undefined): T[] {
@@ -511,6 +511,51 @@ function normalizeSubworlds(subworlds: WorldSubworld[] | null | undefined) {
   return normalized.length > 0 ? normalized : DEFAULT_SUBWORLDS;
 }
 
+function nodeMatchesDailySubworld(node: WorldStateNode, key: WorldScene) {
+  if (key === 'global') return true;
+  const haystack = [
+    node.scene,
+    node.title,
+    node.display_title,
+    node.summary,
+    node.display_summary,
+    node.source_name,
+    asArray(node.tags).join(' '),
+    asArray(node.alignment_tags).join(' '),
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  if (key === 'geo-politics-daily') {
+    return (
+      ['war', 'finance', 'health', 'capacity'].includes(String(node.scene || '')) ||
+      /(conflict|war|military|diplomacy|sanction|election|policy|minister|parliament|tariff|macro|market|public health|health|outbreak|shipping|energy|geopolitic|地缘|外交|冲突|制裁|选举|政策|公共卫生|航运|能源)/i.test(haystack)
+    );
+  }
+
+  if (key === 'technology-daily') {
+    return (
+      ['technology', 'capacity'].includes(String(node.scene || '')) ||
+      /(technology|research|paper|chip|semiconductor|model|robot|space|science|engineering|open-source|opensource|科技|论文|芯片|开源|工程)/i.test(haystack)
+    );
+  }
+
+  if (key === 'ai-daily') {
+    return /(\bai\b|\bllm\b|openai|anthropic|chatgpt|gemini|claude|\bmodel\b|\bagent\b|aihot|ai-hot|人工智能|大模型|智能体|模型)/i.test(haystack);
+  }
+
+  return node.scene === key || asArray(node.alignment_tags).includes(`scene:${key}`);
+}
+
+function withLocalSubworldCounts(subworlds: WorldSubworld[], state: WorldStateResponse | null) {
+  const nodes = asArray(state?.nodes);
+  if (nodes.length === 0) return subworlds;
+  return subworlds.map((world) => ({
+    ...world,
+    signal_count: world.key === 'global' ? nodes.length : nodes.filter((node) => nodeMatchesDailySubworld(node, world.key)).length,
+  }));
+}
+
 function formatTime(value: string) {
   return new Date(value).toLocaleString('zh-CN', {
     month: 'short',
@@ -681,13 +726,16 @@ function severitySoftTone(severity: number) {
 
 function sceneDisplayLabel(scene: WorldScene) {
   const labels: Record<string, string> = {
-    global: '主世界',
+    global: '全部信号',
     war: '冲突',
     technology: '科技',
     capacity: '产能与供应链',
     finance: '市场',
     health: '公共卫生',
     'weak-signal': '弱信号',
+    'geo-politics-daily': '国际时政日报',
+    'technology-daily': '科技日报',
+    'ai-daily': 'AI日报',
   };
 
   return labels[scene] || scene;
@@ -1208,6 +1256,10 @@ function signalOpenHref(id: string, url?: string) {
   return hasOpenableSourceUrl(url) ? url! : signalDetailHref(id);
 }
 
+function liveBenchQuestionDetailHref(snapshot: LiveQuestionSnapshot, scene: WorldScene) {
+  return `/livebench/${encodeURIComponent(snapshot.question.question_id)}?scene=${encodeURIComponent(scene)}`;
+}
+
 function _reliabilityTone(tier?: string) {
   if (tier === 'stable') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (tier === 'watchlist') return 'border-amber-200 bg-amber-50 text-amber-700';
@@ -1397,8 +1449,8 @@ export default function PageClient({
   const [scene, setScene] = useState<WorldScene>(initialScene);
   const [state, setState] = useState<WorldStateResponse | null>(normalizedInitialState);
   const [subworlds, setSubworlds] = useState<WorldSubworld[]>(normalizedInitialSubworlds);
-  const [marketSnapshot, setMarketSnapshot] = useState<WorldMarketSnapshot | null>(initialMarketSnapshot);
-  const [explain, setExplain] = useState<WorldExplainResponse | null>(initialExplain);
+  const [, setMarketSnapshot] = useState<WorldMarketSnapshot | null>(initialMarketSnapshot);
+  const [, setExplain] = useState<WorldExplainResponse | null>(initialExplain);
   const [globeTimeMode, setGlobeTimeMode] = useState<'today' | 'memory30'>('today');
   const [activeSignalId, setActiveSignalId] = useState<string | null>(null);
   const [globeAutoPauseUntil, setGlobeAutoPauseUntil] = useState<number>(0);
@@ -1722,8 +1774,8 @@ export default function PageClient({
       : focusFallbackWatchNext(activeSignalNode.scene, activeSignalNode.geo.label || activeSignalNode.geo.region);
     return {
       label: sceneDisplayLabel(activeSignalNode.scene),
-      title: cleanPresentationText(activeSignalNode.display_title || activeSignalNode.title),
-      summary: cleanNarrativeText(activeSignalNode.display_summary || activeSignalNode.summary),
+      title: cleanPresentationText(activeSignalNode.title || activeSignalNode.display_title),
+      summary: cleanNarrativeText(activeSignalNode.summary || activeSignalNode.display_summary),
       updatedAt: activeSignalNode.updated_at || activeSignalNode.published_at,
       watchNext,
     };
@@ -1771,7 +1823,8 @@ export default function PageClient({
     return () => window.clearInterval(timer);
   }, [globeAutoPauseUntil, markers]);
 
-  const activeSubworld = subworlds.find((world) => world.key === scene) || null;
+  const displaySubworlds = useMemo(() => withLocalSubworldCounts(subworlds, state), [subworlds, state]);
+  const activeSubworld = displaySubworlds.find((world) => world.key === scene) || null;
   const skillEntry = state?.skill_entry || null;
   const sourceRefresh = state?.source_refresh_summary || null;
   const livebenchSummary = state?.livebench_summary || null;
@@ -1975,11 +2028,11 @@ export default function PageClient({
             </div>
           </div>
 
-          <div className="mt-5 border-t border-slate-100 pt-4">
-            <div className="flex flex-col gap-3 rounded-[20px] border border-slate-200/80 bg-slate-50/75 px-3 py-3 text-sm text-slate-600">
+          <div className="mt-3 border-t border-slate-100 pt-3">
+            <div className="flex flex-col gap-2 text-sm text-slate-600">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <span className="text-xs font-medium tracking-[0.08em] text-slate-500">主世界控制</span>
+                  <span className="text-xs font-medium tracking-[0.08em] text-slate-500">日报筛选</span>
                   <span className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-xs text-slate-500">3D 地球</span>
                   <Button
                     variant="outline"
@@ -2008,7 +2061,7 @@ export default function PageClient({
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
-                {subworlds.map((world) => (
+                {displaySubworlds.map((world) => (
                   <button
                     key={world.key}
                     type="button"
@@ -2081,10 +2134,10 @@ export default function PageClient({
                           {severityLabel(node.severity)}
                         </Badge>
                         <p className="min-w-0 flex-1 break-words text-sm font-medium leading-6 text-slate-900">
-                          {cleanPresentationText(node.display_title || node.title)}
+                          {cleanPresentationText(node.title || node.display_title)}
                         </p>
                       </div>
-                      <p className="break-words text-xs leading-6 text-slate-600">{cleanPresentationText(node.display_summary || node.summary)}</p>
+                      <p className="break-words text-xs leading-6 text-slate-600">{cleanPresentationText(node.summary || node.display_summary)}</p>
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
                         {hasOpenableSourceUrl(node.source_url) ? (
                           <a
@@ -2293,6 +2346,16 @@ export default function PageClient({
                                 <p className="mt-2 line-clamp-2 text-[12px] leading-6 text-slate-600">{arenaPlatformContext(snapshot)}</p>
                               )}
                               <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                                <a
+                                  href={liveBenchQuestionDetailHref(snapshot, scene)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-500 transition hover:text-slate-900"
+                                >
+                                  <Link2 className="h-3 w-3" />
+                                  题目详情
+                                </a>
                                 {arenaQuestionHref(snapshot) ? (
                                   <a
                                     href={arenaQuestionHref(snapshot) || '#'}
@@ -2530,7 +2593,7 @@ export default function PageClient({
                 </div>
 
               <div className="border-t border-slate-100 bg-white/70 px-4 py-3 text-xs text-slate-500">
-                待结算列表会统一保留还没出官方结果的问题；当前窗口约为 {livebenchArena?.active_window_days || WEEKLY_PREDICTION_WINDOW_DAYS} 天主判断期，加上 {livebenchArena?.watchlist_window_days || REPORT_MEMORY_DAYS} 天补充跟踪期。
+                待结算列表按近 {livebenchArena?.active_window_days || WEEKLY_PREDICTION_WINDOW_DAYS} 天主判断期和 {livebenchArena?.watchlist_window_days || REPORT_MEMORY_DAYS} 天补充跟踪期滚动；已结算列表长期保留，便于回看题面、规则和结果。
               </div>
             </CardContent>
           </Card>
@@ -2584,10 +2647,10 @@ export default function PageClient({
                         <span className="text-[11px] text-slate-400">{formatTime(signal.published_at)}</span>
                       </div>
                       <p className="mt-2 line-clamp-2 text-[12px] font-medium leading-6 text-slate-900">
-                        {cleanPresentationText(signal.display_title || signal.title)}
+                        {cleanPresentationText(signal.title || signal.display_title)}
                       </p>
                       <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-500">
-                        {cleanNarrativeText(signal.display_summary)}
+                        {cleanNarrativeText(signal.summary || signal.display_summary)}
                       </p>
                     </article>
                   ))}

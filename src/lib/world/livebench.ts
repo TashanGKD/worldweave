@@ -62,7 +62,7 @@ const LIVEBENCH_WATCHLIST_LIMIT = 96;
 const LIVEBENCH_ACTIVE_CANDIDATE_LIMIT = 96;
 const LIVEBENCH_RESOLVED_CANDIDATE_LIMIT = 64;
 const LIVEBENCH_WATCHLIST_CANDIDATE_LIMIT = 160;
-const LIVEBENCH_RECENTLY_RESOLVED_WINDOW_DAYS = 30;
+const LIVEBENCH_RESOLVED_RETENTION_DAYS = resolveLiveBenchInteger('WORLD_LIVEBENCH_RESOLVED_RETENTION_DAYS', 3650, 30, 3650);
 const LIVEBENCH_QUESTION_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const LIVEBENCH_MIN_OPEN_QUESTION_COUNT = 20;
 const LIVEBENCH_MIN_TOTAL_QUESTION_COUNT = 40;
@@ -3227,7 +3227,7 @@ function pickPolymarketProbabilityYes(title: string, outcomes: string[], prices:
 function shouldKeepQuestionForArenaSync(question: Pick<LiveQuestion, 'official_outcome' | 'official_resolved_at' | 'resolve_at' | 'close_at'>) {
   if (question.official_outcome) {
     const referenceTime = question.official_resolved_at || question.resolve_at || question.close_at;
-    return Math.abs(daysUntil(referenceTime)) <= LIVEBENCH_RECENTLY_RESOLVED_WINDOW_DAYS;
+    return Math.abs(daysUntil(referenceTime)) <= LIVEBENCH_RESOLVED_RETENTION_DAYS;
   }
   const closeDays = Math.min(daysUntil(question.resolve_at), daysUntil(question.close_at));
   return closeDays >= -SETTLEMENT_PENDING_WINDOW_DAYS && closeDays <= WATCHLIST_WINDOW_DAYS;

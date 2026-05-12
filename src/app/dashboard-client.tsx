@@ -64,7 +64,7 @@ const WorldGlobe = dynamic(() => import('@/components/world-globe'), { ssr: fals
 const AUTO_REFRESH_MS = 60 * 1000;
 const INITIAL_BACKGROUND_REFRESH_DELAY_MS = 1800;
 const DASHBOARD_CACHE_TTL_MS = 10 * 60 * 1000;
-const DASHBOARD_CACHE_VERSION = 2;
+const DASHBOARD_CACHE_VERSION = 3;
 const DASHBOARD_CACHE_PREFIX = `world-v2:${DASHBOARD_CACHE_VERSION}:dashboard`;
 const GLOBE_MEMORY_DAYS = 30;
 
@@ -172,13 +172,10 @@ type PageClientProps = {
 };
 
 const DEFAULT_SUBWORLDS: WorldSubworld[] = [
-  { key: 'global', title: '主世界', summary: '观察全部信号与世界标点。', signal_count: 0, matched_tags: [], recommended_bundles: [] },
-  { key: 'war', title: '冲突', summary: '冲突、外交、军事与制裁链条。', signal_count: 0, matched_tags: ['war'], recommended_bundles: [] },
-  { key: 'technology', title: '科技', summary: '模型、论文、芯片与实验室。', signal_count: 0, matched_tags: ['technology'], recommended_bundles: [] },
-  { key: 'capacity', title: '产能与供应链', summary: '能源、航运、制造与物流联动。', signal_count: 0, matched_tags: ['capacity'], recommended_bundles: [] },
-  { key: 'finance', title: '市场', summary: '市场、监管、财报、宏观与政策定价。', signal_count: 0, matched_tags: ['finance'], recommended_bundles: [] },
-  { key: 'health', title: '公共卫生', summary: '疫情、疾病、临床与生物安全。', signal_count: 0, matched_tags: ['health'], recommended_bundles: [] },
-  { key: 'weak-signal', title: '弱信号', summary: '社媒、论坛、预测市场与早期回响。', signal_count: 0, matched_tags: ['social'], recommended_bundles: [] },
+  { key: 'global', title: '全部信号', summary: '观察全部信号与世界标点。', signal_count: 0, matched_tags: [], recommended_bundles: [] },
+  { key: 'geo-politics-daily', title: '国际时政日报', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', signal_count: 0, matched_tags: ['geopolitics', 'war', 'policy'], recommended_bundles: [] },
+  { key: 'technology-daily', title: '科技日报', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', signal_count: 0, matched_tags: ['technology', 'research', 'chip'], recommended_bundles: [] },
+  { key: 'ai-daily', title: 'AI日报', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', signal_count: 0, matched_tags: ['ai', 'llm', 'agent', 'aihot'], recommended_bundles: [] },
 ];
 
 function dashboardCacheKey(scene: WorldScene) {
@@ -656,9 +653,9 @@ function livebenchPoolHeadline(summary: WorldDashboardLiveBenchSummary | null | 
   if (!summary) return '题池覆盖还在同步。';
   const pendingSettlement = summary.settlement_pending_count || 0;
   if (pendingSettlement > 0) {
-    return `最近 30 天窗口里有 ${summary.current_question_count} 道题在跟踪，已核票 ${summary.resolved_question_count} 道，另有 ${pendingSettlement} 道到期待核票。`;
+    return `当前有 ${summary.current_question_count} 道题在跟踪，累计已核票 ${summary.resolved_question_count} 道，另有 ${pendingSettlement} 道到期待核票。`;
   }
-  return `最近 30 天窗口里有 ${summary.current_question_count} 道题在跟踪，已核票 ${summary.resolved_question_count} 道。`;
+  return `当前有 ${summary.current_question_count} 道题在跟踪，累计已核票 ${summary.resolved_question_count} 道。`;
 }
 
 function summarizeEmptySignalCheck(

@@ -158,13 +158,16 @@ export function compactText(value?: string | null, max = 160) {
 
 export function sceneDisplayLabel(scene: WorldScene) {
   const labels: Record<string, string> = {
-    global: '主世界',
+    global: '全部信号',
     war: '冲突',
     technology: '科技',
     capacity: '产能与供应链',
     finance: '市场',
     health: '公共卫生',
     'weak-signal': '弱信号',
+    'geo-politics-daily': '国际时政日报',
+    'technology-daily': '科技日报',
+    'ai-daily': 'AI日报',
   };
   return labels[scene] || scene;
 }

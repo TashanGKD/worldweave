@@ -22,13 +22,16 @@ function formatTime(value?: string | null) {
 
 function signalSceneLabel(scene: string) {
   const labels: Record<string, string> = {
-    global: '主世界',
+    global: '全部信号',
     war: '冲突',
     technology: '科技',
     capacity: '产能与供应链',
     finance: '市场',
     health: '公共卫生',
     'weak-signal': '弱信号',
+    'geo-politics-daily': '国际时政日报',
+    'technology-daily': '科技日报',
+    'ai-daily': 'AI日报',
   };
 
   return labels[scene] || scene;
@@ -52,8 +55,8 @@ export default async function SignalDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const title = signal?.display_title || signal?.title || node?.display_title || node?.title || id;
-  const summary = signal?.display_summary || node?.display_summary || signal?.summary || node?.summary || '暂无更多摘要。';
+  const title = signal?.title || node?.title || signal?.display_title || node?.display_title || id;
+  const summary = signal?.summary || node?.summary || signal?.display_summary || node?.display_summary || '暂无更多摘要。';
   const sourceName = signal?.source_name || node?.source_name || 'Unknown';
   const sourceUrl = signal?.source_url || node?.source_url || '';
   const region = signal?.region || node?.geo?.region || '--';

@@ -157,7 +157,7 @@ function slimInitialDashboardState(state: InitialDashboardState | null): Initial
     top_signals: (state.top_signals || []).slice(0, 12).map(slimInitialSignal),
     knowledge_signals: (state.knowledge_signals || []).slice(0, 4).map(slimInitialSignal),
     pending_question_previews: (state.pending_question_previews || []).slice(0, 8).map(slimInitialQuestionPreview),
-    resolved_question_previews: (state.resolved_question_previews || []).slice(0, 2).map(slimInitialQuestionPreview),
+    resolved_question_previews: (state.resolved_question_previews || []).slice(0, 12).map(slimInitialQuestionPreview),
     what_to_do_next: buildInitialNextSteps(state),
     quick_links: (state.quick_links || []).map((link) => ({
       ...link,

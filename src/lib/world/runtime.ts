@@ -937,7 +937,7 @@ const CATALOG_SOURCE_CURSOR_FILE = path.join(process.cwd(), '.cache', 'world-cat
 const DASHBOARD_SNAPSHOT_FILE = path.join(process.cwd(), '.cache', 'world-dashboard-snapshot.json');
 const LATEST_WORLD_STATE_FILE = path.join(process.cwd(), '.cache', 'latest-world-state.json');
 const SOURCE_REFRESH_STATUS_FILE = path.join(process.cwd(), '.cache', 'world-source-refresh-status.json');
-const DASHBOARD_SNAPSHOT_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+const _DASHBOARD_SNAPSHOT_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 const API_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const SOURCE_KNOWLEDGE_SYNC_DASHBOARD_TIMEOUT_MS = 15000;
 const RUNTIME_HISTORY_FILE = path.join(process.cwd(), '.cache', 'world-runtime-history.json');
@@ -1406,6 +1406,9 @@ const SCENE_LABELS: Record<string, string> = {
   finance: '市场',
   health: '公共卫生',
   'weak-signal': '弱信号',
+  'geo-politics-daily': '国际时政日报',
+  'technology-daily': '科技日报',
+  'ai-daily': 'AI日报',
   global: '主世界',
 };
 
@@ -1610,9 +1613,26 @@ function buildDisplayTitle(signal: DisplaySignalInput): string {
   return `${location} · ${thread.titleBeat}`;
 }
 
+function isGenericGeneratedDisplayText(value?: string | null): boolean {
+  const text = cleanDisplayText(value || '');
+  if (!text) return false;
+  return /出现新的.+信号|后续重点看|按普通监测处理|值得补充观察|目前热度较高，需继续跟踪/.test(text);
+}
+
+function concreteDisplayText(value?: string | null, max = 220): string {
+  const text = cleanDisplayText(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
 function buildDisplaySummary(
   signal: DisplaySignalInput & Pick<WorldSignal, 'coverageGap' | 'hotspotScore'>,
 ): string {
+  const concreteSummary = concreteDisplayText(applyQuickTextTranslations(signal.summary || ''), 180);
+  if (concreteSummary && !isGenericGeneratedDisplayText(concreteSummary)) {
+    return concreteSummary;
+  }
+
   const thread = getSignalThread(signal);
   const location = buildDisplayLocation(signal);
   const emphasis =
@@ -2721,14 +2741,40 @@ function signalMatchesScene(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' 
     return true;
   }
 
-  if (normalizeTag(scene) === 'weaksignal') {
+  const normalizedScene = normalizeTag(scene);
+  const signalScene = normalizeTag(signal.scene);
+  const alignmentTags = signal.alignmentTags.map(normalizeTag);
+  const haystack = normalizeTag([
+    signal.title,
+    signal.summary,
+    signal.tags.join(' '),
+    signal.sourceName,
+    signal.sourceUrl,
+    signal.scene,
+    signal.alignmentTags.join(' '),
+  ].join(' '));
+
+  if (normalizedScene === 'weaksignal') {
     return isWeakSignalSignal(signal);
   }
 
-  const normalizedScene = normalizeTag(scene);
+  if (normalizedScene === 'geo-politics-daily' || normalizedScene === 'geopoliticsdaily' || normalizedScene === 'international-politics-daily' || normalizedScene === 'internationalpoliticsdaily') {
+    if (['war', 'finance', 'health', 'capacity'].includes(signalScene)) return true;
+    return /(conflict|war|military|diplomacy|sanction|election|policy|minister|parliament|tariff|macro|market|publichealth|health|outbreak|shipping|energy|geopolitic|地缘|外交|冲突|制裁|选举|政策|公共卫生|航运|能源)/.test(haystack);
+  }
+
+  if (normalizedScene === 'technology-daily' || normalizedScene === 'technologydaily') {
+    if (signalScene === 'technology' || signalScene === 'capacity') return true;
+    return /(technology|research|paper|chip|semiconductor|model|robot|space|science|engineering|open-source|opensource|科技|论文|芯片|开源|工程)/.test(haystack);
+  }
+
+  if (normalizedScene === 'ai-daily' || normalizedScene === 'aidaily') {
+    return /(\bai\b|\bllm\b|openai|anthropic|chatgpt|gemini|claude|\bmodel\b|\bagent\b|aihot|ai-hot|人工智能|大模型|智能体|模型)/.test(haystack);
+  }
+
   return (
-    normalizeTag(signal.scene) === normalizedScene ||
-    signal.alignmentTags.map(normalizeTag).includes(`scene:${normalizedScene}`)
+    signalScene === normalizedScene ||
+    alignmentTags.includes(`scene:${normalizedScene}`)
   );
 }
 
@@ -3554,12 +3600,22 @@ function scoreSignals(rows: SignalRow[]): WorldSignal[] {
 
 function toEvidenceSignal(signal: WorldSignal): WorldEvidenceSignal {
   const localized = getLocalizedSignal(signal);
+  const concreteTitle = concreteDisplayText(applyQuickTextTranslations(signal.title), 120);
+  const concreteSummary = concreteDisplayText(applyQuickTextTranslations(signal.summary), 240);
+  const displayTitle =
+    isGenericGeneratedDisplayText(localized.displayTitle) && concreteTitle
+      ? concreteTitle
+      : localized.displayTitle;
+  const displaySummary =
+    isGenericGeneratedDisplayText(localized.displaySummary) && concreteSummary
+      ? concreteSummary
+      : localized.displaySummary;
   return {
     id: signal.id,
     title: signal.title,
     summary: signal.summary,
-    display_title: localized.displayTitle,
-    display_summary: localized.displaySummary,
+    display_title: displayTitle,
+    display_summary: displaySummary,
     source_name: signal.sourceName,
     source_url: resolveSignalSourceUrlForUi(signal),
     published_at: signal.publishedAt,
@@ -3616,6 +3672,19 @@ function resolveSourceReliability(
   const sourceUrl = typeof signal.sourceUrl === 'string' ? signal.sourceUrl : '';
   const normalizedUrl = sourceUrl.trim().toLowerCase();
   const normalizedName = sourceName.trim().toLowerCase();
+
+  if (normalizedName === 'ai hot' || normalizedName.includes('aihot') || normalizedUrl.includes('aihot.virxact.com')) {
+    return {
+      tier: 'stable',
+      label: 'stable-source',
+      reason: 'AI HOT 通过公开 Skill、RSS 和匿名 REST API 暴露精选 AI 动态；当前按整体 AI 信源接入，并保留原文链接供核对。',
+      source_name: sourceName || 'AI HOT',
+      source_url: sourceUrl || 'https://aihot.virxact.com/',
+      connectivity: 'direct',
+      matched_skill_name: 'aihot',
+      matched_admission_tier: 'context',
+    };
+  }
 
   if (!sourceCatalog) {
     return {
@@ -4990,6 +5059,68 @@ function normalizeNewsFeedSnapshot(
   ];
 }
 
+function normalizeAiHotSnapshot(data: unknown): SignalRow[] {
+  const items = (getPayloadArray(data, ['items']) || [])
+    .map((item) => ({
+      id: asText(item.id),
+      title: asText(item.title) || asText(item.title_en),
+      titleEn: asText(item.title_en),
+      url: asText(item.url),
+      source: asText(item.source),
+      publishedAt: asText(item.publishedAt) || asText(item.published_at) || asText(item.created_at),
+      summary: asText(item.summary),
+      category: asText(item.category),
+    }))
+    .filter((item) => item.title || item.summary)
+    .slice(0, 8);
+
+  if (items.length === 0) {
+    return [];
+  }
+
+  const latest = items[0];
+  const eventTime = parseIsoDay(latest.publishedAt || new Date().toISOString());
+  const headlineList = items
+    .slice(0, 4)
+    .map((item) => {
+      const source = item.source ? `（${item.source}）` : '';
+      return `《${cleanDisplayText(item.title)}》${source}`;
+    })
+    .join('、');
+  const categoryList = [...new Set(items.map((item) => normalizeTag(item.category)).filter(Boolean))].slice(0, 5);
+  const anchor = getKnowledgeAnchor('', 'AI HOT', 'AI HOT', ['ai', 'technology']);
+  const leadingSummary = concreteDisplayText(latest.summary || latest.titleEn || latest.title, 180);
+
+  return [
+    {
+      id: generateStableId('selected-source', `aihot-${eventTime.slice(0, 13)}-${latest.id || latest.title}`),
+      title: `AI HOT 精选：${cleanDisplayText(latest.title)}`,
+      description: `${leadingSummary ? `${leadingSummary}。` : ''}本轮 AI HOT 精选还包括 ${headlineList}。`,
+      source_name: 'AI HOT',
+      source_url: 'https://aihot.virxact.com/',
+      event_time: eventTime,
+      created_at: new Date().toISOString(),
+      location: 'AI HOT',
+      country: '',
+      latitude: anchor?.latitude ?? null,
+      longitude: anchor?.longitude ?? null,
+      severity: 2,
+      relevance_score: 0.78,
+      tags: ['technology', 'ai', 'aihot', 'ai-news', 'source-feed', 'daily:ai', ...categoryList],
+      alignment_tags: ['source:selected-source', 'source:aihot', 'source:news-feed', 'category:ai-daily'],
+      urgency_reason: 'AI HOT selected public API snapshot',
+      last_seen_at: new Date().toISOString(),
+      source_type: 'api-json',
+      source_feed_name: 'AI HOT',
+      content_md: items
+        .map((item) =>
+          [cleanDisplayText(item.title), item.source, concreteDisplayText(item.summary, 140), item.url].filter(Boolean).join(' — '),
+        )
+        .join('\n'),
+    },
+  ];
+}
+
 function catalogSourceSceneTags(scene: string) {
   if (scene === 'finance') return ['finance', 'market', 'catalog-source'];
   if (scene === 'technology') return ['technology', 'research', 'catalog-source'];
@@ -5768,6 +5899,10 @@ async function loadSelectedHighQualityRows(): Promise<SignalRow[]> {
     Accept: 'application/json, application/xml, text/xml, text/html;q=0.9, */*;q=0.8',
     'User-Agent': 'world-threads/1.0',
   };
+  const aiHotHeaders = {
+    ...headers,
+    'User-Agent': 'Mozilla/5.0 (compatible; worldweave-aihot/0.1; +https://github.com/TashanGKD/worldweave) aihot-skill/0.2.0',
+  };
   const nseHeaders = {
     ...headers,
     Referer: 'https://www.nseindia.com/',
@@ -5940,6 +6075,14 @@ async function loadSelectedHighQualityRows(): Promise<SignalRow[]> {
             signal: AbortSignal.timeout(PUBLIC_ANCHOR_TIMEOUT_MS),
           }).then((response) => (response.ok ? response.json() : null)),
         ]).then(([articles, sources]) => normalizeInkwellSnapshot(articles, sources)),
+    },
+    {
+      key: 'aihot',
+      run: () =>
+        fetch('https://aihot.virxact.com/api/public/items?mode=selected&take=12', {
+          headers: aiHotHeaders,
+          signal: AbortSignal.timeout(PUBLIC_ANCHOR_TIMEOUT_MS),
+        }).then((response) => (response.ok ? response.json() : null)).then((data) => normalizeAiHotSnapshot(data)),
     },
     {
       key: 'signal-arena',
@@ -7357,45 +7500,27 @@ function buildWorldSubworldSummaries(
   const fixedWorlds: Array<{ key: WorldScene; title: string; summary: string; matched_tags: string[] }> = [
     {
       key: 'global',
-      title: '主世界',
+      title: '全部信号',
       summary: '观察全部信号与世界标点。',
       matched_tags: [],
     },
     {
-      key: 'war',
-      title: '冲突',
-      summary: '冲突、外交、军事与制裁链条。',
-      matched_tags: ['war', 'security', 'conflict'],
+      key: 'geo-politics-daily',
+      title: '国际时政日报',
+      summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。',
+      matched_tags: ['geopolitics', 'war', 'policy', 'macro', 'health'],
     },
     {
-      key: 'technology',
-      title: '科技',
-      summary: '模型、论文、芯片、实验室与开源生态。',
-      matched_tags: ['technology', 'ai', 'paper'],
+      key: 'technology-daily',
+      title: '科技日报',
+      summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。',
+      matched_tags: ['technology', 'research', 'chip', 'opensource'],
     },
     {
-      key: 'capacity',
-      title: '产能与供应链',
-      summary: '能源、航运、制造与物流外溢。',
-      matched_tags: ['capacity', 'shipping', 'energy'],
-    },
-    {
-      key: 'finance',
-      title: '市场',
-      summary: '市场、监管、财报、宏观与政策定价。',
-      matched_tags: ['finance', 'macro', 'regulatory'],
-    },
-    {
-      key: 'health',
-      title: '公共卫生',
-      summary: '疫情、疾病、临床与生物安全。',
-      matched_tags: ['health', 'outbreak', 'biosecurity'],
-    },
-    {
-      key: 'weak-signal',
-      title: '弱信号',
-      summary: '社媒、论坛、预测市场与早期回响。',
-      matched_tags: ['social', 'community', 'prediction'],
+      key: 'ai-daily',
+      title: 'AI日报',
+      summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。',
+      matched_tags: ['ai', 'llm', 'agent', 'aihot'],
     },
   ];
 
@@ -7461,13 +7586,10 @@ function buildSubworldSummariesFromCachedDashboardState(
 
   const sourceCatalog = (state as { source_catalog?: WorldSourceCatalog | null }).source_catalog || null;
   const fixedWorlds: Array<{ key: WorldScene; title: string; summary: string; matched_tags: string[] }> = [
-    { key: 'global', title: '主世界', summary: '观察全部信号与世界标点。', matched_tags: [] },
-    { key: 'war', title: '冲突', summary: '冲突、外交、军事与制裁链条。', matched_tags: ['war', 'security', 'conflict'] },
-    { key: 'technology', title: '科技', summary: '模型、论文、芯片、实验室与开源生态。', matched_tags: ['technology', 'ai', 'paper'] },
-    { key: 'capacity', title: '产能与供应链', summary: '能源、航运、制造与物流外溢。', matched_tags: ['capacity', 'shipping', 'energy'] },
-    { key: 'finance', title: '市场', summary: '市场、监管、财报、宏观与政策定价。', matched_tags: ['finance', 'macro', 'regulatory'] },
-    { key: 'health', title: '公共卫生', summary: '疫情、疾病、临床与生物安全。', matched_tags: ['health', 'outbreak', 'biosecurity'] },
-    { key: 'weak-signal', title: '弱信号', summary: '社媒、论坛、预测市场与早期回响。', matched_tags: ['social', 'community', 'prediction'] },
+    { key: 'global', title: '全部信号', summary: '观察全部信号与世界标点。', matched_tags: [] },
+    { key: 'geo-politics-daily', title: '国际时政日报', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', matched_tags: ['geopolitics', 'war', 'policy', 'macro', 'health'] },
+    { key: 'technology-daily', title: '科技日报', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', matched_tags: ['technology', 'research', 'chip', 'opensource'] },
+    { key: 'ai-daily', title: 'AI日报', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', matched_tags: ['ai', 'llm', 'agent', 'aihot'] },
   ];
 
   return fixedWorlds.map((world) => ({
@@ -7475,7 +7597,20 @@ function buildSubworldSummariesFromCachedDashboardState(
     signal_count:
       world.key === 'global'
         ? state.metrics?.active_signal_count || 0
-        : (sceneCounts.get(world.key)?.size || 0),
+        : pooledSignals.filter((signal) =>
+            signalMatchesScene(
+              {
+                scene: (signal?.scene as WorldScene | undefined) || 'global',
+                alignmentTags: Array.isArray(signal?.alignment_tags) ? signal.alignment_tags : [],
+                sourceName: typeof signal?.source_name === 'string' ? signal.source_name : '',
+                sourceUrl: typeof signal?.source_url === 'string' ? signal.source_url : '',
+                title: typeof signal?.title === 'string' ? signal.title : '',
+                summary: typeof signal?.summary === 'string' ? signal.summary : '',
+                tags: Array.isArray(signal?.tags) ? signal.tags : [],
+              },
+              world.key,
+            ),
+          ).length || sceneCounts.get(world.key)?.size || 0,
     recommended_bundles: buildCuratedBundleHints(sourceCatalog)[world.key] || [],
   }));
 }
@@ -7541,14 +7676,21 @@ export function isRenderableDashboardState(state: Pick<WorldDashboardStatePayloa
 }
 
 function cachedEvidenceSignalMatchesScene(
-  signal: Pick<WorldEvidenceSignal, 'scene' | 'tags' | 'alignment_tags'> | null | undefined,
+  signal: Pick<WorldEvidenceSignal, 'scene' | 'tags' | 'alignment_tags' | 'source_name' | 'source_url' | 'title' | 'summary'> | null | undefined,
   scene: WorldScene,
 ) {
   if (!signal || scene === 'global') return true;
-  const target = normalizeTag(scene);
-  return (
-    normalizeTag(signal.scene) === target ||
-    signal.alignment_tags?.some((tag) => normalizeTag(tag) === `scene:${target}`)
+  return signalMatchesScene(
+    {
+      scene: signal.scene,
+      alignmentTags: signal.alignment_tags || [],
+      sourceName: signal.source_name || '',
+      sourceUrl: signal.source_url || '',
+      title: signal.title || '',
+      summary: signal.summary || '',
+      tags: signal.tags || [],
+    },
+    scene,
   );
 }
 
@@ -7557,8 +7699,18 @@ function cachedNodeMatchesScene(
   scene: WorldScene,
 ) {
   if (!node || scene === 'global') return true;
-  const target = normalizeTag(scene);
-  return normalizeTag(node.scene) === target || node.alignment_tags?.some((tag) => normalizeTag(tag) === `scene:${target}`);
+  return signalMatchesScene(
+    {
+      scene: node.scene,
+      alignmentTags: node.alignment_tags || [],
+      sourceName: node.source_name || '',
+      sourceUrl: node.source_url || '',
+      title: node.title || '',
+      summary: node.summary || '',
+      tags: node.tags || [],
+    },
+    scene,
+  );
 }
 
 function dedupeCachedEvidenceSignals(signals: WorldEvidenceSignal[]) {
@@ -7866,6 +8018,10 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
   const hotspotNodes = hotspotSourceSignals
     .map<WorldStateNode>((signal) => {
       const localized = getLocalizedSignal(signal);
+      const concreteTitle = concreteDisplayText(applyQuickTextTranslations(signal.title), 120);
+      const concreteSummary = concreteDisplayText(applyQuickTextTranslations(signal.summary), 240);
+      const displayTitle = isGenericGeneratedDisplayText(localized.displayTitle) && concreteTitle ? concreteTitle : localized.displayTitle;
+      const displaySummary = isGenericGeneratedDisplayText(localized.displaySummary) && concreteSummary ? concreteSummary : localized.displaySummary;
       return ({
       node_id: signal.id,
       node_type: 'hotspot',
@@ -7892,10 +8048,10 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
       source_name: signal.sourceName,
       source_url: resolveSignalSourceUrlForUi(signal),
       last_report_at: null,
-      title: localized.displayTitle,
-      summary: localized.displaySummary,
-      display_title: localized.displayTitle,
-      display_summary: localized.displaySummary,
+      title: displayTitle,
+      summary: displaySummary,
+      display_title: displayTitle,
+      display_summary: displaySummary,
       activities: [],
       });
     });
@@ -7903,6 +8059,10 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
   const explorationNodes = explorationSourceSignals
     .map<WorldStateNode>((signal) => {
       const localized = getLocalizedSignal(signal);
+      const concreteTitle = concreteDisplayText(applyQuickTextTranslations(signal.title), 120);
+      const concreteSummary = concreteDisplayText(applyQuickTextTranslations(signal.summary), 240);
+      const displayTitle = isGenericGeneratedDisplayText(localized.displayTitle) && concreteTitle ? concreteTitle : localized.displayTitle;
+      const displaySummary = isGenericGeneratedDisplayText(localized.displaySummary) && concreteSummary ? concreteSummary : localized.displaySummary;
       return ({
       node_id: `${signal.id}:explore`,
       node_type: 'exploration',
@@ -7929,10 +8089,10 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
       source_name: signal.sourceName,
       source_url: resolveSignalSourceUrlForUi(signal),
       last_report_at: null,
-      title: localized.displayTitle,
-      summary: localized.displaySummary,
-      display_title: localized.displayTitle,
-      display_summary: localized.displaySummary,
+      title: displayTitle,
+      summary: displaySummary,
+      display_title: displayTitle,
+      display_summary: displaySummary,
       activities: [],
       });
     });
