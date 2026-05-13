@@ -64,7 +64,7 @@ const WorldGlobe = dynamic(() => import('@/components/world-globe'), { ssr: fals
 const AUTO_REFRESH_MS = 60 * 1000;
 const INITIAL_BACKGROUND_REFRESH_DELAY_MS = 1800;
 const DASHBOARD_CACHE_TTL_MS = 10 * 60 * 1000;
-const DASHBOARD_CACHE_VERSION = 3;
+const DASHBOARD_CACHE_VERSION = 4;
 const DASHBOARD_CACHE_PREFIX = `world-v2:${DASHBOARD_CACHE_VERSION}:dashboard`;
 const GLOBE_MEMORY_DAYS = 30;
 
@@ -173,9 +173,9 @@ type PageClientProps = {
 
 const DEFAULT_SUBWORLDS: WorldSubworld[] = [
   { key: 'global', title: '全部信号', summary: '观察全部信号与世界标点。', signal_count: 0, matched_tags: [], recommended_bundles: [] },
-  { key: 'geo-politics-daily', title: '国际时政日报', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', signal_count: 0, matched_tags: ['geopolitics', 'war', 'policy'], recommended_bundles: [] },
-  { key: 'technology-daily', title: '科技日报', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', signal_count: 0, matched_tags: ['technology', 'research', 'chip'], recommended_bundles: [] },
-  { key: 'ai-daily', title: 'AI日报', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', signal_count: 0, matched_tags: ['ai', 'llm', 'agent', 'aihot'], recommended_bundles: [] },
+  { key: 'geo-politics-daily', title: '国际时政', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', signal_count: 0, matched_tags: ['geopolitics', 'war', 'policy'], recommended_bundles: [] },
+  { key: 'technology-daily', title: '科技', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', signal_count: 0, matched_tags: ['technology', 'research', 'chip'], recommended_bundles: [] },
+  { key: 'ai-daily', title: 'AI', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', signal_count: 0, matched_tags: ['ai', 'llm', 'agent', 'aihot'], recommended_bundles: [] },
 ];
 
 function dashboardCacheKey(scene: WorldScene) {
@@ -192,6 +192,93 @@ function normalizeSubworlds(subworlds: WorldSubworld[] | null | undefined) {
     }));
 
   return normalized.length > 0 ? normalized : DEFAULT_SUBWORLDS;
+}
+
+function nodeMatchesDailySubworld(node: WorldStateNode, key: WorldScene) {
+  if (key === 'global') return true;
+  const haystack = [
+    node.scene,
+    node.title,
+    node.display_title,
+    node.summary,
+    node.display_summary,
+    node.source_name,
+    asArray(node.tags).join(' '),
+    asArray(node.alignment_tags).join(' '),
+  ]
+    .join(' ')
+    .toLowerCase();
+
+  if (key === 'geo-politics-daily') {
+    return (
+      ['war', 'finance', 'health', 'capacity'].includes(String(node.scene || '')) ||
+      /(conflict|war|military|diplomacy|sanction|election|policy|minister|parliament|tariff|macro|market|public health|health|outbreak|shipping|energy|geopolitic|地缘|外交|冲突|制裁|选举|政策|公共卫生|航运|能源)/i.test(haystack)
+    );
+  }
+
+  if (key === 'technology-daily') {
+    return (
+      ['technology', 'capacity'].includes(String(node.scene || '')) ||
+      /(technology|research|paper|chip|semiconductor|model|robot|space|science|engineering|open-source|opensource|科技|论文|芯片|开源|工程)/i.test(haystack)
+    );
+  }
+
+  if (key === 'ai-daily') {
+    return /(\bai\b|\bllm\b|openai|anthropic|chatgpt|gemini|claude|\bmodel\b|\bagent\b|aihot|ai-hot|人工智能|大模型|智能体|模型)/i.test(haystack);
+  }
+
+  return node.scene === key || asArray(node.alignment_tags).includes(`scene:${key}`);
+}
+
+type DailyBriefItem = {
+  key: WorldScene;
+  label: string;
+  title: string;
+  summary: string;
+};
+
+const DAILY_BRIEF_CATEGORIES: Array<{ key: WorldScene; label: string; fallback: string }> = [
+  { key: 'geo-politics-daily', label: '国际时政', fallback: '今天还没有足够新的国际时政信号，继续等下一轮刷新补齐。' },
+  { key: 'technology-daily', label: '科技', fallback: '今天还没有足够新的科技信号，先保留近 30 天信源作对照。' },
+  { key: 'ai-daily', label: 'AI', fallback: '今天还没有足够新的 AI 信号，AI HOT 和模型动态会继续补位。' },
+];
+
+function briefNodeScore(node: WorldStateNode) {
+  const timestamp = new Date(node.updated_at || node.last_report_at || node.published_at || 0).getTime();
+  const recency = Number.isFinite(timestamp) ? timestamp / 10000000000000 : 0;
+  return (node.severity || 0) * 1000 + (node.hotspot_score || 0) + recency;
+}
+
+function compactPresentationText(value?: string | null, max = 160) {
+  const text = cleanPresentationText(value);
+  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
+}
+
+function buildDailyBriefItems(state: WorldDashboardResponse | null): DailyBriefItem[] {
+  const nodes = asArray(state?.nodes)
+    .filter((node) => cleanPresentationText(node.display_title || node.title).length > 0)
+    .sort((a, b) => briefNodeScore(b) - briefNodeScore(a));
+
+  return DAILY_BRIEF_CATEGORIES.map((category) => {
+    const node = nodes.find((candidate) => nodeMatchesDailySubworld(candidate, category.key));
+    if (!node) {
+      return {
+        key: category.key,
+        label: category.label,
+        title: '等待新信号',
+        summary: category.fallback,
+      };
+    }
+
+    const title = cleanPresentationText(node.display_title || node.title);
+    const summary = compactPresentationText(node.display_summary || node.summary || node.urgency_reason, 118);
+    return {
+      key: category.key,
+      label: category.label,
+      title,
+      summary: summary || category.fallback,
+    };
+  });
 }
 
 function normalizeStateNode(node: WorldStateNode): WorldStateNode {
@@ -611,44 +698,6 @@ function sourceRuntimeHeadline(
   return `本次看板校验${status}，监测池 ${summary.monitor_runtime.monitor_source_count} 条，高质量 ${summary.monitor_runtime.high_quality_source_count} 条，题池已结算 ${resolved} 道、跟踪 ${active} 道。`;
 }
 
-function latestSourceRefreshTime(...values: Array<string | null | undefined>) {
-  let latest: string | null = null;
-  let latestMs = 0;
-  for (const value of values) {
-    if (!value) continue;
-    const ms = new Date(value).getTime();
-    if (!Number.isFinite(ms) || ms <= latestMs) continue;
-    latest = value;
-    latestMs = ms;
-  }
-  return formatTime(latest);
-}
-
-function sourceRuntimeSupport(
-  summary: WorldDashboardSourceRefreshSummary | null | undefined,
-  livebench: WorldDashboardLiveBenchSummary | null | undefined,
-  evaluation: LiveBenchPlatformModelSummary | null | undefined,
-) {
-  if (!summary) return '治理摘要同步后会补上变动和冷却情况。';
-  const job = summary.refresh_job;
-  const resolved = evaluation?.resolved_question_count ?? livebench?.resolved_question_count ?? 0;
-  const scored = evaluation ? displayScoredQuestionCount(evaluation) : resolved;
-  const jobLine = job
-    ? job.running
-      ? '巡检任务正在运行。'
-      : job.ok
-        ? `巡检任务已完成，最近结束 ${formatTime(job.finished_at)}。`
-        : `巡检任务部分完成，最近结束 ${formatTime(job.finished_at)}；失败源保留旧缓存，等待下轮重试。`
-    : '';
-  return [
-    `最近一轮变动 ${summary.monitor_runtime.changed_source_count} 条，临时降权 ${summary.monitor_runtime.cooling_down_count} 条，待补位 ${summary.monitor_runtime.next_batch_count} 条。`,
-    `题池核票 ${resolved} 道，进入计分 ${scored} 道。`,
-    jobLine,
-  ]
-    .filter(Boolean)
-    .join(' ');
-}
-
 function livebenchPoolHeadline(summary: WorldDashboardLiveBenchSummary | null | undefined) {
   if (!summary) return '题池覆盖还在同步。';
   const pendingSettlement = summary.settlement_pending_count || 0;
@@ -1053,7 +1102,7 @@ export default function DashboardClient({
   const evaluationSummary = state?.evaluation_summary || null;
   const sourceRefreshSummary = state?.source_refresh_summary || null;
   const livebenchSummary = state?.livebench_summary || null;
-  const sourceHealth = state?.source_health || null;
+  const dailyBriefItems = useMemo(() => buildDailyBriefItems(state), [state]);
   const skillEntry = useMemo(() => {
     const base = state?.skill_entry || null;
     if (!base) return null;
@@ -1165,80 +1214,42 @@ export default function DashboardClient({
                     <div className="flex h-full flex-col">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">信源监测</p>
+                          <p className="text-[11px] font-medium tracking-[0.12em] text-slate-400">今日简报</p>
                           <p className="mt-2 text-[13px] leading-6 text-slate-900">
-                            {sourceRuntimeHeadline(sourceRefreshSummary, livebenchSummary, evaluationSummary)}
-                          </p>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-500">
-                            {sourceRuntimeSupport(sourceRefreshSummary, livebenchSummary, evaluationSummary)}
+                            三条主线只保留当天最值得读的一句：国际时政、科技、AI。
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">入口池</p>
-                            <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {latestSourceRefreshTime(
-                                sourceRefreshSummary?.skillhub_snapshot?.last_refreshed_at,
-                                sourceRefreshSummary?.source_skill_snapshot?.last_refreshed_at,
-                                sourceRefreshSummary?.monitor_runtime.latest_poll_finished_at,
-                                sourceRefreshSummary?.refresh_job?.finished_at,
-                              )}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
-                            入口 {sourceRefreshSummary?.source_skill_snapshot?.active_hub_count || 0} 个，沉淀 {sourceRefreshSummary?.source_skill_snapshot?.yielded_skill_count || 0} 条。
-                          </p>
-                        </div>
-
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">目录候选</p>
-                            <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {latestSourceRefreshTime(
-                                sourceRefreshSummary?.repo_discovery_snapshot?.last_refreshed_at,
-                                sourceRefreshSummary?.refresh_job?.finished_at,
-                              )}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
-                            本地沉淀 {sourceRefreshSummary?.repo_discovery_snapshot?.local_repo_count || 0} 组样本，候选 {sourceRefreshSummary?.repo_discovery_snapshot?.github_candidate_count || 0} 条。
-                            目录扩充 {sourceRefreshSummary?.repo_discovery_snapshot?.directory_candidate_count || 0} 条。
-                          </p>
-                          <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                            可转信源 {sourceRefreshSummary?.repo_discovery_snapshot?.endpoint_candidate_count || 0} 条，方法样本 {sourceRefreshSummary?.repo_discovery_snapshot?.method_candidate_count || 0} 条。
-                          </p>
-                        </div>
-
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">稳定</p>
-                            <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {sourceHealth ? `${sourceHealth.stable_source_count} 条` : '--'}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
-                            观察 {sourceHealth?.watchlist_source_count || 0} 条，待确认 {sourceHealth?.blocked_or_unknown_source_count || 0} 条。
-                          </p>
-                        </div>
-
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">题池</p>
-                            <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {evaluationSummary ? `${evaluationSummary.resolved_question_count} 已结算` : '--'}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
-                            跟踪 {evaluationSummary?.active_question_count ?? livebenchSummary?.active_question_count ?? 0} 道，计分 {displayScoredQuestionCount(evaluationSummary)} 道。
-                          </p>
-                          <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                            待核票 {livebenchSummary?.settlement_pending_count || 0} 道。
-                          </p>
-                        </div>
+                      <div className="mt-3 grid grid-cols-1 gap-2 xl:grid-cols-3">
+                        {dailyBriefItems.map((item) => (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => setScene(item.key)}
+                            className={`min-w-0 rounded-[18px] border px-3 py-2.5 text-left transition hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)] ${scene === item.key ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50/85 text-slate-900'}`}
+                            title={item.summary}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className={`whitespace-nowrap text-[11px] font-semibold tracking-[0.08em] ${scene === item.key ? 'text-white/70' : 'text-slate-400'}`}>
+                                {item.label}
+                              </p>
+                              <span className={`whitespace-nowrap text-[11px] ${scene === item.key ? 'text-white/60' : 'text-slate-400'}`}>
+                                {formatTime(state?.generated_at)}
+                              </span>
+                            </div>
+                            <p className={`mt-1 line-clamp-2 text-[12px] font-semibold leading-5 ${scene === item.key ? 'text-white' : 'text-slate-950'}`}>
+                              {item.title}
+                            </p>
+                            <p className={`mt-1 line-clamp-3 text-[11px] leading-5 ${scene === item.key ? 'text-white/70' : 'text-slate-500'}`}>
+                              {item.summary}
+                            </p>
+                          </button>
+                        ))}
                       </div>
+                      <p className="mt-2 text-[11px] leading-5 text-slate-400">
+                        {sourceRuntimeHeadline(sourceRefreshSummary, livebenchSummary, evaluationSummary)}
+                      </p>
                     </div>
                   </div>
                 </div>

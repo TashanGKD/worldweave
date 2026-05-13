@@ -29,9 +29,9 @@ function signalSceneLabel(scene: string) {
     finance: '市场',
     health: '公共卫生',
     'weak-signal': '弱信号',
-    'geo-politics-daily': '国际时政日报',
-    'technology-daily': '科技日报',
-    'ai-daily': 'AI日报',
+    'geo-politics-daily': '国际时政',
+    'technology-daily': '科技',
+    'ai-daily': 'AI',
   };
 
   return labels[scene] || scene;

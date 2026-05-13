@@ -1406,9 +1406,9 @@ const SCENE_LABELS: Record<string, string> = {
   finance: '市场',
   health: '公共卫生',
   'weak-signal': '弱信号',
-  'geo-politics-daily': '国际时政日报',
-  'technology-daily': '科技日报',
-  'ai-daily': 'AI日报',
+  'geo-politics-daily': '国际时政',
+  'technology-daily': '科技',
+  'ai-daily': 'AI',
   global: '主世界',
 };
 
@@ -7506,19 +7506,19 @@ function buildWorldSubworldSummaries(
     },
     {
       key: 'geo-politics-daily',
-      title: '国际时政日报',
+      title: '国际时政',
       summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。',
       matched_tags: ['geopolitics', 'war', 'policy', 'macro', 'health'],
     },
     {
       key: 'technology-daily',
-      title: '科技日报',
+      title: '科技',
       summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。',
       matched_tags: ['technology', 'research', 'chip', 'opensource'],
     },
     {
       key: 'ai-daily',
-      title: 'AI日报',
+      title: 'AI',
       summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。',
       matched_tags: ['ai', 'llm', 'agent', 'aihot'],
     },
@@ -7587,9 +7587,9 @@ function buildSubworldSummariesFromCachedDashboardState(
   const sourceCatalog = (state as { source_catalog?: WorldSourceCatalog | null }).source_catalog || null;
   const fixedWorlds: Array<{ key: WorldScene; title: string; summary: string; matched_tags: string[] }> = [
     { key: 'global', title: '全部信号', summary: '观察全部信号与世界标点。', matched_tags: [] },
-    { key: 'geo-politics-daily', title: '国际时政日报', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', matched_tags: ['geopolitics', 'war', 'policy', 'macro', 'health'] },
-    { key: 'technology-daily', title: '科技日报', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', matched_tags: ['technology', 'research', 'chip', 'opensource'] },
-    { key: 'ai-daily', title: 'AI日报', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', matched_tags: ['ai', 'llm', 'agent', 'aihot'] },
+    { key: 'geo-politics-daily', title: '国际时政', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', matched_tags: ['geopolitics', 'war', 'policy', 'macro', 'health'] },
+    { key: 'technology-daily', title: '科技', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', matched_tags: ['technology', 'research', 'chip', 'opensource'] },
+    { key: 'ai-daily', title: 'AI', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', matched_tags: ['ai', 'llm', 'agent', 'aihot'] },
   ];
 
   return fixedWorlds.map((world) => ({
