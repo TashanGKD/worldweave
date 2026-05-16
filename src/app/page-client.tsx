@@ -28,7 +28,7 @@ import type {
 const WorldGlobe = dynamic(() => import('@/components/world-globe'), { ssr: false });
 const AUTO_REFRESH_MS = 60 * 1000;
 const DASHBOARD_CACHE_TTL_MS = 10 * 60 * 1000;
-const DASHBOARD_CACHE_VERSION = 9;
+const DASHBOARD_CACHE_VERSION = 8;
 const DASHBOARD_CACHE_PREFIX = `world-threads:v${DASHBOARD_CACHE_VERSION}:dashboard`;
 const LEGACY_DASHBOARD_CACHE_PREFIX = 'world-threads:dashboard:';
 const DASHBOARD_VIEW_LIMIT = 100;
@@ -244,11 +244,10 @@ type PageClientProps = {
 };
 
 const DEFAULT_SUBWORLDS: WorldSubworld[] = [
-  { key: 'global', title: '全部信号', summary: '观察全部信号与世界标点。', signal_count: 0, matched_tags: [], recommended_bundles: [] },
-  { key: 'geo-politics-daily', title: '国际时政', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', signal_count: 0, matched_tags: ['geopolitics', 'war', 'policy'], recommended_bundles: [] },
-  { key: 'technology-daily', title: '科技', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', signal_count: 0, matched_tags: ['technology', 'research', 'chip'], recommended_bundles: [] },
-  { key: 'ai-daily', title: 'AI', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', signal_count: 0, matched_tags: ['ai', 'llm', 'agent', 'aihot'], recommended_bundles: [] },
+  { key: 'geo-politics-daily', title: '地缘', summary: '冲突、外交、制裁、选举、公共安全和区域风险。', signal_count: 0, matched_tags: ['geopolitics', 'war', 'conflict', 'diplomacy'], recommended_bundles: [] },
+  { key: 'tech-ai', title: 'AI', summary: '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。', signal_count: 0, matched_tags: ['ai', 'llm', 'agent', 'aihot'], recommended_bundles: [] },
 ];
+const PRIMARY_SUBWORLD_ORDER = ['geo-politics-daily', 'tech-ai'];
 
 function asArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
@@ -500,15 +499,35 @@ function normalizeWorldStateResponse(state: WorldStateResponse | null): WorldSta
 }
 
 function normalizeSubworlds(subworlds: WorldSubworld[] | null | undefined) {
-  const normalized = asArray(subworlds)
+  const byKey = new Map<string, WorldSubworld>();
+  asArray(subworlds)
     .filter((item): item is WorldSubworld => Boolean(item?.key && item?.title))
-    .map((item) => ({
-      ...item,
-      matched_tags: asArray(item.matched_tags),
-      recommended_bundles: asArray(item.recommended_bundles),
-    }));
+    .forEach((item) => {
+      const key =
+        item.key === 'ai-daily'
+          ? 'tech-ai'
+          : item.key === 'geo-politics-daily'
+            ? 'geo-politics-daily'
+            : null;
+      if (!key) return;
+      const existing = byKey.get(key);
+      const fallback = DEFAULT_SUBWORLDS.find((world) => world.key === key);
+      byKey.set(key, {
+        ...item,
+        key: key as WorldScene,
+        title: fallback?.title || item.title,
+        summary: fallback?.summary || item.summary,
+        signal_count: (existing?.signal_count || 0) + (item.signal_count || 0),
+        matched_tags: [...new Set([...(existing?.matched_tags || []), ...asArray(item.matched_tags), ...(fallback?.matched_tags || [])])],
+        recommended_bundles: [...asArray(existing?.recommended_bundles), ...asArray(item.recommended_bundles)],
+      });
+    });
 
-  return normalized.length > 0 ? normalized : DEFAULT_SUBWORLDS;
+  for (const fallback of DEFAULT_SUBWORLDS) {
+    if (!byKey.has(fallback.key)) byKey.set(fallback.key, fallback);
+  }
+
+  return PRIMARY_SUBWORLD_ORDER.map((key) => byKey.get(key)).filter((item): item is WorldSubworld => Boolean(item));
 }
 
 function nodeMatchesDailySubworld(node: WorldStateNode, key: WorldScene) {
@@ -533,14 +552,7 @@ function nodeMatchesDailySubworld(node: WorldStateNode, key: WorldScene) {
     );
   }
 
-  if (key === 'technology-daily') {
-    return (
-      ['technology', 'capacity'].includes(String(node.scene || '')) ||
-      /(technology|research|paper|chip|semiconductor|model|robot|space|science|engineering|open-source|opensource|科技|论文|芯片|开源|工程)/i.test(haystack)
-    );
-  }
-
-  if (key === 'ai-daily') {
+  if (key === 'tech-ai' || key === 'ai-daily') {
     return /(\bai\b|\bllm\b|openai|anthropic|chatgpt|gemini|claude|\bmodel\b|\bagent\b|aihot|ai-hot|人工智能|大模型|智能体|模型)/i.test(haystack);
   }
 
@@ -554,57 +566,6 @@ function withLocalSubworldCounts(subworlds: WorldSubworld[], state: WorldStateRe
     ...world,
     signal_count: world.key === 'global' ? nodes.length : nodes.filter((node) => nodeMatchesDailySubworld(node, world.key)).length,
   }));
-}
-
-type DailyBriefItem = {
-  key: WorldScene;
-  label: string;
-  title: string;
-  summary: string;
-};
-
-const DAILY_BRIEF_CATEGORIES: Array<{ key: WorldScene; label: string; fallback: string }> = [
-  { key: 'geo-politics-daily', label: '国际时政', fallback: '今天还没有足够新的国际时政信号，继续等下一轮刷新补齐。' },
-  { key: 'technology-daily', label: '科技', fallback: '今天还没有足够新的科技信号，先保留近 30 天信源作对照。' },
-  { key: 'ai-daily', label: 'AI', fallback: '今天还没有足够新的 AI 信号，AI HOT 和模型动态会继续补位。' },
-];
-
-function briefNodeScore(node: WorldStateNode) {
-  const timestamp = new Date(node.updated_at || node.last_report_at || node.published_at || 0).getTime();
-  const recency = Number.isFinite(timestamp) ? timestamp / 10000000000000 : 0;
-  return (node.severity || 0) * 1000 + (node.hotspot_score || 0) + recency;
-}
-
-function buildDailyBriefItems(state: WorldStateResponse | null): DailyBriefItem[] {
-  const nodes = asArray(state?.nodes)
-    .filter((node) => cleanPresentationText(node.display_title || node.title).length > 0)
-    .sort((a, b) => briefNodeScore(b) - briefNodeScore(a));
-
-  return DAILY_BRIEF_CATEGORIES.map((category) => {
-    const node = nodes.find((candidate) => nodeMatchesDailySubworld(candidate, category.key));
-    if (!node) {
-      return {
-        key: category.key,
-        label: category.label,
-        title: '等待新信号',
-        summary: category.fallback,
-      };
-    }
-
-    const title = cleanPresentationText(node.display_title || node.title);
-    const summary = compactPresentationText(node.display_summary || node.summary || node.urgency_reason, 118);
-    return {
-      key: category.key,
-      label: category.label,
-      title,
-      summary: summary || category.fallback,
-    };
-  });
-}
-
-function compactPresentationText(value?: string | null, max = 160) {
-  const text = cleanPresentationText(value);
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
 function formatTime(value: string) {
@@ -777,15 +738,15 @@ function severitySoftTone(severity: number) {
 
 function sceneDisplayLabel(scene: WorldScene) {
   const labels: Record<string, string> = {
-    global: '全部信号',
+    global: '地缘',
     war: '冲突',
     technology: '科技',
     capacity: '产能与供应链',
     finance: '市场',
     health: '公共卫生',
     'weak-signal': '弱信号',
-    'geo-politics-daily': '国际时政',
-    'technology-daily': '科技',
+    'geo-politics-daily': '地缘',
+    'tech-ai': 'AI',
     'ai-daily': 'AI',
   };
 
@@ -826,7 +787,8 @@ function _alignmentTagLabel(tag: string) {
     'geo:unmapped': '关联点',
     'source:ic': '信源库',
     'source:world-threads': '世界脉络',
-    'model:aligned': '模型对齐',
+    'model:ai-related': 'AI 相关',
+    'model:not-ai-related': '非 AI',
     'severity:severe': '严重',
     'severity:elevated': '高关注',
     'severity:normal': '普通',
@@ -914,7 +876,7 @@ function _arenaQuestionMeta(snapshot: LiveQuestionSnapshot) {
     .map((value) => {
       const cleaned = cleanPresentationText(value);
       if (!cleaned) return '';
-      if (/^global$/i.test(cleaned)) return '主世界';
+      if (/^global$/i.test(cleaned)) return '地缘';
       return cleaned;
     })
     .filter(Boolean);
@@ -1120,8 +1082,8 @@ function arenaRuleReference(snapshot: LiveQuestionSnapshot) {
 
 function arenaRegionLabel(snapshot: LiveQuestionSnapshot) {
   const cleaned = cleanPresentationText(snapshot.question.region_hint);
-  if (!cleaned) return '主世界';
-  if (/^global$/i.test(cleaned)) return '主世界';
+  if (!cleaned) return '地缘';
+  if (/^global$/i.test(cleaned)) return '地缘';
   return cleaned;
 }
 
@@ -1347,6 +1309,7 @@ function _visibleAlignmentTags(tags: string[]) {
     if (tag.startsWith('type:')) return false;
     if (tag.startsWith('source:')) return false;
     if (tag === 'model:aligned') return false;
+    if (tag === 'model:ai-related' || tag === 'model:not-ai-related') return false;
     return true;
   });
 }
@@ -1497,7 +1460,7 @@ export default function PageClient({
 }: PageClientProps) {
   const normalizedInitialState = useMemo(() => normalizeWorldStateResponse(initialState), [initialState]);
   const normalizedInitialSubworlds = useMemo(() => normalizeSubworlds(initialSubworlds), [initialSubworlds]);
-  const [scene, setScene] = useState<WorldScene>(initialScene);
+  const [scene] = useState<WorldScene>(initialScene);
   const [state, setState] = useState<WorldStateResponse | null>(normalizedInitialState);
   const [subworlds, setSubworlds] = useState<WorldSubworld[]>(normalizedInitialSubworlds);
   const [, setMarketSnapshot] = useState<WorldMarketSnapshot | null>(initialMarketSnapshot);
@@ -1876,7 +1839,6 @@ export default function PageClient({
 
   const displaySubworlds = useMemo(() => withLocalSubworldCounts(subworlds, state), [subworlds, state]);
   const activeSubworld = displaySubworlds.find((world) => world.key === scene) || null;
-  const dailyBriefItems = useMemo(() => buildDailyBriefItems(state), [state]);
   const skillEntry = state?.skill_entry || null;
   const sourceRefresh = state?.source_refresh_summary || null;
   const livebenchSummary = state?.livebench_summary || null;
@@ -2035,31 +1997,45 @@ export default function PageClient({
               <div className="rounded-[22px] border border-slate-200/90 bg-white/92 p-4 shadow-[0_12px_28px_rgba(15,23,42,0.04)]">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-[11px] font-medium tracking-[0.12em] text-slate-400">今日简报</p>
+                    <p className="text-[11px] font-medium tracking-[0.12em] text-slate-400">信源监测</p>
                     <p className="mt-1 text-[13px] leading-6 text-slate-600">
-                      先给判断，再给依据；每条都能回到信源。
+                      入口库、仓库发现和运行采样的简报。
                     </p>
                   </div>
                   <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] text-slate-500">
                     {formatSourceTime(sourceRefresh?.generated_at)}
                   </div>
                 </div>
-                <div className="mt-4 grid gap-3">
-                  {dailyBriefItems.map((item) => (
-                    <div key={item.key} className="rounded-[18px] border border-slate-200/90 bg-slate-50/75 px-3 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600">
-                          {item.label}
-                        </span>
-                        <span className="text-[11px] text-slate-400">判断</span>
-                      </div>
-                      <div className="mt-2 text-sm font-semibold leading-6 text-slate-950">{item.title}</div>
-                      <div className="mt-1 text-[12px] leading-6 text-slate-600">{item.summary}</div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[18px] border border-slate-200/90 bg-slate-50/75 px-3 py-3">
+                    <div className="text-[11px] tracking-[0.08em] text-slate-400">SkillHub 上次查询</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{formatSourceTime(sourceRefresh?.skillhub_snapshot.last_refreshed_at)}</div>
+                    <div className="mt-1 text-[11px] leading-5 text-slate-500">
+                      入口 {formatMetric(sourceRefresh?.source_skill_snapshot.active_hub_count)} 个，沉淀 {formatMetric(sourceRefresh?.source_skill_snapshot.yielded_skill_count)} 条。
                     </div>
-                  ))}
-                  <div className="rounded-[18px] border border-slate-200/90 bg-white/80 px-3 py-3 text-[11px] leading-5 text-slate-500">
-                    信源池 {formatMetric(state?.source_health?.stable_source_count || state?.source_knowledge?.source_health?.stable_source_count)} 条稳定更新，
-                    最近运行更新 {formatMetric(sourceRefresh?.monitor_runtime.changed_source_count)} 条，待补 {formatMetric(sourceRefresh?.monitor_runtime.next_batch_count)} 条。
+                  </div>
+                  <div className="rounded-[18px] border border-slate-200/90 bg-slate-50/75 px-3 py-3">
+                    <div className="text-[11px] tracking-[0.08em] text-slate-400">GitHub 上次查询</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{formatSourceTime(sourceRefresh?.repo_discovery_snapshot.last_refreshed_at)}</div>
+                    <div className="mt-1 text-[11px] leading-5 text-slate-500">
+                      本地 {formatMetric(sourceRefresh?.repo_discovery_snapshot.local_repo_count)} 个，候选 {formatMetric(sourceRefresh?.repo_discovery_snapshot.github_candidate_count)} 条。
+                    </div>
+                  </div>
+                  <div className="rounded-[18px] border border-slate-200/90 bg-slate-50/75 px-3 py-3">
+                    <div className="text-[11px] tracking-[0.08em] text-slate-400">稳定更新</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">
+                      {formatMetric(state?.source_health?.stable_source_count || state?.source_knowledge?.source_health?.stable_source_count)} 条
+                    </div>
+                    <div className="mt-1 text-[11px] leading-5 text-slate-500">
+                      观察 {formatMetric(state?.source_health?.watchlist_source_count || state?.source_knowledge?.source_health?.watchlist_source_count)} 条，待确认 {formatMetric(state?.source_health?.blocked_or_unknown_source_count || state?.source_knowledge?.source_health?.blocked_or_unknown_source_count)} 条。
+                    </div>
+                  </div>
+                  <div className="rounded-[18px] border border-slate-200/90 bg-slate-50/75 px-3 py-3">
+                    <div className="text-[11px] tracking-[0.08em] text-slate-400">最近运行</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{formatSourceTime(sourceRefresh?.monitor_runtime.latest_poll_finished_at)}</div>
+                    <div className="mt-1 text-[11px] leading-5 text-slate-500">
+                      更新 {formatMetric(sourceRefresh?.monitor_runtime.changed_source_count)} 条，待补 {formatMetric(sourceRefresh?.monitor_runtime.next_batch_count)} 条。
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2070,8 +2046,6 @@ export default function PageClient({
             <div className="flex flex-col gap-2 text-sm text-slate-600">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <span className="text-xs font-medium tracking-[0.08em] text-slate-500">信号分类</span>
-                  <span className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-xs text-slate-500">3D 地球</span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -2097,23 +2071,6 @@ export default function PageClient({
                     ))}
                   </div>
                 ) : null}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {displaySubworlds.map((world) => (
-                  <button
-                    key={world.key}
-                    type="button"
-                    onClick={() => setScene(world.key)}
-                    className={`rounded-full border px-3 py-1.5 text-xs transition ${
-                      scene === world.key
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-200 bg-white/82 text-slate-600'
-                    }`}
-                    title={world.summary}
-                  >
-                    {world.title} {world.signal_count}
-                  </button>
-                ))}
               </div>
             </div>
           </div>

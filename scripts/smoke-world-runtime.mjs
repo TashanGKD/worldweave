@@ -6,8 +6,41 @@ dotenv.config({ path: '.env.local' });
 
 const baseUrl = process.env.WORLD_SMOKE_BASE_URL || 'http://127.0.0.1:5000';
 const scene = process.env.WORLD_SMOKE_SCENE || 'global';
-const xiaId = process.env.WORLD_SMOKE_XIA_ID || 'worldline-primary';
-const shouldWriteReport = process.env.WORLD_SMOKE_WRITE_REPORT === '1';
+const databaseConfigured = Boolean(process.env.WORLDWEAVE_DATABASE_URL || process.env.DATABASE_URL);
+
+function collectSignals(stateJson) {
+  return [
+    ...(Array.isArray(stateJson.top_signals) ? stateJson.top_signals : []),
+    ...(Array.isArray(stateJson.graph_signals) ? stateJson.graph_signals : []),
+  ];
+}
+
+function signalText(signal) {
+  return [
+    signal?.id,
+    signal?.source_name,
+    signal?.display_title,
+    signal?.display_summary,
+    signal?.title,
+    signal?.summary,
+    Array.isArray(signal?.tags) ? signal.tags.join(' ') : '',
+    Array.isArray(signal?.alignment_tags) ? signal.alignment_tags.join(' ') : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function isLowInformationSignal(signal) {
+  return /model:low-information|^fallback-|fallback-|信源更新|结构化更新|Bundle Feed|Source Feed|Global Feed|当前接口返回了结构化|当前样本前几项包括|本轮前几条标题|标题清单/i.test(
+    signalText(signal),
+  );
+}
+
+function isAiSignal(signal) {
+  return /source:aihot|aihot|model:ai-related|openai|anthropic|claude|gemini|deepseek|qwen|agent|llm|大模型|智能体|人工智能/i.test(
+    signalText(signal),
+  );
+}
 
 function request(pathname, options = {}) {
   return new Promise((resolve, reject) => {
@@ -48,41 +81,16 @@ function request(pathname, options = {}) {
 
 async function main() {
   const state = await request(`/api/v1/world/state?scene=${encodeURIComponent(scene)}`);
+  const livebench = await request(`/api/v1/world/livebench/questions?scene=${encodeURIComponent(scene)}&limit=8`);
+  const sourceStatus = await request(`/api/v1/world/source-knowledge/status?scene=${encodeURIComponent(scene)}`);
+
   const stateJson = JSON.parse(state.body);
-
-  const briefing = await request(`/api/v1/world/briefing?scene=${encodeURIComponent(scene)}&xia_id=${encodeURIComponent(xiaId)}`);
-  const briefingJson = JSON.parse(briefing.body);
-
-  const dispatch = await request('/api/v1/world/dispatch', {
-    method: 'POST',
-    body: {
-      scene,
-      xia_id: xiaId,
-      mission_id: briefingJson.mission_id,
-      briefing: briefingJson,
-    },
-  });
-  const dispatchJson = JSON.parse(dispatch.body);
-
-  let reportSummary = null;
-  if (shouldWriteReport) {
-    const report = await request('/api/v1/world/report', {
-      method: 'POST',
-      body: {
-        scene,
-        xia_id: xiaId,
-        mission_id: dispatchJson.briefing.mission_id,
-        briefing: dispatchJson.briefing,
-      },
-    });
-    const reportJson = JSON.parse(report.body);
-    reportSummary = {
-      mission_id: reportJson.mission_id,
-      signal_id: reportJson.signal_id,
-      validation_status: reportJson.validation_status,
-      summary: reportJson.summary,
-    };
-  }
+  const livebenchJson = JSON.parse(livebench.body);
+  const sourceStatusJson = JSON.parse(sourceStatus.body);
+  const sourceMonitorDb = sourceStatusJson.source_monitor_db || null;
+  const signals = collectSignals(stateJson);
+  const lowInformationCount = signals.filter(isLowInformationSignal).length;
+  const aiSignalCount = signals.filter(isAiSignal).length;
 
   console.log(
     JSON.stringify(
@@ -92,21 +100,24 @@ async function main() {
         state: {
           status: state.status,
           nodeCount: stateJson.nodes?.length || 0,
-          reportCount: stateJson.graph_reports?.length || 0,
+          topSignalCount: stateJson.top_signals?.length || 0,
+          sourceHealth: stateJson.source_health?.freshness_status || null,
+          lowInformationCount,
+          aiSignalCount,
         },
-        briefing: {
-          status: briefing.status,
-          mission_id: briefingJson.mission_id,
-          region: briefingJson.region,
-          topic: briefingJson.topic_label || briefingJson.topic,
-          pending_reference_reports: briefingJson.pending_reference_reports?.length || 0,
+        livebench: {
+          status: livebench.status,
+          questionCount: Array.isArray(livebenchJson.questions) ? livebenchJson.questions.length : Array.isArray(livebenchJson) ? livebenchJson.length : 0,
         },
-        dispatch: {
-          status: dispatch.status,
-          ok: dispatchJson.ok === true,
-          mission_id: dispatchJson.briefing?.mission_id || null,
+        sourceStatus: {
+          status: sourceStatus.status,
+          freshness: sourceStatusJson.source_health?.freshness_status || sourceStatusJson.freshness_status || null,
+          latestSignalPublishedAt:
+            sourceStatusJson.latest_signal_published_at || sourceStatusJson.source_health?.latest_signal_published_at || null,
+          databaseConfigured,
+          databaseConnected: sourceMonitorDb?.connected ?? null,
+          databaseSnapshotTableReady: sourceMonitorDb?.snapshot_table_ready ?? null,
         },
-        report: reportSummary,
       },
       null,
       2,
@@ -115,10 +126,12 @@ async function main() {
 
   if (
     state.status !== 200 ||
-    briefing.status !== 200 ||
-    dispatch.status !== 200 ||
-    dispatchJson.ok !== true ||
-    !briefingJson.mission_id
+    livebench.status !== 200 ||
+    sourceStatus.status !== 200 ||
+    !Array.isArray(stateJson.top_signals) ||
+    lowInformationCount > 0 ||
+    (databaseConfigured && sourceMonitorDb?.connected !== true) ||
+    (scene === 'tech-ai' && aiSignalCount === 0)
   ) {
     process.exit(1);
   }

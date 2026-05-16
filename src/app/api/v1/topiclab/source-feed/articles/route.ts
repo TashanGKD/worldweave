@@ -97,6 +97,21 @@ function signalMatchesCategory(signal: WorldEvidenceSignal, category: string) {
   );
 }
 
+function signalMatchesSource(signal: WorldEvidenceSignal, source: string) {
+  if (!source || source === 'all') return true;
+  const normalized = source.toLowerCase();
+  const haystack = [
+    signal.source_name,
+    signal.source_url,
+    ...(signal.tags || []),
+    ...(signal.alignment_tags || []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(normalized);
+}
+
 function toTopicLabArticle(input: {
   signal: WorldEvidenceSignal;
   origin: string | null;
@@ -142,6 +157,7 @@ export async function GET(request: Request) {
     const page = Math.floor(offset / limit) + 1;
     const query = normalizeSearchText(url.searchParams.get('q') || url.searchParams.get('query') || url.searchParams.get('search'));
     const category = normalizeSearchText(url.searchParams.get('category') || url.searchParams.get('tab'));
+    const source = normalizeSearchText(url.searchParams.get('source') || url.searchParams.get('source_name'));
     const sourceType = url.searchParams.get('source_type') || 'worldweave-signal';
     const sourceFeedName = url.searchParams.get('source_feed_name') || '世界脉络';
     const origin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
@@ -151,7 +167,9 @@ export async function GET(request: Request) {
       ...(dashboard.graph_signals || []),
       ...(dashboard.knowledge_signals || []),
     ]).sort((left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime());
-    const filteredSignals = signals.filter((signal) => signalMatchesQuery(signal, query) && signalMatchesCategory(signal, category));
+    const filteredSignals = signals.filter(
+      (signal) => signalMatchesQuery(signal, query) && signalMatchesCategory(signal, category) && signalMatchesSource(signal, source),
+    );
     const list = filteredSignals
       .map((signal) => toTopicLabArticle({ signal, origin, sourceType, sourceFeedName }))
       .slice(offset, offset + limit);
@@ -168,6 +186,7 @@ export async function GET(request: Request) {
         filters: {
           q: query,
           category,
+          source,
           scene,
           source_type: sourceType,
           source_feed_name: sourceFeedName,

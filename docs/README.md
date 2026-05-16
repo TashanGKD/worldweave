@@ -22,3 +22,4 @@ Start here:
 - `docs/architecture/livebench-participation-rules.md`
 - `docs/architecture/topiclab-alignment.md`
 - `docs/runbooks/runtime-stability.md`
+- `docs/workspace-maintenance-summary.md`

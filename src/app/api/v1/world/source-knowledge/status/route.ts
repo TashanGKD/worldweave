@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { getWorldSourceKnowledge } from '@/lib/world/runtime';
+import { getWorldRepoDiscoverySnapshotSummary, getWorldSourceKnowledge } from '@/lib/world/runtime';
 import { readWorldApiSnapshot, writeWorldApiSnapshot } from '@/lib/world/api-snapshot';
+import { getWorldSourceMonitorDbStatus } from '@/lib/world/source-monitor-db';
 import type { WorldScene, WorldSourceKnowledgeState } from '@/lib/world/types';
 
 const SOURCE_STATUS_FAST_TIMEOUT_MS = 2500;
@@ -11,6 +12,16 @@ const SOURCE_STATUS_FRESH_TIMEOUT_MS = 45000;
 const SOURCE_STATUS_SNAPSHOT_MAX_AGE_MS = 90 * 60 * 1000;
 const SOURCE_STATUS_STALE_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SOURCE_LATEST_SIGNAL_STALE_HOURS = 48;
+
+async function addSourceStatusExtras(state: WorldSourceKnowledgeState, sourceMonitorDb: Awaited<ReturnType<typeof getWorldSourceMonitorDbStatus>>) {
+  return {
+    ...state,
+    source_refresh_summary: {
+      repo_discovery_snapshot: await getWorldRepoDiscoverySnapshotSummary(),
+    },
+    source_monitor_db: sourceMonitorDb,
+  };
+}
 
 function timeout<T>(ms: number, value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
@@ -158,6 +169,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const scene = (url.searchParams.get('scene') as WorldScene | null) || 'global';
+    const sourceMonitorDb = await getWorldSourceMonitorDbStatus(scene);
     const bypassSnapshot = url.searchParams.get('fresh') === '1' || request.headers.get('x-world-batch-refresh') === '1';
     let staleSnapshot: WorldSourceKnowledgeState | null = null;
     if (!bypassSnapshot) {
@@ -166,8 +178,8 @@ export async function GET(request: Request) {
         'source_status',
         SOURCE_STATUS_SNAPSHOT_MAX_AGE_MS,
       );
-      if (isStateFresh(snapshot, SOURCE_STATUS_SNAPSHOT_MAX_AGE_MS)) {
-        return NextResponse.json(snapshot, {
+      if (snapshot && isStateFresh(snapshot, SOURCE_STATUS_SNAPSHOT_MAX_AGE_MS)) {
+        return NextResponse.json(await addSourceStatusExtras(snapshot, sourceMonitorDb), {
           headers: {
             'Cache-Control': 'no-store, max-age=0',
             'x-world-snapshot': '1',
@@ -183,7 +195,7 @@ export async function GET(request: Request) {
         const snapshot = staleSnapshot;
         return NextResponse.json(
           {
-            ...snapshot,
+            ...(await addSourceStatusExtras(snapshot, sourceMonitorDb)),
             snapshot_warning: '信源知识库正在刷新，当前返回上一版可用快照。',
           },
           {
@@ -208,7 +220,7 @@ export async function GET(request: Request) {
         void writeWorldApiSnapshot(scene, 'source_status', fallbackStatus);
         return NextResponse.json(
           {
-            ...fallbackStatus,
+            ...(await addSourceStatusExtras(fallbackStatus, sourceMonitorDb)),
             snapshot_warning: '完整信源状态正在刷新，当前返回最近一次落盘简报。',
           },
           {
@@ -223,7 +235,7 @@ export async function GET(request: Request) {
         const snapshot = staleSnapshot as WorldSourceKnowledgeState;
         return NextResponse.json(
           {
-            ...snapshot,
+            ...(await addSourceStatusExtras(snapshot, sourceMonitorDb)),
             snapshot_warning: '信源知识库正在刷新，当前返回上一版可用快照。',
           },
           {
@@ -246,7 +258,7 @@ export async function GET(request: Request) {
       );
     }
     void writeWorldApiSnapshot(scene, 'source_status', sourceStatus);
-    return NextResponse.json(sourceStatus, {
+    return NextResponse.json(await addSourceStatusExtras(sourceStatus, sourceMonitorDb), {
       headers: {
         'Cache-Control': 'no-store, max-age=0',
         'x-world-snapshot': '0',

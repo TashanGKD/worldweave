@@ -953,6 +953,9 @@ export interface WorldDashboardSourceRefreshSummary {
     local_repo_count: number;
     github_candidate_count: number;
     directory_candidate_count?: number;
+    rss_candidate_count?: number;
+    rss_added_count?: number;
+    rss_removed_count?: number;
     endpoint_candidate_count?: number;
     method_candidate_count?: number;
     trendradar_ready: boolean;
@@ -975,6 +978,12 @@ export interface WorldDashboardSourceRefreshSummary {
     ok: boolean;
     timed_out: boolean;
     duration_ms: number | null;
+    directory_ok?: boolean | null;
+    world_cache_ok?: boolean | null;
+    world_cache_degraded?: boolean;
+    world_cache_base_url?: string | null;
+    self_healing_ok?: boolean | null;
+    note_count?: number;
   };
   signal_mix: {
     total_signal_count: number;
@@ -1087,4 +1096,17 @@ export interface WorldSourceKnowledgeState {
     dimension: number;
     count: number;
   }>;
+  source_refresh_summary?: Pick<WorldDashboardSourceRefreshSummary, 'repo_discovery_snapshot'>;
+  source_monitor_db?: WorldSourceMonitorDbStatus;
+}
+
+export interface WorldSourceMonitorDbStatus {
+  enabled: boolean;
+  connected: boolean;
+  snapshot_table_ready: boolean;
+  latest_scene: WorldScene | null;
+  latest_snapshot_recorded_at: string | null;
+  latest_signal_published_at: string | null;
+  latest_signal_count: number | null;
+  error?: string;
 }

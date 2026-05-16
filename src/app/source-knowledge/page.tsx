@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { compactText, formatTime, sceneDisplayLabel, shellCardClass, worldHref } from '@/components/world-ui';
 import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { getWorldSourceKnowledge } from '@/lib/world/runtime';
+import { getWorldSourceMonitorDbStatus } from '@/lib/world/source-monitor-db';
 import type { WorldScene, WorldSourceKnowledgeState } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,80 @@ type PageProps = {
 function statusTone(count: number) {
   if (count > 0) return 'border-amber-200 bg-amber-50 text-amber-700';
   return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+}
+
+function sourceSceneLabel(value: string | null | undefined) {
+  const key = String(value || '').toLowerCase();
+  if (key.includes('tech') || key.includes('ai')) return 'AI/科技';
+  if (key.includes('war') || key.includes('geo')) return '地缘';
+  if (key.includes('finance') || key.includes('market')) return '市场';
+  if (key.includes('health')) return '公共卫生';
+  if (key.includes('global')) return '主世界';
+  return value || '未分区';
+}
+
+function admissionTierLabel(value: string | null | undefined) {
+  const key = String(value || '').toLowerCase();
+  if (key === 'anchor') return '核心信源';
+  if (key === 'context') return '背景信源';
+  if (key === 'watchlist') return '观察中';
+  if (key === 'blocked') return '暂缓';
+  return value || '待定';
+}
+
+function validationStatusLabel(value: string | null | undefined) {
+  const key = String(value || '').toLowerCase();
+  if (key === 'verified') return '已验证';
+  if (key === 'partially_verified') return '部分验证';
+  if (key === 'pending') return '待验证';
+  if (key === 'failed') return '运行失败';
+  return value || '待验证';
+}
+
+function sourceKindLabel(value: string | null | undefined) {
+  const key = String(value || '').toLowerCase();
+  if (key === 'catalog') return '目录信源';
+  if (key === 'selected') return '精选信源';
+  if (key === 'public-anchor') return '公共主源';
+  return value || '信源';
+}
+
+function embeddingBackendLabel(value: string | null | undefined) {
+  const key = String(value || '').toLowerCase();
+  if (key.includes('local-hash')) return '本地备用索引';
+  if (key.includes('qwen')) return 'Qwen 向量索引';
+  return value || '索引后端';
+}
+
+function embeddingModelLabel(value: string | null | undefined) {
+  const key = String(value || '').toLowerCase();
+  if (key.includes('local-hash')) return '本地备用索引';
+  return value || '向量模型';
+}
+
+function readableSourceText(value: string | null | undefined, max = 140) {
+  const text = String(value || '')
+    .replace(/\banchor\/context\b/giu, '核心/背景')
+    .replace(/\bsource catalog\b/giu, '信源目录')
+    .replace(/\bnext_batch\b/giu, '下一批候选')
+    .replace(/\bskill\b/giu, 'Skill')
+    .replace(/\bzvec\b/giu, '向量分组')
+    .replace(/\bbackend\b/giu, '后端')
+    .replace(/\blocal hash\b/giu, '本地备用索引')
+    .replace(/本地\s*hash/giu, '本地备用索引')
+    .replace(/\bANN\b/giu, '近邻')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return compactText(text, max);
+}
+
+function sourceMonitorDbLabel(detail: WorldSourceKnowledgeState) {
+  const status = detail.source_monitor_db;
+  if (!status?.enabled) return '未接入监控库';
+  if (!status.connected) return '监控库连接异常';
+  if (!status.snapshot_table_ready) return '监控库已连接，等待首轮刷新写入';
+  if (!status.latest_snapshot_recorded_at) return '监控库已连接，等待本分区写入';
+  return `监控库已接入，最近写入 ${formatTime(status.latest_snapshot_recorded_at)}`;
 }
 
 export default async function SourceKnowledgePage({ searchParams }: PageProps) {
@@ -58,6 +133,10 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
       </main>
     );
   }
+  detail = {
+    ...detail,
+    source_monitor_db: await getWorldSourceMonitorDbStatus(scene),
+  };
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
@@ -92,7 +171,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                 <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">召回分块</p>
                   <p className="mt-1 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">{detail.chunk_count}</p>
-                  <p className="mt-1 text-[12px] leading-6 text-slate-500">zvec 分组 {detail.zvec_group_count}</p>
+                  <p className="mt-1 text-[12px] leading-6 text-slate-500">向量分组 {detail.zvec_group_count}</p>
                 </div>
                 <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">稳定信源</p>
@@ -102,7 +181,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                 <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">最近同步</p>
                   <p className="mt-1 text-lg font-semibold text-slate-950">{formatTime(detail.last_synced_at)}</p>
-                  <p className="mt-1 text-[12px] leading-6 text-slate-500">{compactText(detail.source_status.embeddings, 42)}</p>
+                  <p className="mt-1 text-[12px] leading-6 text-slate-500">{readableSourceText(detail.source_status.embeddings, 42)}</p>
                 </div>
               </section>
 
@@ -110,14 +189,23 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                 <p className="text-sm font-semibold text-slate-900">向量召回与底座状态</p>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
-                    <p className="text-[11px] tracking-[0.08em] text-slate-400">Embedding 状态</p>
-                    <p className="mt-2 text-[13px] leading-7 text-slate-700">{detail.source_status.embeddings}</p>
+                    <p className="text-[11px] tracking-[0.08em] text-slate-400">向量状态</p>
+                    <p className="mt-2 text-[13px] leading-7 text-slate-700">{readableSourceText(detail.source_status.embeddings, 180)}</p>
                   </div>
                   <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">接入池说明</p>
                     <p className="mt-2 text-[13px] leading-7 text-slate-700">
-                      {detail.source_health?.note || '当前还没有稳定的信源池说明。'}
+                      {readableSourceText(detail.source_health?.note || '当前还没有稳定的信源池说明。', 180)}
                     </p>
+                  </div>
+                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-4 md:col-span-2">
+                    <p className="text-[11px] tracking-[0.08em] text-slate-400">监控数据库</p>
+                    <p className="mt-2 text-[13px] leading-7 text-slate-700">{sourceMonitorDbLabel(detail)}</p>
+                    {detail.source_monitor_db?.latest_signal_count !== null && detail.source_monitor_db?.latest_signal_count !== undefined ? (
+                      <p className="mt-1 text-[12px] leading-6 text-slate-500">
+                        最近写入信号 {detail.source_monitor_db.latest_signal_count} 条，最新信号 {formatTime(detail.source_monitor_db.latest_signal_published_at)}。
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 {detail.embedding_groups.length > 0 ? (
@@ -125,13 +213,13 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                     {detail.embedding_groups.map((group) => (
                       <article key={`${group.backend}-${group.model}-${group.dimension}`} className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium text-slate-900">{group.model}</p>
+                          <p className="text-sm font-medium text-slate-900">{embeddingModelLabel(group.model)}</p>
                           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
                             {group.count} 条
                           </span>
                         </div>
                         <p className="mt-2 text-[12px] leading-6 text-slate-500">
-                          backend: {group.backend} · 维度 {group.dimension}
+                          索引后端：{embeddingBackendLabel(group.backend)} · 维度 {group.dimension}
                         </p>
                       </article>
                     ))}
@@ -146,7 +234,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                     <p className="mt-1 text-[12px] leading-6 text-slate-500">这些入口已经过一轮筛选，首屏只展示最近值得处理的几条。</p>
                   </div>
                   <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">
-                    {detail.source_health?.next_batch.length ?? 0} 条
+                    {detail.source_health?.next_batch?.length ?? 0} 条
                   </span>
                 </div>
                 <div className="mt-4 space-y-3">
@@ -154,9 +242,9 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                     <article key={`${item.name}-${item.source_platform}`} className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-medium text-slate-900">{compactText(item.name, 42)}</p>
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{item.recommended_scene}</span>
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{item.admission_tier}</span>
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{item.validation_status}</span>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{sourceSceneLabel(item.recommended_scene)}</span>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{admissionTierLabel(item.admission_tier)}</span>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{validationStatusLabel(item.validation_status)}</span>
                       </div>
                       <p className="mt-2 text-[12px] leading-6 text-slate-600">
                         {item.source_platform} · 可用 {item.usable_source_count} 条 · 可运行 {item.runnable_source_count} 条
@@ -206,7 +294,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                     <article key={`${item.key}-${item.last_failed_at}`} className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-medium text-slate-900">{compactText(item.label, 42)}</p>
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{item.source_kind}</span>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{sourceKindLabel(item.source_kind)}</span>
                       </div>
                       <p className="mt-2 text-[12px] leading-6 text-slate-600">{compactText(item.last_error, 120)}</p>
                       <p className="mt-1 text-[11px] leading-5 text-slate-400">失败时间 {formatTime(item.last_failed_at)}{item.cooldown_until ? ` · 冷却到 ${formatTime(item.cooldown_until)}` : ''}</p>
@@ -222,7 +310,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                     <article key={`${item.skill}-${item.source_name}`} className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
                       <p className="text-sm font-medium text-slate-900">{compactText(item.source_name, 42)}</p>
                       <p className="mt-1 text-[12px] leading-6 text-slate-600">
-                        {compactText(item.skill, 20)} · {item.scene} · {compactText(item.recommendation, 56)}
+                        {compactText(item.skill, 20)} · {sourceSceneLabel(item.scene)} · {readableSourceText(item.recommendation, 56)}
                       </p>
                       <p className="mt-1 text-[11px] leading-5 text-slate-400">
                         成功率 {Math.round(item.success_rate * 100)}% · 质量分 {item.quality_score} · 平均延迟 {Math.round(item.avg_latency_ms)}ms

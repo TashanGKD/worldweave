@@ -25,7 +25,8 @@ function parseArgs(argv) {
     timeoutMinutes: Number(process.env.WORLD_SOURCE_REFRESH_TIMEOUT_MINUTES || 20),
     skipWorldWarm: false,
     includeHeavyWorldSync: process.env.WORLD_SOURCE_REFRESH_INCLUDE_HEAVY_SYNC === '1',
-    worldBaseUrl: (process.env.WORLD_BATCH_REFRESH_BASE_URL || 'http://127.0.0.1:5000').replace(/\/+$/, ''),
+    worldBaseUrl: (process.env.WORLD_BATCH_REFRESH_BASE_URL || '').replace(/\/+$/, ''),
+    worldBaseUrlExplicit: Boolean(process.env.WORLD_BATCH_REFRESH_BASE_URL),
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -34,7 +35,10 @@ function parseArgs(argv) {
     if (arg === '--include-heavy-world-sync') args.includeHeavyWorldSync = true;
     if (arg === '--interval-minutes') args.intervalMinutes = Number(argv[++index] || args.intervalMinutes);
     if (arg === '--timeout-minutes') args.timeoutMinutes = Number(argv[++index] || args.timeoutMinutes);
-    if (arg === '--world-base-url') args.worldBaseUrl = String(argv[++index] || args.worldBaseUrl).replace(/\/+$/, '');
+    if (arg === '--world-base-url') {
+      args.worldBaseUrl = String(argv[++index] || args.worldBaseUrl).replace(/\/+$/, '');
+      args.worldBaseUrlExplicit = true;
+    }
   }
   return args;
 }
@@ -351,6 +355,71 @@ async function fetchWorldJson(baseUrl, pathname, timeoutMs = 45000, batchHeader 
   }
 }
 
+async function probeWorldBaseUrl(baseUrl) {
+  const startedAt = Date.now();
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/world/livebench/questions?scene=global&limit=1`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(5000),
+    });
+    await response.arrayBuffer().catch(() => null);
+    return {
+      base_url: baseUrl,
+      ok: response.ok,
+      status: response.status,
+      duration_ms: Date.now() - startedAt,
+    };
+  } catch (error) {
+    return {
+      base_url: baseUrl,
+      ok: false,
+      status: null,
+      duration_ms: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function resolveWorldBaseUrl(args) {
+  if (args.skipWorldWarm) return args;
+  const configured = args.worldBaseUrl;
+  if (configured) {
+    const probe = await probeWorldBaseUrl(configured);
+    if (probe.ok || args.worldBaseUrlExplicit) {
+      return { ...args, worldBaseUrl: configured, worldBaseUrlProbe: probe };
+    }
+  }
+
+  const workerPort = process.env.WORLD_SOURCE_REFRESH_WORKER_PORT || '5020';
+  const candidates = [
+    process.env.WORLD_SOURCE_REFRESH_WORKER_BASE_URL,
+    `http://127.0.0.1:${workerPort}`,
+    'http://127.0.0.1:5000',
+    'http://127.0.0.1:5010',
+    'http://127.0.0.1:3000',
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).replace(/\/+$/, ''));
+  const uniqueCandidates = [...new Set(candidates)];
+  const probes = [];
+  for (const candidate of uniqueCandidates) {
+    if (candidate === configured) continue;
+    const probe = await probeWorldBaseUrl(candidate);
+    probes.push(probe);
+    if (probe.ok) {
+      append(outPath, `[${nowIso()}] selected world refresh base ${candidate}\n`);
+      return { ...args, worldBaseUrl: candidate, worldBaseUrlProbe: probe, worldBaseUrlCandidates: probes };
+    }
+  }
+
+  return {
+    ...args,
+    worldBaseUrl: configured || uniqueCandidates[0] || 'http://127.0.0.1:5020',
+    worldBaseUrlProbe: probes[0] || null,
+    worldBaseUrlCandidates: probes,
+  };
+}
+
 function summarizeSourceFreshness(payload) {
   const health = payload?.source_health && typeof payload.source_health === 'object' ? payload.source_health : {};
   const latestSignalPublishedAt =
@@ -401,11 +470,18 @@ async function warmWorldCaches(args) {
         batchHeader: true,
       },
       {
-        method: 'GET',
-        pathname: '/api/v1/world/state?scene=global&batch=1',
-        timeoutMs: 45000,
+        method: 'POST',
+        pathname: '/api/v1/world/source-knowledge/sync?scene=tech-ai&batch=1',
+        timeoutMs: 90000,
         critical: false,
         batchHeader: true,
+      },
+      {
+        method: 'GET',
+        pathname: '/api/v1/world/state?scene=tech-ai&fresh=1',
+        timeoutMs: 30000,
+        critical: false,
+        batchHeader: false,
       },
     );
   }
@@ -434,6 +510,14 @@ async function warmWorldCaches(args) {
       critical: false,
       batchHeader: snapshotBatchHeader,
       snapshot: { scene: 'global', key: 'source_status' },
+    },
+    {
+      method: 'GET',
+      pathname: '/api/v1/world/source-knowledge/status?scene=tech-ai',
+      timeoutMs: 15000,
+      critical: false,
+      batchHeader: snapshotBatchHeader,
+      snapshot: { scene: 'tech-ai', key: 'source_status' },
     },
   );
   const results = [];
@@ -667,6 +751,7 @@ async function runSourceRefreshRemediation(args, warmStatus) {
 }
 
 async function runOnce(args) {
+  args = await resolveWorldBaseUrl(args);
   const startedAt = nowIso();
   const reportDate = startedAt.slice(0, 10);
   const baseStatus = {
@@ -680,6 +765,8 @@ async function runOnce(args) {
     duration_ms: null,
     report_date: reportDate,
     command: ['node', 'scripts/world-source-refresh.mjs'],
+    world_base_url: args.worldBaseUrl,
+    world_base_url_probe: args.worldBaseUrlProbe || null,
     outputs: collectOutputs(reportDate),
   };
   await writeStatusWithMonitor(baseStatus);

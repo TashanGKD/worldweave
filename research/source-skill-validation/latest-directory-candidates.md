@@ -1,132 +1,133 @@
 # GitHub 目录型信源候选拆解
 
-更新时间：2026-04-23T13:48:34.752Z
+更新时间：2026-05-15T22:02:53.166Z
 
 说明：本文件只记录“从目录中拆出的候选入口”。目录本身不进入实时信号，只有后续验证过的 API / RSS / 数据集 / 官方文档才进入正式信源池。
 
-- public-apis 候选：478
-- awesome-ai-in-finance 候选：120
+- awesome-ai-in-finance 候选：123
+- awesome-rss-feeds 候选：1998
+- public-apis 候选：497
 
 | collection | section | name | role | admission | url | description |
 |---|---|---|---|---|---|---|
-| public-apis | Cryptocurrency | 0x | market-signal | candidate-no-key | https://0x.org/api | API for querying token and pool stats across various liquidity pools |
-| public-apis | Cryptocurrency | 1inch | market-signal | candidate-no-key | https://1inch.io/api/ | API for querying decentralize exchange |
-| public-apis | Geocoding | adresse.data.gouv.fr | world-context | candidate-no-key | https://adresse.data.gouv.fr | Address database of France, geocoding and reverse |
-| public-apis | Transportation | ADS-B Exchange | world-context | candidate-no-key | https://www.adsbexchange.com/data/ | Access real-time and historical data of any and all airborne aircraft |
-| public-apis | Transportation | airportsapi | world-context | candidate-no-key | https://airport-web.appspot.com/api/docs/ | Get name and website-URL for airports by ICAO code |
-| public-apis | Science & Math | arcsecond.io | macro-regulatory | candidate-no-key | https://api.arcsecond.io/ | Multiple astronomy data sources |
-| public-apis | Transportation | AviationAPI | world-context | candidate-no-key | https://docs.aviationapi.com | FAA Aeronautical Charts and Publications, Airport Information, and Airport Weather |
-| public-apis | Weather | AviationWeather | world-context | candidate-no-key | https://www.aviationweather.gov/dataserver | NOAA aviation weather forecasts and observations |
-| public-apis | Government | Bank Negara Malaysia Open Data | macro-regulatory | candidate-no-key | https://apikijangportal.bnm.gov.my/ | Malaysia Central Bank Open Data |
-| public-apis | Cryptocurrency | Bitcambio | market-signal | candidate-no-key | https://nova.bitcambio.com.br/api/v3/docs#a-public | Get the list of all traded assets in the exchange |
-| public-apis | Cryptocurrency | BitcoinCharts | market-signal | candidate-no-key | https://bitcoincharts.com/about/exchanges/ | Financial and Technical Data related to the Bitcoin Network |
-| public-apis | Government | Brazil | macro-regulatory | candidate-no-key | https://brasilapi.com.br/ | Community driven API for Brazil Public Data |
-| public-apis | Government | Brazil Central Bank Open Data | macro-regulatory | candidate-no-key | https://dadosabertos.bcb.gov.br/ | Brazil Central Bank Open Data |
-| public-apis | Government | Brazilian Chamber of Deputies Open Data | macro-regulatory | candidate-no-key | https://dadosabertos.camara.leg.br/swagger/api.html | Provides legislative information in Apis XML and JSON, as well as files in various formats |
-| public-apis | Government | Census.gov | macro-regulatory | candidate-no-key | https://www.census.gov/data/developers/data-sets.html | The US Census Bureau provides various APIs and data sets on demographics and businesses |
-| public-apis | News | Chronicling America | hotspot-discovery | candidate-no-key | http://chroniclingamerica.loc.gov/about/api/ | Provides access to millions of pages of historic US newspapers from the Library of Congress |
-| public-apis | Government | City, Gdynia | macro-regulatory | candidate-no-key | http://otwartedane.gdynia.pl/en/api_doc.html | Gdynia (PL) City Open Data |
-| public-apis | Government | City, Lviv | macro-regulatory | candidate-no-key | https://opendata.city-adm.lviv.ua/ | Lviv(UA) City Open Data |
-| public-apis | Government | City, New York Open Data | macro-regulatory | candidate-no-key | https://opendata.cityofnewyork.us/ | New York (US) City Open Data |
-| public-apis | Government | City, Prague Open Data | macro-regulatory | candidate-no-key | http://opendata.praha.eu/en | Prague(CZ) City Open Data |
-| public-apis | Environment | CO2 Offset | world-context | candidate-no-key | https://co2offset.io/api.html | API calculates and validates the carbon footprint |
-| public-apis | Cryptocurrency | CoinCap | market-signal | candidate-no-key | https://docs.coincap.io/ | Real time Cryptocurrency prices through a RESTful API |
-| public-apis | Cryptocurrency | CoinDesk | market-signal | candidate-no-key | https://old.coindesk.com/coindesk-api/ | CoinDesk's Bitcoin Price Index (BPI) in multiple currencies |
-| public-apis | Cryptocurrency | CoinGecko | market-signal | candidate-no-key | http://www.coingecko.com/api | Cryptocurrency Price, Market, and Developer/Social Data |
-| public-apis | Cryptocurrency | Coinlore | market-signal | candidate-no-key | https://www.coinlore.com/cryptocurrency-data-api | Cryptocurrencies prices, volume and more |
-| public-apis | Cryptocurrency | Coinpaprika | market-signal | candidate-no-key | https://api.coinpaprika.com | Cryptocurrencies prices, volume and more |
-| public-apis | Government | Colorado Information Marketplace | macro-regulatory | candidate-no-key | https://data.colorado.gov/ | Colorado State Government Open Data |
-| public-apis | Transportation | Community Transit | world-context | candidate-no-key | https://github.com/transitland/transitland-datastore/blob/master/README.md#api-endpoints | Transitland API |
-| public-apis | Cryptocurrency | CryptAPI | market-signal | candidate-no-key | https://docs.cryptapi.io/ | Cryptocurrency Payment Processor |
-| public-apis | Cryptocurrency | CryptingUp | market-signal | candidate-no-key | https://www.cryptingup.com/apidoc/#introduction | Cryptocurrency data |
-| public-apis | Cryptocurrency | Cryptonator | market-signal | candidate-no-key | https://www.cryptonator.com/api/ | Cryptocurrencies Exchange Rates |
-| public-apis | Currency Exchange | Currency-api | market-signal | candidate-no-key | https://github.com/fawazahmed0/currency-api#readme | Free Currency Exchange Rates API with 150+ Currencies & No Rate Limits |
-| public-apis | Environment | Danish data service Energi | world-context | candidate-no-key | https://www.energidataservice.dk/ | Open energy data from Energinet to society |
-| public-apis | Government | Data USA | macro-regulatory | candidate-no-key | https://datausa.io/about/api/ | US Public Data |
-| public-apis | Government | Data.parliament.uk | macro-regulatory | candidate-no-key | https://explore.data.parliament.uk/?learnmore=Members | Contains live datasets including information about petitions, bills, MP votes, attendance and more |
-| public-apis | Government | District of Columbia Open Data | macro-regulatory | candidate-no-key | http://opendata.dc.gov/pages/using-apis | Contains D.C. government public datasets, including crime, GIS, financial data, and so on |
-| public-apis | Geocoding | Ducks Unlimited | world-context | candidate-no-key | https://gis.ducks.org/datasets/du-university-chapters/api | API explorer that gives a query URL with a JSON response of locations and cities |
-| public-apis | Finance | Econdb | market-signal | candidate-no-key | https://www.econdb.com/api/ | Global macroeconomic data |
-| public-apis | Currency Exchange | Economia.Awesome | market-signal | candidate-no-key | https://docs.awesomeapi.com.br/api-de-moedas | Portuguese free currency prices and conversion with no rate limits |
-| public-apis | Government | EPA | macro-regulatory | candidate-no-key | https://www.epa.gov/developers/data-data-products#apis | Web services and data sets from the US Environmental Protection Agency |
-| public-apis | Currency Exchange | Exchangerate.host | market-signal | candidate-no-key | https://exchangerate.host?utm_source=Github&utm_medium=Referral&utm_campaign=Public-apis-repo-Best-sellers | Free foreign exchange & crypto rates API |
-| public-apis | Finance | Fed Treasury | market-signal | candidate-no-key | https://fiscaldata.treasury.gov/api-documentation/ | U.S. Department of the Treasury Data |
-| public-apis | Government | Federal Register | macro-regulatory | candidate-no-key | https://www.federalregister.gov/reader-aids/developer-resources/rest-api | The Daily Journal of the United States Government |
-| public-apis | Government | Food Standards Agency | macro-regulatory | candidate-no-key | http://ratings.food.gov.uk/open-data/en-GB | UK food hygiene rating data API |
-| public-apis | Currency Exchange | Frankfurter | market-signal | candidate-no-key | https://www.frankfurter.app/docs | Exchange rates, currency conversion and time series |
-| public-apis | Currency Exchange | FreeForexAPI | market-signal | candidate-no-key | https://freeforexapi.com/Home/Api | Real-time foreign exchange rates for major currency pairs |
-| public-apis | Cryptocurrency | Gemini | market-signal | candidate-no-key | https://docs.gemini.com/rest-api/ | Cryptocurrencies Exchange |
-| public-apis | Geocoding | GeoApi | world-context | candidate-no-key | https://api.gouv.fr/api/geoapi.html | French geographical data |
-| public-apis | Geocoding | Geodata.gov.gr | world-context | candidate-no-key | https://geodata.gov.gr/en/ | Open geospatial data and API service for Greece |
-| public-apis | Geocoding | Graph Countries | world-context | candidate-no-key | https://github.com/lennertVanSever/graphcountries | Country-related data like currencies, languages, flags, regions+subregions and bordering countries |
-| public-apis | Geocoding | Hong Kong GeoData Store | world-context | candidate-no-key | https://geodata.gov.hk/gs/ | API for accessing geo-data of Hong Kong |
-| public-apis | Weather | Hong Kong Obervatory | world-context | candidate-no-key | https://www.hko.gov.hk/en/abouthko/opendata_intro.htm | Provide weather information, earthquake information, and climate data |
-| public-apis | Transportation | Icelandic APIs | world-context | candidate-no-key | http://docs.apis.is/ | Open APIs that deliver services in or regarding Iceland |
-| public-apis | Finance | Indian Mutual Fund | market-signal | candidate-no-key | https://www.mfapi.in/ | Get complete history of India Mutual Funds Data |
-| public-apis | News | Inshorts News | hotspot-discovery | candidate-no-key | https://github.com/cyberboysumanjay/Inshorts-News-API | Provides news from inshorts |
-| public-apis | Geocoding | ip-api | world-context | candidate-no-key | https://ip-api.com/docs | Find location with IP address or domain |
-| public-apis | Geocoding | ipapi.co | world-context | candidate-no-key | https://ipapi.co/api/#introduction | Find IP address location information |
-| public-apis | Geocoding | IPGEO | world-context | candidate-no-key | https://api.techniknews.net/ipgeo/ | Unlimited free IP Address API with useful information |
-| public-apis | Government | Istanbul (İBB) Open Data | macro-regulatory | candidate-no-key | https://data.ibb.gov.tr | Data sets from the İstanbul Metropolitan Municipality (İBB) |
-| public-apis | Science & Math | Launch Library 2 | macro-regulatory | candidate-no-key | https://thespacedevs.com/llapi | Spaceflight launches and events database |
-| public-apis | Cryptocurrency | Mempool | market-signal | candidate-no-key | https://mempool.space/api | Bitcoin API Service focusing on the transaction fee |
-| public-apis | Cryptocurrency | Messari | market-signal | candidate-no-key | https://messari.io/api | Provides API endpoints for thousands of crypto assets |
-| public-apis | Weather | MetaWeather | world-context | candidate-no-key | https://www.metaweather.com/api/ | Weather |
-| public-apis | Geocoding | Mexico | world-context | candidate-no-key | https://github.com/IcaliaLabs/sepomex | Mexico RESTful zip codes API |
-| public-apis | Science & Math | NASA | macro-regulatory | candidate-no-key | https://api.nasa.gov | NASA data, including imagery |
-| public-apis | Currency Exchange | National Bank of Poland | market-signal | candidate-no-key | http://api.nbp.pl/en.html | A collection of currency exchange rates (data in XML and JSON) |
-| public-apis | Environment | National Grid ESO | world-context | candidate-no-key | https://data.nationalgrideso.com/ | Open data from Great Britain’s Electricity System Operator |
-| public-apis | Cryptocurrency | Nexchange | market-signal | candidate-no-key | https://nexchange2.docs.apiary.io/ | Automated cryptocurrency exchange service |
-| public-apis | Science & Math | Noctua | macro-regulatory | candidate-no-key | https://api.noctuasky.com/api/v1/swaggerdoc/ | REST API used to access NoctuaSky features |
-| public-apis | Weather | ODWeather | world-context | candidate-no-key | http://api.oceandrivers.com/static/docs.html | Weather and weather webcams |
-| public-apis | Government | Open Government, ACT | macro-regulatory | candidate-no-key | https://www.data.act.gov.au/ | Australian Capital Territory Open Data |
-| public-apis | Government | Open Government, Australia | macro-regulatory | candidate-no-key | https://www.data.gov.au/ | Australian Government Open Data |
-| public-apis | Government | Open Government, Austria | macro-regulatory | candidate-no-key | https://www.data.gv.at/ | Austria Government Open Data |
-| public-apis | Government | Open Government, Belgium | macro-regulatory | candidate-no-key | https://data.gov.be/ | Belgium Government Open Data |
-| public-apis | Government | Open Government, Colombia | macro-regulatory | candidate-no-key | https://www.dane.gov.co/ | Colombia Government Open Data |
-| public-apis | Government | Open Government, Cyprus | macro-regulatory | candidate-no-key | https://data.gov.cy/?language=en | Cyprus Government Open Data |
-| public-apis | Government | Open Government, Czech Republic | macro-regulatory | candidate-no-key | https://data.gov.cz/english/ | Czech Republic Government Open Data |
-| public-apis | Government | Open Government, Denmark | macro-regulatory | candidate-no-key | https://www.opendata.dk/ | Denmark Government Open Data |
-| public-apis | Government | Open Government, Finland | macro-regulatory | candidate-no-key | https://www.avoindata.fi/en | Finland Government Open Data |
-| public-apis | Government | Open Government, Germany | macro-regulatory | candidate-no-key | https://www.govdata.de/daten/-/details/govdata-metadatenkatalog | Germany Government Open Data |
-| public-apis | Government | Open Government, Ireland | macro-regulatory | candidate-no-key | https://data.gov.ie/pages/developers | Ireland Government Open Data |
-| public-apis | Government | Open Government, Italy | macro-regulatory | candidate-no-key | https://www.dati.gov.it/ | Italy Government Open Data |
-| public-apis | Government | Open Government, Lithuania | macro-regulatory | candidate-no-key | https://data.gov.lt/public/api/1 | Lithuania Government Open Data |
-| public-apis | Government | Open Government, Netherlands | macro-regulatory | candidate-no-key | https://data.overheid.nl/en/ondersteuning/data-publiceren/api | Netherlands Government Open Data |
-| public-apis | Government | Open Government, New Zealand | macro-regulatory | candidate-no-key | https://www.data.govt.nz/ | New Zealand Government Open Data |
-| public-apis | Government | Open Government, Norway | macro-regulatory | candidate-no-key | https://data.norge.no/dataservices | Norwegian Government Open Data |
-| public-apis | Government | Open Government, Poland | macro-regulatory | candidate-no-key | https://dane.gov.pl/en | Poland Government Open Data |
-| public-apis | Government | Open Government, Portugal | macro-regulatory | candidate-no-key | https://dados.gov.pt/en/docapi/ | Portugal Government Open Data |
-| public-apis | Government | Open Government, Queensland Government | macro-regulatory | candidate-no-key | https://www.data.qld.gov.au/ | Queensland Government Open Data |
-| public-apis | Government | Open Government, Romania | macro-regulatory | candidate-no-key | http://data.gov.ro/ | Romania Government Open Data |
-| public-apis | Government | Open Government, Saudi Arabia | macro-regulatory | candidate-no-key | https://data.gov.sa | Saudi Arabia Government Open Data |
-| public-apis | Government | Open Government, Singapore | macro-regulatory | candidate-no-key | https://data.gov.sg/developer | Singapore Government Open Data |
-| public-apis | Government | Open Government, Slovakia | macro-regulatory | candidate-no-key | https://data.gov.sk/en/ | Slovakia Government Open Data |
-| public-apis | Government | Open Government, Slovenia | macro-regulatory | candidate-no-key | https://podatki.gov.si/ | Slovenia Government Open Data |
-| public-apis | Government | Open Government, South Australian Government | macro-regulatory | candidate-no-key | https://data.sa.gov.au/ | South Australian Government Open Data |
-| public-apis | Government | Open Government, Sweden | macro-regulatory | candidate-no-key | https://www.dataportal.se/en/dataservice/91_29789/api-for-the-statistical-database | Sweden Government Open Data |
-| public-apis | Government | Open Government, Switzerland | macro-regulatory | candidate-no-key | https://handbook.opendata.swiss/de/content/nutzen/api-nutzen.html | Switzerland Government Open Data |
-| public-apis | Government | Open Government, Taiwan | macro-regulatory | candidate-no-key | https://data.gov.tw/ | Taiwan Government Open Data |
-| public-apis | Government | Open Government, UK | macro-regulatory | candidate-no-key | https://data.gov.uk/ | UK Government Open Data |
-| public-apis | Government | Open Government, USA | macro-regulatory | candidate-no-key | https://www.data.gov/ | United States Government Open Data |
-| public-apis | Government | Open Government, Victoria State Government | macro-regulatory | candidate-no-key | https://www.data.vic.gov.au/ | Victoria State Government Open Data |
-| public-apis | Government | Open Government, West Australia | macro-regulatory | candidate-no-key | https://data.wa.gov.au/ | West Australia Open Data |
-| public-apis | Geocoding | Open Topo Data | world-context | candidate-no-key | https://www.opentopodata.org | Elevation and ocean depth for a latitude and longitude |
-| public-apis | Weather | openSenseMap | world-context | candidate-no-key | https://api.opensensemap.org/ | Data from Personal Weather Stations called senseBoxes |
-| public-apis | Transportation | OpenSky Network | world-context | candidate-no-key | https://opensky-network.org/apidoc/index.html | Free real-time ADS-B aviation data |
-| public-apis | Environment | PM2.5 Open Data Portal | world-context | candidate-no-key | https://pm25.lass-net.org/#apis | Open low-cost PM2.5 sensor data |
-| public-apis | Geocoding | Postali | world-context | candidate-no-key | https://postali.app/api | Mexico Zip Codes API |
-| public-apis | Geocoding | PostcodeData.nl | world-context | candidate-no-key | http://api.postcodedata.nl/v1/postcode/?postcode=1211EP&streetnumber=60&ref=domeinnaam.nl&type=json | Provide geolocation data based on postcode for Dutch addresses |
-| public-apis | Weather | RainViewer | world-context | candidate-no-key | https://www.rainviewer.com/api.html | Radar data collected from different websites across the Internet |
-| public-apis | Geocoding | Rwanda Locations | world-context | candidate-no-key | https://rapidapi.com/victorkarangwa4/api/rwanda | Rwanda Provences, Districts, Cities, Capital City, Sector, cells, villages and streets |
-| public-apis | Finance | SEC EDGAR Data | market-signal | candidate-no-key | https://www.sec.gov/edgar/sec-api-documentation | API to access annual reports of public US companies |
-| public-apis | Science & Math | SHARE | macro-regulatory | candidate-no-key | https://share.osf.io/api/v2/ | A free, open, dataset about research and scholarly activities |
-| public-apis | Geocoding | SLF | world-context | candidate-no-key | https://github.com/slftool/slftool.github.io/blob/master/API.md | German city, country, river, database |
-| public-apis | News | Spaceflight News | hotspot-discovery | candidate-no-key | https://spaceflightnewsapi.net | Spaceflight related news 🚀 |
-| public-apis | Science & Math | SpaceX | macro-regulatory | candidate-no-key | https://github.com/r-spacex/SpaceX-API | Company, vehicle, launchpad and launch data |
-| public-apis | Science & Math | SpaceX | macro-regulatory | candidate-no-key | https://api.spacex.land/graphql/ | GraphQL, Company, Ships, launchpad and launch data |
-| public-apis | Science & Math | Times Adder | macro-regulatory | candidate-no-key | https://github.com/FranP-code/API-Times-Adder | With this API you can add each of the times introduced in the array sended |
-| public-apis | Transportation | Transport for Belgium | world-context | candidate-no-key | https://docs.irail.be/ | The iRail API is a third-party API for Belgian public transport by train |
-| public-apis | Transportation | Transport for Berlin, Germany | world-context | candidate-no-key | https://github.com/derhuerst/vbb-rest/blob/3/docs/index.md | Third-party VBB API |
-| public-apis | Transportation | Transport for Budapest, Hungary | world-context | candidate-no-key | https://bkkfutar.docs.apiary.io | Budapest public transport API |
+| awesome-rss-feeds | 🌍 英文（1207 源） | 30 seconds of code | source-discovery | candidate-rss | https://www.30secondsofcode.org/feed | RSS 订阅源；主页：https://www.30secondsofcode.org/feed |
+| awesome-rss-feeds | 🌍 英文（1207 源） | 60-Second Science | source-discovery | candidate-rss | http://rss.sciam.com/sciam/60secsciencepodcast | RSS 订阅源；主页：http://rss.sciam.com/sciam/60secsciencepodcast |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | 八分 | source-discovery | candidate-rss | https://api.vistopia.com.cn/rss/program/11.xml | RSS 订阅源；主页：https://api.vistopia.com.cn/rss/program/11.xml |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | 宝玉(@dotey) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/97f1484ae48c430fbbf3438099743674 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/97f1484ae48c430fbbf3438099743674 |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | 歸藏(guizang.ai)(@op7418) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/831fac36aa0a49a9af79f35dc1c9b5d9 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/831fac36aa0a49a9af79f35dc1c9b5d9 |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | 国家统计局数据解读 | source-discovery | candidate-rss | https://www.stats.gov.cn/sj/sjjd/rss.xml | RSS 订阅源；主页：https://www.stats.gov.cn/sj/sjjd/rss.xml |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | 国家统计局最新发布 | source-discovery | candidate-rss | https://www.stats.gov.cn/sj/zxfb/rss.xml | RSS 订阅源；主页：https://www.stats.gov.cn/sj/zxfb/rss.xml |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | 看理想电台 | source-discovery | candidate-rss | https://api.vistopia.com.cn/rss/program/13.xml | RSS 订阅源；主页：https://api.vistopia.com.cn/rss/program/13.xml |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | 没理想编辑部 | source-discovery | candidate-rss | https://api.vistopia.com.cn/rss/program/116.xml | RSS 订阅源；主页：https://api.vistopia.com.cn/rss/program/116.xml |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | 小互(@imxiaohu) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/74e542992cf7441390c708f5601071d4 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/74e542992cf7441390c708f5601071d4 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | a16z(@a16z) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/f3fedf817599470dbf8d8d11f0872475 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/f3fedf817599470dbf8d8d11f0872475 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Accessibility in government | source-discovery | candidate-rss | https://accessibility.blog.gov.uk/feed/atom | RSS 订阅源；主页：https://accessibility.blog.gov.uk/feed/atom |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Adam D'Angelo(@adamdangelo) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/3042b6f912b24f64982cc23f7bd59681 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/3042b6f912b24f64982cc23f7bd59681 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | AI at Meta(@AIatMeta) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/ef7c70f9568d45f4915169fef4ce90b4 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/ef7c70f9568d45f4915169fef4ce90b4 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | AI Breakfast(@AiBreakfast) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/0e3ebaf288014c45b0d24b71fe37312b | RSS 订阅源；主页：https://api.xgo.ing/rss/user/0e3ebaf288014c45b0d24b71fe37312b |
+| awesome-rss-feeds | 🌍 英文（1207 源） | AI Engineer(@aiDotEngineer) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/7d19a619a1cc4a9896129211269d2c85 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/7d19a619a1cc4a9896129211269d2c85 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | AI SDK(@aisdk) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/22af005b21ec45b1a4503acca777b7f0 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/22af005b21ec45b1a4503acca777b7f0 |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | AI产品黄叔(@PMbackttfuture) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/5b632b7fba274f62928cdcc9d3db4c5e | RSS 订阅源；主页：https://api.xgo.ing/rss/user/5b632b7fba274f62928cdcc9d3db4c5e |
+| awesome-rss-feeds | 🌍 英文（1207 源） | AK(@_akhaliq) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/341f7b9f8d9b477e8bb200caa7f32c6e | RSS 订阅源；主页：https://api.xgo.ing/rss/user/341f7b9f8d9b477e8bb200caa7f32c6e |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Akshay Kothari(@akothari) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/3434c0d56ee0446f991fb6af42bfac4b | RSS 订阅源；主页：https://api.xgo.ing/rss/user/3434c0d56ee0446f991fb6af42bfac4b |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Alex Albert(@alexalbert__) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/524525de0d69407b80f0a7d891fdc8df | RSS 订阅源；主页：https://api.xgo.ing/rss/user/524525de0d69407b80f0a7d891fdc8df |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Amjad Masad(@amasad) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/5fb1814c610c4af2911caa98c5c5ef82 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/5fb1814c610c4af2911caa98c5c5ef82 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Andrej Karpathy(@karpathy) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/edf707b5c0b248579085f66d7a3c5524 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/edf707b5c0b248579085f66d7a3c5524 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | andrew chen(@andrewchen) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/a3eb6beb2d894da3a9b7ab6d2e46790e | RSS 订阅源；主页：https://api.xgo.ing/rss/user/a3eb6beb2d894da3a9b7ab6d2e46790e |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Andrew Ng(@AndrewYNg) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/08b5488b20bc437c8bfc317a52e5c26d | RSS 订阅源；主页：https://api.xgo.ing/rss/user/08b5488b20bc437c8bfc317a52e5c26d |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Anthropic(@AnthropicAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/fc28a211471b496682feff329ec616e5 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/fc28a211471b496682feff329ec616e5 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Aravind Srinivas(@AravSrinivas) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/59e6b63ae9684d11be0ae13d9e7420f2 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/59e6b63ae9684d11be0ae13d9e7420f2 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Arthur Mensch(@arthurmensch) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/d8121d969fb34c7daad2dd2aac4ba270 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/d8121d969fb34c7daad2dd2aac4ba270 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Augment Code(@augmentcode) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/e153fdd077df458b8298d975c060dcc3 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/e153fdd077df458b8298d975c060dcc3 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Barsee 🐶(@heyBarsee) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/244eb9fa77ce4fa3b7fa5ceba80027a4 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/244eb9fa77ce4fa3b7fa5ceba80027a4 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Berkeley AI Research(@berkeley_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/6bbf31cac345443585c3280320ba9009 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/6bbf31cac345443585c3280320ba9009 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Binyuan Hui(@huybery) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/f54b2b40185943ce8f48a880110b7bc2 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/f54b2b40185943ce8f48a880110b7bc2 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Character.AI(@character_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/3877c31cdb554cffb750b3b683c98c4d | RSS 订阅源；主页：https://api.xgo.ing/rss/user/3877c31cdb554cffb750b3b683c98c4d |
+| awesome-rss-feeds | 🌍 英文（1207 源） | ChatGPT(@ChatGPTapp) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/f7992687b8d74b14bf2341eb3a0a5ec4 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/f7992687b8d74b14bf2341eb3a0a5ec4 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Claude(@claudeai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/01f60d63a61b44d692cc35c7feb0b4a4 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/01f60d63a61b44d692cc35c7feb0b4a4 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | clem 🤗(@ClementDelangue) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/5dbd038a8f5140938d0877511571797b | RSS 订阅源；主页：https://api.xgo.ing/rss/user/5dbd038a8f5140938d0877511571797b |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Cognition(@cognition_labs) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/4cc14cbd15c74e189d537c415369e1a7 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/4cc14cbd15c74e189d537c415369e1a7 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | cohere(@cohere) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/462aa134ed914f98b3491680ad9b36ed | RSS 订阅源；主页：https://api.xgo.ing/rss/user/462aa134ed914f98b3491680ad9b36ed |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Cursor(@cursor_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/5287b4e0e13a4ab7ab7b1d56f9d88960 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/5287b4e0e13a4ab7ab7b1d56f9d88960 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Dario Amodei(@DarioAmodei) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/49666ce6fe3e4cb786c6574684542ec5 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/49666ce6fe3e4cb786c6574684542ec5 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Data@Mozilla | source-discovery | candidate-rss | https://blog.mozilla.org/data/feed | RSS 订阅源；主页：https://blog.mozilla.org/data/feed |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Databricks | source-discovery | candidate-rss | https://www.databricks.com/feed | RSS 订阅源；主页：https://www.databricks.com/feed |
+| awesome-rss-feeds | 🌍 英文（1207 源） | DeepLearning.AI(@DeepLearningAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/42e6b4901b97498eab2ab64c07d56177 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/42e6b4901b97498eab2ab64c07d56177 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | DeepSeek(@deepseek_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/68b610deb24b47ae9a236811563cda86 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/68b610deb24b47ae9a236811563cda86 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Demis Hassabis(@demishassabis) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/4a884d5e2f3740c5a26c9c093de6388a | RSS 订阅源；主页：https://api.xgo.ing/rss/user/4a884d5e2f3740c5a26c9c093de6388a |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Design in government | source-discovery | candidate-rss | https://designnotes.blog.gov.uk/feed | RSS 订阅源；主页：https://designnotes.blog.gov.uk/feed |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Dify(@dify_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/0be252fedbe84ad7bea21be44b18da89 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/0be252fedbe84ad7bea21be44b18da89 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | ElevenLabs Blog | source-discovery | candidate-rss | https://api.bestblogs.dev/feed/elevenLabsBlog | RSS 订阅源；主页：https://api.bestblogs.dev/feed/elevenLabsBlog |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Escapist Magazine | source-discovery | candidate-rss | https://www.escapistmagazine.com/v2/feed | RSS 订阅源；主页：https://www.escapistmagazine.com/v2/feed |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Fei-Fei Li(@drfeifei) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/a4bfe44bfc0d4c949da21ebd3f5f42a5 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/a4bfe44bfc0d4c949da21ebd3f5f42a5 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Fellou(@FellouAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/326763c2f6154826babcfd71c5ab0f70 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/326763c2f6154826babcfd71c5ab0f70 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Figma(@figma) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/f8a106a09a7d404fb8de7eb0c5ddd2a2 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/f8a106a09a7d404fb8de7eb0c5ddd2a2 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Firecrawl(@firecrawl_dev) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/c04abb206bbf4f91b22795024d6c0614 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/c04abb206bbf4f91b22795024d6c0614 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Fireworks AI(@FireworksAI_HQ) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/9f35c76341554bd78c2b9e63dc4fa5d8 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/9f35c76341554bd78c2b9e63dc4fa5d8 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | FlowingData | source-discovery | candidate-rss | https://flowingdata.com/feed | RSS 订阅源；主页：https://flowingdata.com/feed |
+| awesome-rss-feeds | 🌍 英文（1207 源） | FlowiseAI(@FlowiseAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/be74da51698d4cefb12b39830d6cd201 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/be74da51698d4cefb12b39830d6cd201 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Fluent Reader Releases | source-discovery | candidate-rss | https://github.com/yang991178/fluent-reader/releases.atom | RSS 订阅源；主页：https://github.com/yang991178/fluent-reader/releases.atom |
+| awesome-rss-feeds | 🌍 英文（1207 源） | FreshRSS Releases | source-discovery | candidate-rss | https://github.com/FreshRSS/FreshRSS/releases.atom | RSS 订阅源；主页：https://github.com/FreshRSS/FreshRSS/releases.atom |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Gary Marcus(@GaryMarcus) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/35a38c5646d946fb894d8c30c1d9629e | RSS 订阅源；主页：https://api.xgo.ing/rss/user/35a38c5646d946fb894d8c30c1d9629e |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Genspark(@genspark_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/71ffd342cb5d478185ef7d55bdfca011 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/71ffd342cb5d478185ef7d55bdfca011 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Geoffrey Hinton(@geoffreyhinton) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/cb6169815e2e447e8e6148a4af3f9686 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/cb6169815e2e447e8e6148a4af3f9686 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | GitHub(@github) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/fa5b15f68a2e4df1ab301e26a4ab9190 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/fa5b15f68a2e4df1ab301e26a4ab9190 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Google AI Developers(@googleaidevs) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/69d925d4a8d44221b03eecbe07bd0f74 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/69d925d4a8d44221b03eecbe07bd0f74 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Google AI(@GoogleAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/4de0bd2d5cef4333a0260dc8157054a7 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/4de0bd2d5cef4333a0260dc8157054a7 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Google DeepMind(@GoogleDeepMind) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/a99538443a484fcc846bdcc8f50745ec | RSS 订阅源；主页：https://api.xgo.ing/rss/user/a99538443a484fcc846bdcc8f50745ec |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Google Gemini App(@GeminiApp) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/6fb337feeec44ca38b79491b971d868d | RSS 订阅源；主页：https://api.xgo.ing/rss/user/6fb337feeec44ca38b79491b971d868d |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Government Digital Service | source-discovery | candidate-rss | https://gds.blog.gov.uk/feed | RSS 订阅源；主页：https://gds.blog.gov.uk/feed |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Greg Brockman(@gdb) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/af19d054e26a49129f23abfa82d9e268 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/af19d054e26a49129f23abfa82d9e268 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Groq Inc(@GroqInc) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/771b32075fe54a83bdb6966de9647b4f | RSS 订阅源；主页：https://api.xgo.ing/rss/user/771b32075fe54a83bdb6966de9647b4f |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Hailuo AI (MiniMax)(@Hailuo_AI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/e65b5e59fcb544918c1ba17f5758f0f8 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/e65b5e59fcb544918c1ba17f5758f0f8 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Harrison Chase(@hwchase17) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/f299207df53745bca04a03db8d11c5aa | RSS 订阅源；主页：https://api.xgo.ing/rss/user/f299207df53745bca04a03db8d11c5aa |
+| awesome-rss-feeds | 🇨🇳 中文（793 源） | HelloGitHub 月刊 | source-discovery | candidate-rss | https://hellogithub.com/rss | RSS 订阅源；主页：https://hellogithub.com/rss |
+| awesome-rss-feeds | 🌍 英文（1207 源） | HeyGen(@HeyGen_Official) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/a9aff6b016c143ed8728dd86eb70d7db | RSS 订阅源；主页：https://api.xgo.ing/rss/user/a9aff6b016c143ed8728dd86eb70d7db |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Hugging Face(@huggingface) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/fc16750ce50741f1b1f05ea1fb29436f | RSS 订阅源；主页：https://api.xgo.ing/rss/user/fc16750ce50741f1b1f05ea1fb29436f |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Hunyuan(@TXhunyuan) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/6e8e7b42cb434818810f87bcf77d86fb | RSS 订阅源；主页：https://api.xgo.ing/rss/user/6e8e7b42cb434818810f87bcf77d86fb |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Ian Goodfellow(@goodfellow_ian) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/57831559d22440debbfb2f2528e4ba84 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/57831559d22440debbfb2f2528e4ba84 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Ideogram(@ideogram_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/a719880fe66e4156a111187f50dae91b | RSS 订阅源；主页：https://api.xgo.ing/rss/user/a719880fe66e4156a111187f50dae91b |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Jan Leike(@janleike) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/dceb5cd131b34c72a8376cba8ea5d864 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/dceb5cd131b34c72a8376cba8ea5d864 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Jeff Dean(@JeffDean) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/b1013166769c49f8aa3fbdc222867054 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/b1013166769c49f8aa3fbdc222867054 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Jerry Liu(@jerryjliu0) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/b3d904c0d7c446558ef3a1e7f2eb362b | RSS 订阅源；主页：https://api.xgo.ing/rss/user/b3d904c0d7c446558ef3a1e7f2eb362b |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Jim Fan(@DrJimFan) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/c6cfe7c0d6b74849997073233fdea840 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/c6cfe7c0d6b74849997073233fdea840 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Jina AI(@JinaAI_) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/f510f6e7eecf456ca7e2895a46752888 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/f510f6e7eecf456ca7e2895a46752888 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Julien Chaumond(@julien_c) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/44d9fa384087448a94d3c8595f8d535e | RSS 订阅源；主页：https://api.xgo.ing/rss/user/44d9fa384087448a94d3c8595f8d535e |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Justin Welsh(@thejustinwelsh) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/58894bf2934a426ca833c682da2bc810 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/58894bf2934a426ca833c682da2bc810 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Justine Moore(@venturetwins) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/c61046471f174d86bc0eb76cb44a21c3 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/c61046471f174d86bc0eb76cb44a21c3 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Kevin Weil 🇺🇸(@kevinweil) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/3ca3c7698fd04611a0e7d14fae93c84c | RSS 订阅源；主页：https://api.xgo.ing/rss/user/3ca3c7698fd04611a0e7d14fae93c84c |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Kling AI(@Kling_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/564237c3de274d58a04f064920817888 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/564237c3de274d58a04f064920817888 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | LangChain(@LangChainAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/862fee50a745423c87e2633b274caf1d | RSS 订阅源；主页：https://api.xgo.ing/rss/user/862fee50a745423c87e2633b274caf1d |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Lenny Rachitsky(@lennysan) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/77d5ce4736854b0ebae603e4b54d3095 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/77d5ce4736854b0ebae603e4b54d3095 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Lex Fridman(@lexfridman) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/adf65931519340f795e2336910b4cd15 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/adf65931519340f795e2336910b4cd15 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Lilian Weng(@lilianweng) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/a8f7e2238039461cbc8bf55f5f194498 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/a8f7e2238039461cbc8bf55f5f194498 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | LlamaIndex 🦙(@llama_index) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/67e259bd5be544ce84bbc867eace54c2 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/67e259bd5be544ce84bbc867eace54c2 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | lmarena.ai(@lmarena_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/f01b088d5a39473e854b07143df77ec5 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/f01b088d5a39473e854b07143df77ec5 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Logan Kilpatrick(@OfficialLoganK) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/4f63d960de644aeebd0aa97e4994dafe | RSS 订阅源；主页：https://api.xgo.ing/rss/user/4f63d960de644aeebd0aa97e4994dafe |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Lovable(@lovable_dev) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/639cd13d44284e10ac89fbd1c5399767 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/639cd13d44284e10ac89fbd1c5399767 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | LovartAI(@lovart_ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/db648e4d4eae4822aa0d34f0faef7ad2 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/db648e4d4eae4822aa0d34f0faef7ad2 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | ManusAI(@ManusAI_HQ) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/320181c4651a41a08015946b55f704ab | RSS 订阅源；主页：https://api.xgo.ing/rss/user/320181c4651a41a08015946b55f704ab |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Marc Andreessen 🇺🇸(@pmarca) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/63316630d94543f5a6480f230f483008 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/63316630d94543f5a6480f230f483008 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Martin Fowler(@martinfowler) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/55d2d3f3eaaf4357b3230e0b01a464d7 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/55d2d3f3eaaf4357b3230e0b01a464d7 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | mem0(@mem0ai) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/94bb691baeff461686326af619beb116 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/94bb691baeff461686326af619beb116 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Microsoft Research(@MSFTResearch) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/61f4b78554fb4b8fa5653ec5d924d15a | RSS 订阅源；主页：https://api.xgo.ing/rss/user/61f4b78554fb4b8fa5653ec5d924d15a |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Midjourney(@midjourney) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/72dd496bfd9d44c5a5761a974630376d | RSS 订阅源；主页：https://api.xgo.ing/rss/user/72dd496bfd9d44c5a5761a974630376d |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Mike Krieger(@mikeyk) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/78d7b99318b04b309b04000f7e24da29 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/78d7b99318b04b309b04000f7e24da29 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Milvus(@milvusio) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/424e67b19eed4500b7a440976bbd2ade | RSS 订阅源；主页：https://api.xgo.ing/rss/user/424e67b19eed4500b7a440976bbd2ade |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Mistral AI(@MistralAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/8d2d03aea8af49818096da4ea00409d1 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/8d2d03aea8af49818096da4ea00409d1 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Mustafa Suleyman(@mustafasuleyman) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/394acfaff8c44e09936f5bc0b8504f2c | RSS 订阅源；主页：https://api.xgo.ing/rss/user/394acfaff8c44e09936f5bc0b8504f2c |
+| awesome-rss-feeds | 🌍 英文（1207 源） | NASA Breaking News | source-discovery | candidate-rss | https://www.nasa.gov/rss/dyn/breaking_news.rss | RSS 订阅源；主页：https://www.nasa.gov/rss/dyn/breaking_news.rss |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Naval(@naval) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/b43bc203409e4c5a9c3ae86fe1ac00c9 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/b43bc203409e4c5a9c3ae86fe1ac00c9 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | NotebookLM(@NotebookLM) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/221a88341acb475db221a12fed8208d0 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/221a88341acb475db221a12fed8208d0 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Notion(@NotionHQ) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/f97a26863aec4425b021720d4f8e4ede | RSS 订阅源；主页：https://api.xgo.ing/rss/user/f97a26863aec4425b021720d4f8e4ede |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Now Stable across Chrome, Edge, Firefox, and Safari | source-discovery | candidate-rss | https://time-to-stable.deno.dev/when-stable?browser-chrome=on&browser-edge=on&browser-firefox=on&browser-safari=on&feature-api=on&feature-css=on&feature-html=on&feature-javascript=on&type=rss | RSS 订阅源；主页：https://time-to-stable.deno.dev/when-stable?browser-chrome=on&browser-edge=on&browser-firefox=on&browser-safari=on&feature-api=on&feature-css=on&feature-html=on&feature-javascript=on&type=rss |
+| awesome-rss-feeds | 🌍 英文（1207 源） | NVIDIA AI(@NVIDIAAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/05f1492e43514dc3862a076d3697c390 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/05f1492e43514dc3862a076d3697c390 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | ollama(@ollama) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/6326c63a2dfa445bbde88bea0c3112c2 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/6326c63a2dfa445bbde88bea0c3112c2 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Open Web Docs blog | source-discovery | candidate-rss | https://openwebdocs.org/feed.xml | RSS 订阅源；主页：https://openwebdocs.org/feed.xml |
+| awesome-rss-feeds | 🌍 英文（1207 源） | OpenAI Developers(@OpenAIDevs) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/971dc1fc90da449bac23e5fad8a33d55 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/971dc1fc90da449bac23e5fad8a33d55 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | OpenAI(@OpenAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/0c0856a69f9f49cf961018c32a0b0049 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/0c0856a69f9f49cf961018c32a0b0049 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | OpenRouter(@OpenRouterAI) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/e503a90c035c4b1d8f8dd34907d15bf4 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/e503a90c035c4b1d8f8dd34907d15bf4 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | orange.ai(@oran_ge) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/0277b0bbefd54df7bc6b7880122da8f7 | RSS 订阅源；主页：https://api.xgo.ing/rss/user/0277b0bbefd54df7bc6b7880122da8f7 |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Patrick Loeber(@patloeber) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/c65c68f3713747bba863f92d6b5e996f | RSS 订阅源；主页：https://api.xgo.ing/rss/user/c65c68f3713747bba863f92d6b5e996f |
+| awesome-rss-feeds | 🌍 英文（1207 源） | Paul Couvert(@itsPaulAi) | source-discovery | candidate-rss | https://api.xgo.ing/rss/user/b9912ac9a29042cf8c834419dc44cb1f | RSS 订阅源；主页：https://api.xgo.ing/rss/user/b9912ac9a29042cf8c834419dc44cb1f |
 

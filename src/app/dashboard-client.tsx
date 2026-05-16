@@ -2,9 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { ArrowRight, Link2, MapPin, Radio, RefreshCw } from 'lucide-react';
+import { ArrowRight, Link2, Radio, RefreshCw } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -23,12 +22,26 @@ import {
   sceneDisplayLabel,
   severityLabel,
   severitySoftTone,
-  severityTone,
   shellCardClass,
+  signalDetailHref,
   voteSideLabel,
   voteSideTone,
   worldHref,
 } from '@/components/world-ui';
+import {
+  dashboardNodeMatchesScene,
+  dashboardSignalMatchesScene,
+  isTrustedTechAiDashboardSignal,
+  mainWorldSignalPriority,
+  mainWorldSignalRank,
+  readableSignalSourceLine,
+  readableSignalSummary,
+  readableSignalTags,
+  readableSignalTitle,
+  techAiRelevanceScore,
+  techAiSignalRank,
+} from '@/lib/world/dashboard-presentation';
+
 import type {
   LiveBenchPlatformModelSummary,
   LiveBenchQuestionPreview,
@@ -98,6 +111,7 @@ type WorldSubworld = {
 type DashboardSignal = {
   id: string;
   title: string;
+  summary?: string;
   display_title: string;
   display_summary: string;
   scene: WorldScene;
@@ -116,6 +130,7 @@ type DashboardSignal = {
   urgency_reason: string;
   severity: number;
   display_level: 'high' | 'elevated' | 'monitoring';
+  relevance_score?: number;
   hotspot_score: number;
   exploration_score: number;
   source_reliability?: WorldSourceReliability;
@@ -157,6 +172,25 @@ type WorldDashboardResponse = {
   quick_links: WorldDashboardAction[];
 };
 
+type WorldSignalsApiSignal = {
+  id?: string;
+  title?: string;
+  summary?: string;
+  display_title?: string;
+  display_summary?: string;
+  scene?: string;
+  display_level?: DashboardSignal['display_level'];
+  severity?: number;
+  region_label?: string;
+  published_at?: string;
+  updated_at?: string;
+  tags?: string[];
+  alignment_tags?: string[];
+  source_name?: string;
+  source_url?: string;
+  url?: string;
+};
+
 type DashboardCachePayload = {
   version: number;
   saved_at: number;
@@ -171,15 +205,38 @@ type PageClientProps = {
   initialSubworlds?: WorldSubworld[];
 };
 
+type TimelineView = 'geo-politics-daily' | 'tech-ai' | 'livebench';
+
+function timelineViewLabel(view: TimelineView) {
+  if (view === 'tech-ai') return 'AI 日报';
+  if (view === 'livebench') return '演绎日报';
+  return '地缘日报';
+}
+
 const DEFAULT_SUBWORLDS: WorldSubworld[] = [
-  { key: 'global', title: '全部信号', summary: '观察全部信号与世界标点。', signal_count: 0, matched_tags: [], recommended_bundles: [] },
-  { key: 'geo-politics-daily', title: '国际时政', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', signal_count: 0, matched_tags: ['geopolitics', 'war', 'policy'], recommended_bundles: [] },
-  { key: 'technology-daily', title: '科技', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', signal_count: 0, matched_tags: ['technology', 'research', 'chip'], recommended_bundles: [] },
-  { key: 'ai-daily', title: 'AI', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', signal_count: 0, matched_tags: ['ai', 'llm', 'agent', 'aihot'], recommended_bundles: [] },
+  { key: 'geo-politics-daily', title: '地缘日报', summary: '冲突、外交、制裁、选举、公共安全和区域风险。', signal_count: 0, matched_tags: ['geopolitics', 'war', 'conflict', 'diplomacy'], recommended_bundles: [] },
+  { key: 'tech-ai', title: 'AI 日报', summary: '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。', signal_count: 0, matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'aihot'], recommended_bundles: [] },
 ];
+const PRIMARY_SUBWORLD_ORDER = ['geo-politics-daily', 'tech-ai'];
+function techAiDayLabel(iso: string) {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return '未知日期';
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+function techAiTimeLabel(iso: string) {
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return '--:--';
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
 
 function dashboardCacheKey(scene: WorldScene) {
   return `${DASHBOARD_CACHE_PREFIX}:${scene}`;
+}
+
+function normalizePrimaryScene(scene: WorldScene): WorldScene {
+  if (scene === 'finance' || scene === 'global') return 'geo-politics-daily';
+  return scene === 'tech-ai' ? 'tech-ai' : 'geo-politics-daily';
 }
 
 function normalizeSubworlds(subworlds: WorldSubworld[] | null | undefined) {
@@ -187,98 +244,54 @@ function normalizeSubworlds(subworlds: WorldSubworld[] | null | undefined) {
     .filter((item): item is WorldSubworld => Boolean(item?.key && item?.title))
     .map((item) => ({
       ...item,
+      title:
+        item.key === 'tech-ai'
+          ? 'AI 日报'
+          : item.key === 'geo-politics-daily' || item.key === 'global'
+            ? '地缘日报'
+            : item.title,
+      summary:
+        item.key === 'tech-ai'
+          ? '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。'
+          : item.key === 'geo-politics-daily' || item.key === 'global'
+            ? '冲突、外交、制裁、选举、公共安全和区域风险。'
+            : item.summary,
       matched_tags: asArray(item.matched_tags),
       recommended_bundles: asArray(item.recommended_bundles),
     }));
 
-  return normalized.length > 0 ? normalized : DEFAULT_SUBWORLDS;
-}
-
-function nodeMatchesDailySubworld(node: WorldStateNode, key: WorldScene) {
-  if (key === 'global') return true;
-  const haystack = [
-    node.scene,
-    node.title,
-    node.display_title,
-    node.summary,
-    node.display_summary,
-    node.source_name,
-    asArray(node.tags).join(' '),
-    asArray(node.alignment_tags).join(' '),
-  ]
-    .join(' ')
-    .toLowerCase();
-
-  if (key === 'geo-politics-daily') {
-    return (
-      ['war', 'finance', 'health', 'capacity'].includes(String(node.scene || '')) ||
-      /(conflict|war|military|diplomacy|sanction|election|policy|minister|parliament|tariff|macro|market|public health|health|outbreak|shipping|energy|geopolitic|地缘|外交|冲突|制裁|选举|政策|公共卫生|航运|能源)/i.test(haystack)
-    );
-  }
-
-  if (key === 'technology-daily') {
-    return (
-      ['technology', 'capacity'].includes(String(node.scene || '')) ||
-      /(technology|research|paper|chip|semiconductor|model|robot|space|science|engineering|open-source|opensource|科技|论文|芯片|开源|工程)/i.test(haystack)
-    );
-  }
-
-  if (key === 'ai-daily') {
-    return /(\bai\b|\bllm\b|openai|anthropic|chatgpt|gemini|claude|\bmodel\b|\bagent\b|aihot|ai-hot|人工智能|大模型|智能体|模型)/i.test(haystack);
-  }
-
-  return node.scene === key || asArray(node.alignment_tags).includes(`scene:${key}`);
-}
-
-type DailyBriefItem = {
-  key: WorldScene;
-  label: string;
-  title: string;
-  summary: string;
-};
-
-const DAILY_BRIEF_CATEGORIES: Array<{ key: WorldScene; label: string; fallback: string }> = [
-  { key: 'geo-politics-daily', label: '国际时政', fallback: '今天还没有足够新的国际时政信号，继续等下一轮刷新补齐。' },
-  { key: 'technology-daily', label: '科技', fallback: '今天还没有足够新的科技信号，先保留近 30 天信源作对照。' },
-  { key: 'ai-daily', label: 'AI', fallback: '今天还没有足够新的 AI 信号，AI HOT 和模型动态会继续补位。' },
-];
-
-function briefNodeScore(node: WorldStateNode) {
-  const timestamp = new Date(node.updated_at || node.last_report_at || node.published_at || 0).getTime();
-  const recency = Number.isFinite(timestamp) ? timestamp / 10000000000000 : 0;
-  return (node.severity || 0) * 1000 + (node.hotspot_score || 0) + recency;
-}
-
-function compactPresentationText(value?: string | null, max = 160) {
-  const text = cleanPresentationText(value);
-  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
-}
-
-function buildDailyBriefItems(state: WorldDashboardResponse | null): DailyBriefItem[] {
-  const nodes = asArray(state?.nodes)
-    .filter((node) => cleanPresentationText(node.display_title || node.title).length > 0)
-    .sort((a, b) => briefNodeScore(b) - briefNodeScore(a));
-
-  return DAILY_BRIEF_CATEGORIES.map((category) => {
-    const node = nodes.find((candidate) => nodeMatchesDailySubworld(candidate, category.key));
-    if (!node) {
-      return {
-        key: category.key,
-        label: category.label,
-        title: '等待新信号',
-        summary: category.fallback,
-      };
+  const byKey = new Map(normalized.map((item) => [item.key, item]));
+  if (!byKey.has('tech-ai')) {
+    const technology = byKey.get('technology-daily');
+    const ai = byKey.get('ai-daily');
+    if (technology || ai) {
+      byKey.set('tech-ai', {
+        key: 'tech-ai',
+        title: 'AI 日报',
+        summary: '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。',
+        signal_count: (technology?.signal_count || 0) + (ai?.signal_count || 0),
+        matched_tags: Array.from(new Set([...(technology?.matched_tags || []), ...(ai?.matched_tags || []), 'ai', 'aihot'])),
+        recommended_bundles: [...(technology?.recommended_bundles || []), ...(ai?.recommended_bundles || [])],
+      });
     }
+  }
+  if (!byKey.has('geo-politics-daily')) {
+    const global = byKey.get('global');
+    byKey.set('geo-politics-daily', {
+      key: 'geo-politics-daily',
+      title: '地缘日报',
+      summary: '冲突、外交、制裁、选举、公共安全和区域风险。',
+      signal_count: global?.signal_count || 0,
+      matched_tags: ['geopolitics', 'war', 'conflict', 'diplomacy'],
+      recommended_bundles: global?.recommended_bundles || [],
+    });
+  }
+  byKey.delete('finance');
 
-    const title = cleanPresentationText(node.display_title || node.title);
-    const summary = compactPresentationText(node.display_summary || node.summary || node.urgency_reason, 118);
-    return {
-      key: category.key,
-      label: category.label,
-      title,
-      summary: summary || category.fallback,
-    };
-  });
+  const primary = PRIMARY_SUBWORLD_ORDER.map((key) => byKey.get(key) || DEFAULT_SUBWORLDS.find((item) => item.key === key)).filter(
+    (item): item is WorldSubworld => Boolean(item),
+  );
+  return primary.length > 0 ? primary : DEFAULT_SUBWORLDS;
 }
 
 function normalizeStateNode(node: WorldStateNode): WorldStateNode {
@@ -300,6 +313,8 @@ function normalizeSignal(signal: DashboardSignal): DashboardSignal {
 
 function normalizeDashboardState(state: WorldDashboardResponse | null): WorldDashboardResponse | null {
   if (!state || typeof state !== 'object') return null;
+  const pendingQuestionPreviews = asArray(state.pending_question_previews);
+  const resolvedQuestionPreviews = asArray(state.resolved_question_previews);
   return {
     ...state,
     metrics: {
@@ -317,8 +332,8 @@ function normalizeDashboardState(state: WorldDashboardResponse | null): WorldDas
     graph_signals: asArray(state.graph_signals).map(normalizeSignal),
     top_signals: asArray(state.top_signals).map(normalizeSignal),
     knowledge_signals: asArray(state.knowledge_signals).map(normalizeSignal),
-    pending_question_previews: asArray(state.pending_question_previews),
-    resolved_question_previews: asArray(state.resolved_question_previews),
+    pending_question_previews: pendingQuestionPreviews,
+    resolved_question_previews: resolvedQuestionPreviews,
     what_to_do_next: asArray(state.what_to_do_next),
     quick_links: asArray(state.quick_links),
     world_view_summary: state.world_view_summary || null,
@@ -346,6 +361,43 @@ function questionPoolFromState(state: WorldDashboardResponse | null | undefined)
   return normalizeQuestionPreviews([...(state?.pending_question_previews || []), ...(state?.resolved_question_previews || [])]);
 }
 
+async function fetchLiveBenchQuestionFallback(scene: WorldScene) {
+  const load = async (targetScene: WorldScene) => {
+    const response = await fetch(`/api/v1/world/livebench/questions?scene=${encodeURIComponent(targetScene)}&limit=12`, {
+      cache: 'no-store',
+    });
+    if (!response.ok) return [];
+    const data = (await response.json()) as LiveBenchQuestionPreview[];
+    return normalizeQuestionPreviews(data);
+  };
+  try {
+    if (scene === 'tech-ai') {
+      const globalPreviews = await load('global');
+      const aiPreviews = globalPreviews.filter((preview) =>
+        /ai|llm|model|agent|openai|anthropic|claude|gemini|英伟达|nvidia|大模型|模型|智能体|人工智能/i.test(
+          `${preview.title} ${preview.background} ${preview.topic_label}`,
+        ),
+      );
+      return aiPreviews.length > 0 ? aiPreviews : globalPreviews;
+    }
+    if (scene === 'geo-politics-daily') {
+      const globalPreviews = await load('global');
+      const geopoliticsPreviews = globalPreviews.filter((preview) =>
+        /war|conflict|military|election|sanction|diplomacy|iran|ukraine|russia|israel|gaza|战争|冲突|军事|选举|制裁|外交|伊朗|乌克兰|俄罗斯|以色列|加沙/i.test(
+          `${preview.title} ${preview.background} ${preview.topic_label}`,
+        ),
+      );
+      return geopoliticsPreviews.length > 0 ? geopoliticsPreviews : globalPreviews;
+    }
+    const scenePreviews = await load(scene);
+    if (scenePreviews.length > 0) return scenePreviews;
+    if (scene !== 'global') return load('global');
+    return scenePreviews;
+  } catch {
+    return [];
+  }
+}
+
 function hasUsefulDashboardState(state: WorldDashboardResponse | null | undefined) {
   if (!state) return false;
   if ((state.nodes || []).length > 0) return true;
@@ -354,6 +406,115 @@ function hasUsefulDashboardState(state: WorldDashboardResponse | null | undefine
   if ((state.pending_question_previews || []).length > 0) return true;
   if ((state.resolved_question_previews || []).length > 0) return true;
   return false;
+}
+
+function quickSignalToDashboardSignal(signal: WorldSignalsApiSignal, scene: WorldScene = 'tech-ai'): DashboardSignal | null {
+  if (!signal.id || !signal.title) return null;
+  const summary = signal.display_summary || signal.summary || '';
+  return {
+    id: signal.id,
+    title: signal.title,
+    summary,
+    display_title: signal.display_title || signal.title,
+    display_summary: summary,
+    scene,
+    region: signal.region_label || (scene === 'tech-ai' ? 'AI' : 'Global'),
+    source_name: signal.source_name || 'AI 信源',
+    published_at: signal.published_at || signal.updated_at || new Date(0).toISOString(),
+    source_url: signal.source_url || signal.url,
+    location_name: signal.region_label || (scene === 'tech-ai' ? 'AI' : 'Global'),
+    country: '',
+    latitude: null,
+    longitude: null,
+    tags: signal.tags || [],
+    alignment_tags: signal.alignment_tags || [],
+    intensity: null,
+    mention_count: null,
+    urgency_reason: 'AI signal cache',
+    severity: signal.severity || 2,
+    display_level: signal.display_level || 'monitoring',
+    relevance_score: 0.72,
+    hotspot_score: 0.5,
+    exploration_score: 0.55,
+  };
+}
+
+function uniqueDashboardSignals(...sources: Array<DashboardSignal[] | null | undefined>) {
+  return Array.from(
+    new Map(
+      sources
+        .flatMap((source) => source || [])
+        .map((signal) => [signal.id, signal]),
+    ).values(),
+  );
+}
+
+function groupItemsByDay<T>(items: T[], getIso: (item: T) => string) {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const day = techAiDayLabel(getIso(item));
+    groups.set(day, [...(groups.get(day) || []), item]);
+  }
+  return Array.from(groups.entries()).map(([day, groupItems]) => ({ day, items: groupItems }));
+}
+
+function signalDailyDigest(signals: DashboardSignal[], fallback: string) {
+  if (signals.length === 0) return fallback;
+  const seen = new Set<string>();
+  const items: string[] = [];
+  for (const signal of signals) {
+    const title = readableSignalTitle(signal);
+    if (!title) continue;
+    const normalizedTitle = title.toLowerCase().replace(/\s+/g, '');
+    if (seen.has(normalizedTitle)) continue;
+    seen.add(normalizedTitle);
+    items.push(title);
+    if (items.length >= 3) break;
+  }
+  return items.length > 0 ? compactText(`今日重点：${items.join('；')}。`, 150) : fallback;
+}
+
+function livebenchDailyDigest(previews: LiveBenchQuestionPreview[], fallback: string) {
+  const seen = new Set<string>();
+  const items: string[] = [];
+  for (const preview of previews) {
+    const topic = livebenchDailyTopicLabel(preview);
+    if (!topic) continue;
+    const normalizedTopic = topic.toLowerCase().replace(/\s+/g, '');
+    if (seen.has(normalizedTopic)) continue;
+    seen.add(normalizedTopic);
+    items.push(topic);
+    if (items.length >= 2) break;
+  }
+  return items.length > 0 ? compactText(`今日跟踪：${items.join('；')}。`, 150) : fallback;
+}
+
+function livebenchDailyTopicLabel(preview: LiveBenchQuestionPreview) {
+  let text = questionTitleLabel(preview);
+  text = text.replace(/会发生吗[？?]?$/u, '').replace(/[？?]\s*$/u, '').trim();
+  const anyNewBefore = text.match(/^Any new (.+?) Before ([A-Za-z]+) (\d{1,2})(?:st|nd|rd|th)?$/i);
+  if (anyNewBefore) {
+    text = `${formatEnglishMonthDayLabel(anyNewBefore[2], anyNewBefore[3])}前新 ${anyNewBefore[1]} 发布窗口`;
+  }
+  const releasedBy = text.match(/^(.+?) released by (\d{4}年\d{1,2}月\d{1,2}日)$/i);
+  if (releasedBy) {
+    text = `${releasedBy[2]}前 ${releasedBy[1]} 发布窗口`;
+  }
+  const announceAt = text.match(/^(Google|谷歌) announce (.+?) at (.+)$/i);
+  if (announceAt) {
+    text = `${announceAt[1] === 'Google' ? 'Google' : '谷歌'} ${announceAt[3]} ${announceAt[2]} 发布窗口`;
+  }
+  text = text
+    .replace(/\bARR\b/giu, '年度经常性收入')
+    .replace(/\bClaude Model\b/giu, 'Claude 模型')
+    .replace(/\s+or\s+/giu, ' 或 ')
+    .replace(/\(May (\d{1,2})-(\d{1,2})\)/giu, '（5月$1日至$2日）')
+    .replace(/'s next 年度经常性收入 figure show an accelerating % growth rate/iu, '下一期年度经常性收入增速')
+    .replace(/^Will\s+/iu, '')
+    .replace(/模型\s+发布窗口/gu, '模型发布窗口')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  return compactText(text, 56);
 }
 
 function readDashboardCache(scene: WorldScene): DashboardCachePayload | null {
@@ -455,23 +616,6 @@ function chooseDefaultActiveSignalId(nextState: WorldDashboardResponse | null) {
   return candidates[0]?.node_id || null;
 }
 
-function focusFallbackWatchNext(scene: WorldScene, region?: string | null) {
-  const place = cleanPresentationText(region || '');
-  if (scene === 'finance') {
-    return `${place || '这条市场线'}接下来重点看价格和成交会不会继续同向走，监管表态会不会跟上。`;
-  }
-  if (scene === 'capacity') {
-    return `${place || '这条产能线'}接下来重点看装运节奏、价格变化和政策动作会不会一起放大影响。`;
-  }
-  if (scene === 'technology') {
-    return `${place || '这条科技线'}接下来重点看产品动作、机构反应和相邻主题会不会一起变化。`;
-  }
-  if (scene === 'health') {
-    return `${place || '这条卫生线'}接下来重点看病例变化、正式通报和周边地区会不会同步出现。`;
-  }
-  return `${place || '这条线'}接下来重点看执行层变化、官方回应和周边地点会不会一起出现新动向。`;
-}
-
 function previewStatsLabel(preview: LiveBenchQuestionPreview) {
   const pieces = [
     `信源 ${preview.evidence_count}`,
@@ -523,6 +667,11 @@ function formatEnglishDateLabel(monthName: string, day: string, year: string) {
       'december',
     ].indexOf(monthName.toLowerCase()) + 1;
   return monthIndex > 0 ? `${year}年${monthIndex}月${Number(day)}日` : `${year}年${monthName}${Number(day)}日`;
+}
+
+function formatEnglishMonthDayLabel(monthName: string, day: string) {
+  const year = String(new Date().getFullYear());
+  return formatEnglishDateLabel(monthName, day, year).replace(`${year}年`, '');
 }
 
 function formatEnglishMonthLabel(monthName: string) {
@@ -617,10 +766,35 @@ function questionCompletionLabel(preview: LiveBenchQuestionPreview) {
   return preview.aggregate_vote.complete ? '本轮已齐票' : `待齐 ${preview.aggregate_vote.missing_count}`;
 }
 
-function scenePickerButtonClass(selected: boolean) {
-  return selected
-    ? 'border-slate-900 bg-slate-900 text-white shadow-[0_8px_18px_rgba(15,23,42,0.16)]'
-    : 'border-slate-200 bg-white/88 text-slate-600 hover:border-slate-300 hover:text-slate-900';
+function livebenchQuestionTime(preview: LiveBenchQuestionPreview) {
+  return preview.official_resolved_at || preview.resolve_at || new Date().toISOString();
+}
+
+function signedCount(value: number | null | undefined) {
+  const normalized = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  return `${normalized >= 0 ? '+' : ''}${normalized}`;
+}
+
+function removedCount(value: number | null | undefined) {
+  const normalized = typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0;
+  return `${normalized}`;
+}
+
+function sourceRefreshStatusLabel(job: WorldDashboardSourceRefreshSummary['refresh_job'] | null | undefined) {
+  if (!job) return '未见巡检记录';
+  if (job.running) return '巡检运行中';
+  if (job.ok) return '刷新链路正常';
+  if (job.directory_ok && job.world_cache_ok === false) return '目录已更新，运行时预热失败';
+  if (job.directory_ok) return '目录已更新，运行时待复核';
+  return '刷新链路需复核';
+}
+
+function sourceRefreshStatusTone(job: WorldDashboardSourceRefreshSummary['refresh_job'] | null | undefined) {
+  if (!job) return 'border-slate-200 bg-slate-50 text-slate-500';
+  if (job.running) return 'border-sky-200 bg-sky-50 text-sky-700';
+  if (job.ok) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (job.directory_ok) return 'border-amber-200 bg-amber-50 text-amber-700';
+  return 'border-rose-200 bg-rose-50 text-rose-700';
 }
 
 function markerDotClass(level: 'high' | 'elevated' | 'monitoring') {
@@ -698,6 +872,44 @@ function sourceRuntimeHeadline(
   return `本次看板校验${status}，监测池 ${summary.monitor_runtime.monitor_source_count} 条，高质量 ${summary.monitor_runtime.high_quality_source_count} 条，题池已结算 ${resolved} 道、跟踪 ${active} 道。`;
 }
 
+function latestSourceRefreshTime(...values: Array<string | null | undefined>) {
+  let latest: string | null = null;
+  let latestMs = 0;
+  for (const value of values) {
+    if (!value) continue;
+    const ms = new Date(value).getTime();
+    if (!Number.isFinite(ms) || ms <= latestMs) continue;
+    latest = value;
+    latestMs = ms;
+  }
+  return formatTime(latest);
+}
+
+function sourceRuntimeSupport(
+  summary: WorldDashboardSourceRefreshSummary | null | undefined,
+  livebench: WorldDashboardLiveBenchSummary | null | undefined,
+  evaluation: LiveBenchPlatformModelSummary | null | undefined,
+) {
+  if (!summary) return '治理摘要同步后会补上变动和冷却情况。';
+  const job = summary.refresh_job;
+  const resolved = evaluation?.resolved_question_count ?? livebench?.resolved_question_count ?? 0;
+  const scored = evaluation ? displayScoredQuestionCount(evaluation) : resolved;
+  const jobLine = job
+    ? job.running
+      ? '巡检任务正在运行。'
+      : job.ok
+        ? `巡检任务已完成，最近结束 ${formatTime(job.finished_at)}。`
+        : `巡检任务部分完成，最近结束 ${formatTime(job.finished_at)}；失败源保留旧缓存，等待下轮重试。`
+    : '';
+  return [
+    `最近一轮变动 ${summary.monitor_runtime.changed_source_count} 条，临时降权 ${summary.monitor_runtime.cooling_down_count} 条，待补位 ${summary.monitor_runtime.next_batch_count} 条。`,
+    `题池核票 ${resolved} 道，进入计分 ${scored} 道。`,
+    jobLine,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 function livebenchPoolHeadline(summary: WorldDashboardLiveBenchSummary | null | undefined) {
   if (!summary) return '题池覆盖还在同步。';
   const pendingSettlement = summary.settlement_pending_count || 0;
@@ -729,7 +941,7 @@ function summarizeEmptySignalCheck(
     status === 'fresh'
       ? '前台为空，但信源健康检查显示最新 signal 仍在健康线内；需要继续检查前端过滤条件。'
       : status === 'deferred'
-        ? '前台为空，已请求信源检查；公网 Web 已把 heavy sync 交给后台 refresh daemon。'
+        ? '前台为空，已请求信源检查；较重的刷新任务已交给后台巡检链路。'
         : status === 'error'
           ? '前台为空，信源健康检查未返回可用结果；已请求后台刷新链路检查。'
           : '前台为空，信源健康检查显示最新 signal 已过期；已请求后台刷新链路补跑。';
@@ -753,15 +965,26 @@ export default function DashboardClient({
 }: PageClientProps) {
   const normalizedInitialState = useMemo(() => normalizeDashboardState(initialState), [initialState]);
   const normalizedInitialSubworlds = useMemo(() => normalizeSubworlds(initialSubworlds), [initialSubworlds]);
+  const normalizedInitialScene = useMemo(() => normalizePrimaryScene(initialScene), [initialScene]);
   const normalizedInitialQuestionPool = useMemo(
     () => questionPoolFromState(normalizedInitialState),
     [normalizedInitialState],
   );
-  const [scene, setScene] = useState<WorldScene>(initialScene);
+  const initialTimelineScene: TimelineView = normalizedInitialScene === 'tech-ai' ? 'tech-ai' : 'geo-politics-daily';
+  const scene = normalizedInitialScene;
+  const [timelineScene, setTimelineScene] = useState<TimelineView>(initialTimelineScene);
   const [state, setState] = useState<WorldDashboardResponse | null>(normalizedInitialState);
+  const [geoTimelineState, setGeoTimelineState] = useState<WorldDashboardResponse | null>(
+    normalizedInitialScene === 'geo-politics-daily' ? normalizedInitialState : null,
+  );
+  const [techAiTimelineState, setTechAiTimelineState] = useState<WorldDashboardResponse | null>(
+    normalizedInitialScene === 'tech-ai' ? normalizedInitialState : null,
+  );
+  const [quickGeoSignals, setQuickGeoSignals] = useState<DashboardSignal[]>([]);
+  const [quickTechAiSignals, setQuickTechAiSignals] = useState<DashboardSignal[]>([]);
   const [subworlds, setSubworlds] = useState<WorldSubworld[]>(normalizedInitialSubworlds);
   const [questionPool, setQuestionPool] = useState<LiveBenchQuestionPreview[]>(normalizedInitialQuestionPool);
-  const [globeTimeMode, setGlobeTimeMode] = useState<'today' | 'memory30'>('today');
+  const [globeTimeMode, setGlobeTimeMode] = useState<'today' | 'memory30'>('memory30');
   const [activeSignalId, setActiveSignalId] = useState<string | null>(null);
   const [globeAutoPauseUntil, setGlobeAutoPauseUntil] = useState<number>(0);
   const [skillEntryCopied, setSkillEntryCopied] = useState(false);
@@ -769,9 +992,11 @@ export default function DashboardClient({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emptySignalCheck, setEmptySignalCheck] = useState<EmptySignalCheck | null>(null);
+  const [sourceStatusState, setSourceStatusState] = useState<WorldSourceKnowledgeState | null>(null);
   const hasUsefulStateRef = useRef(hasUsefulDashboardState(normalizedInitialState));
   const emptySignalCheckKeyRef = useRef<string | null>(null);
   const worldMapPanelRef = useRef<HTMLDivElement | null>(null);
+  const timelinePanelRef = useRef<HTMLDivElement | null>(null);
   const [worldMapPanelHeight, setWorldMapPanelHeight] = useState<number | null>(null);
   const sidePanelStyle = worldMapPanelHeight
     ? ({ '--world-map-panel-height': `${worldMapPanelHeight}px` } as CSSProperties)
@@ -780,6 +1005,29 @@ export default function DashboardClient({
   useEffect(() => {
     hasUsefulStateRef.current = hasUsefulDashboardState(state);
   }, [state]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(`/api/v1/world/source-knowledge/status?scene=global&_=${Date.now()}`, { cache: 'no-store' })
+      .then(async (response) => (response.ok ? ((await response.json()) as WorldSourceKnowledgeState) : null))
+      .then((payload) => {
+        if (!cancelled) setSourceStatusState(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setSourceStatusState(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('scene') === scene) return;
+    url.searchParams.set('scene', scene);
+    window.history.replaceState(null, '', `${url.pathname}${url.search}`);
+  }, [scene]);
 
   useEffect(() => {
     const panel = worldMapPanelRef.current;
@@ -814,8 +1062,17 @@ export default function DashboardClient({
       if (!stateRes.ok) throw new Error(stateData.error || '加载世界状态失败');
 
       const normalizedState = normalizeDashboardState(stateData);
+      if (nextScene === 'geo-politics-daily') {
+        setGeoTimelineState(normalizedState);
+      }
+      if (nextScene === 'tech-ai') {
+        setTechAiTimelineState(normalizedState);
+      }
       const nextSubworlds = normalizeSubworlds(subworldsData?.subworlds);
-      const nextQuestionPool = questionPoolFromState(normalizedState);
+      let nextQuestionPool = questionPoolFromState(normalizedState);
+      if (nextQuestionPool.length === 0) {
+        nextQuestionPool = await fetchLiveBenchQuestionFallback(nextScene);
+      }
       const nextStateIsUseful = hasUsefulDashboardState(normalizedState);
 
       if (nextStateIsUseful || !hasUsefulStateRef.current) {
@@ -846,7 +1103,7 @@ export default function DashboardClient({
 
   useEffect(() => {
     let backgroundTimer: number | null = null;
-    if (scene === initialScene && hasUsefulDashboardState(normalizedInitialState)) {
+    if (scene === normalizedInitialScene && hasUsefulDashboardState(normalizedInitialState)) {
       persistDashboardCache({
         version: DASHBOARD_CACHE_VERSION,
         saved_at: Date.now(),
@@ -886,7 +1143,7 @@ export default function DashboardClient({
     return () => {
       if (backgroundTimer !== null) window.clearTimeout(backgroundTimer);
     };
-  }, [initialScene, loadDashboard, normalizedInitialState, normalizedInitialSubworlds, scene]);
+  }, [loadDashboard, normalizedInitialScene, normalizedInitialState, normalizedInitialSubworlds, scene]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -894,6 +1151,155 @@ export default function DashboardClient({
     }, AUTO_REFRESH_MS);
     return () => window.clearInterval(timer);
   }, [loadDashboard, scene]);
+
+  useEffect(() => {
+    if (quickGeoSignals.length > 0) return;
+    let cancelled = false;
+    const requestStamp = Date.now();
+    void fetch(`/api/v1/world/signals?scene=geo-politics-daily&limit=24&_=${requestStamp}`, { cache: 'no-store' })
+      .then(async (response) => {
+        const data = (await response.json()) as { signals?: WorldSignalsApiSignal[] };
+        if (!response.ok) throw new Error('加载地缘快速信号失败');
+        return (data.signals || [])
+          .map((signal) => quickSignalToDashboardSignal(signal, 'geo-politics-daily'))
+          .filter((signal): signal is DashboardSignal => Boolean(signal));
+      })
+      .then((signals) => {
+        if (!cancelled) setQuickGeoSignals(signals);
+      })
+      .catch(() => {
+        if (!cancelled) setQuickGeoSignals([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [quickGeoSignals.length]);
+
+  useEffect(() => {
+    if (quickTechAiSignals.length > 0) return;
+    let cancelled = false;
+    const requestStamp = Date.now();
+    void fetch(`/api/v1/world/signals?scene=tech-ai&limit=24&_=${requestStamp}`, { cache: 'no-store' })
+      .then(async (response) => {
+        const data = (await response.json()) as { signals?: WorldSignalsApiSignal[] };
+        if (!response.ok) throw new Error('加载 AI 快速信号失败');
+        return (data.signals || [])
+          .map((signal) => quickSignalToDashboardSignal(signal, 'tech-ai'))
+          .filter((signal): signal is DashboardSignal => Boolean(signal));
+      })
+      .then((signals) => {
+        if (!cancelled) setQuickTechAiSignals(signals);
+      })
+      .catch(() => {
+        if (!cancelled) setQuickTechAiSignals([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [quickTechAiSignals.length]);
+
+  useEffect(() => {
+    if (timelineScene !== 'geo-politics-daily' || geoTimelineState) return;
+    let cancelled = false;
+    const requestStamp = Date.now();
+    void fetch(`/api/v1/world/state?scene=geo-politics-daily&_=${requestStamp}`, { cache: 'no-store' })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || '加载地缘时间线失败');
+        return normalizeDashboardState(data);
+      })
+      .then((nextState) => {
+        if (!cancelled) setGeoTimelineState(nextState);
+      })
+      .catch(() => {
+        if (!cancelled) setGeoTimelineState(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [geoTimelineState, timelineScene]);
+
+  useEffect(() => {
+    if (timelineScene !== 'tech-ai' || techAiTimelineState) return;
+    let cancelled = false;
+    const requestStamp = Date.now();
+    void fetch(`/api/v1/world/state?scene=tech-ai&fresh=1&_=${requestStamp}`, { cache: 'no-store' })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || '加载 AI 时间线失败');
+        return normalizeDashboardState(data);
+      })
+      .then((nextState) => {
+        if (!cancelled) setTechAiTimelineState(nextState);
+      })
+      .catch(() => {
+        if (!cancelled) setTechAiTimelineState(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [techAiTimelineState, timelineScene]);
+
+  useEffect(() => {
+    if (techAiTimelineState || scene === 'tech-ai') return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      const requestStamp = Date.now();
+      void fetch(`/api/v1/world/state?scene=tech-ai&fresh=1&_=${requestStamp}`, { cache: 'no-store' })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data?.error || '加载 AI 摘要失败');
+          return normalizeDashboardState(data);
+        })
+        .then((nextState) => {
+          if (!cancelled) setTechAiTimelineState(nextState);
+        })
+        .catch(() => {
+          if (!cancelled) setTechAiTimelineState(null);
+        });
+    }, 1400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [scene, techAiTimelineState]);
+
+  useEffect(() => {
+    if (geoTimelineState || scene === 'geo-politics-daily') return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      const requestStamp = Date.now();
+      void fetch(`/api/v1/world/state?scene=geo-politics-daily&_=${requestStamp}`, { cache: 'no-store' })
+        .then(async (response) => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data?.error || '加载主世界地图失败');
+          return normalizeDashboardState(data);
+        })
+        .then((nextState) => {
+          if (!cancelled) setGeoTimelineState(nextState);
+        })
+        .catch(() => {
+          if (!cancelled) setGeoTimelineState(null);
+        });
+    }, 900);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [geoTimelineState, scene]);
+
+  useEffect(() => {
+    if (questionPool.length > 0) return;
+    let cancelled = false;
+    void fetchLiveBenchQuestionFallback(scene).then((previews) => {
+      if (!cancelled && previews.length > 0) {
+        setQuestionPool(previews);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [questionPool.length, scene]);
 
   useEffect(() => {
     const handleFocusRefresh = () => {
@@ -907,12 +1313,15 @@ export default function DashboardClient({
     };
   }, [loadDashboard, scene]);
 
+  const mapScene: WorldScene = scene === 'tech-ai' ? 'geo-politics-daily' : scene;
+  const mapState = scene === 'tech-ai' ? geoTimelineState : state;
   const markers = useMemo(() => {
     const todayStart = startOfToday();
-    return (state?.nodes || [])
+    return (mapState?.nodes || [])
+      .filter((node) => dashboardNodeMatchesScene(node, mapScene))
       .filter((node) => node.geo.lat !== null && node.geo.lng !== null)
       .filter((node) => {
-        const timestamp = node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString();
+        const timestamp = node.updated_at || node.last_report_at || node.published_at || mapState?.generated_at || new Date().toISOString();
         if (globeTimeMode === 'today') {
           return new Date(timestamp).getTime() >= todayStart;
         }
@@ -924,11 +1333,11 @@ export default function DashboardClient({
         lng: node.geo.lng!,
         severity: node.severity,
         displayLevel: markerDisplayLevel(node),
-        title: cleanPresentationText(node.display_title || node.title),
-        timestamp: node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString(),
+        title: readableSignalTitle(node),
+        timestamp: node.updated_at || node.last_report_at || node.published_at || mapState?.generated_at || new Date().toISOString(),
         nodeType: node.node_type,
         scene: sceneDisplayLabel(node.scene),
-        summary: cleanPresentationText(node.display_summary || node.summary),
+        summary: readableSignalSummary(node, 120),
         sourceName: node.source_name,
         locationLabel: cleanPresentationText([node.geo.label, node.geo.country].filter(Boolean).join(', ')),
         confidence: node.confidence,
@@ -936,12 +1345,12 @@ export default function DashboardClient({
           globeTimeMode === 'today'
             ? 1
             : ageOpacityFromTimestamp(
-                node.updated_at || node.last_report_at || node.published_at || state?.generated_at || new Date().toISOString(),
+                node.updated_at || node.last_report_at || node.published_at || mapState?.generated_at || new Date().toISOString(),
                 GLOBE_MEMORY_DAYS,
               ),
         activities: node.activities,
       }));
-  }, [globeTimeMode, state]);
+  }, [globeTimeMode, mapScene, mapState]);
 
   useEffect(() => {
     if (!markers.some((marker) => marker.id === activeSignalId)) {
@@ -963,8 +1372,9 @@ export default function DashboardClient({
   }, [globeAutoPauseUntil, markers]);
 
   const alertBoard = useMemo(() => {
-    const candidates = (state?.nodes || [])
+    const candidates = (mapState?.nodes || [])
       .filter((node) => isAlertBoardCandidate(node))
+      .filter((node) => dashboardNodeMatchesScene(node, mapScene))
       .sort((a, b) => b.severity - a.severity || b.hotspot_score - a.hotspot_score);
     const highNodes = candidates.filter((node) => node.node_type === 'hotspot' && node.severity >= 4).slice(0, 12);
     if (highNodes.length > 0) {
@@ -981,14 +1391,21 @@ export default function DashboardClient({
       emptyText: '当前分类还没有需要单独盯住的条目。',
       nodes: candidates.slice(0, 12),
     };
-  }, [state]);
+  }, [mapScene, mapState]);
   const alertNodes = alertBoard.nodes;
 
   useEffect(() => {
     if (!state || loading) return;
+    const hasSignalFeed =
+      (state.top_signals?.length || 0) > 0 ||
+      (state.knowledge_signals?.length || 0) > 0 ||
+      (state.graph_signals?.length || 0) > 0;
+    const canRenderWithoutMap = (scene === 'tech-ai' || scene === 'global' || scene === 'geo-politics-daily') && hasSignalFeed;
     const missing = [
-      markers.length === 0 ? `地图落点为 0（${globeTimeMode === 'today' ? '今天' : '近 30 天'}）` : null,
-      alertNodes.length === 0 ? '当前信号列表为 0' : null,
+      markers.length === 0 && !canRenderWithoutMap ? `地图落点为 0（${globeTimeMode === 'today' ? '今天' : '近 30 天'}）` : null,
+      alertNodes.length === 0 && !canRenderWithoutMap
+        ? '当前信号列表为 0'
+        : null,
     ].filter(Boolean) as string[];
     if (missing.length === 0) {
       emptySignalCheckKeyRef.current = null;
@@ -1058,30 +1475,43 @@ export default function DashboardClient({
 
   const activeSignalNode = useMemo(() => {
     if (!activeSignalId) return null;
-    return (state?.nodes || []).find((node) => node.node_id === activeSignalId) || null;
-  }, [activeSignalId, state]);
+    return (mapState?.nodes || []).find((node) => node.node_id === activeSignalId) || null;
+  }, [activeSignalId, mapState]);
 
   const focusCard = useMemo(() => {
     if (activeSignalNode) {
       return {
         label: sceneDisplayLabel(activeSignalNode.scene),
-        title: cleanPresentationText(activeSignalNode.display_title || activeSignalNode.title),
-        summary: cleanNarrativeText(activeSignalNode.display_summary || activeSignalNode.summary),
+        title: readableSignalTitle(activeSignalNode),
+        summary: readableSignalSummary(activeSignalNode, 140),
         updatedAt: activeSignalNode.updated_at || activeSignalNode.published_at,
-        watchNext: focusFallbackWatchNext(activeSignalNode.scene, activeSignalNode.geo.label || activeSignalNode.geo.region),
+        watchNext: readableSignalSourceLine({
+          ...activeSignalNode,
+          location_name: activeSignalNode.geo.label || activeSignalNode.geo.region,
+        }),
       };
     }
-    if (state?.world_view_summary) {
+    const primarySignal = mapState?.top_signals?.[0] || mapState?.graph_signals?.[0] || mapState?.knowledge_signals?.[0];
+    if (primarySignal) {
+      return {
+        label: sceneDisplayLabel(primarySignal.scene),
+        title: readableSignalTitle(primarySignal),
+        summary: readableSignalSummary(primarySignal, 140),
+        updatedAt: primarySignal.published_at || mapState?.generated_at,
+        watchNext: readableSignalSourceLine(primarySignal),
+      };
+    }
+    if (mapState?.world_view_summary) {
       return {
         label: '世界视图',
-        title: state.world_view_summary.title,
-        summary: cleanNarrativeText(state.world_view_summary.summary),
-        updatedAt: state.world_view_summary.updated_at,
+        title: mapState.world_view_summary.title,
+        summary: cleanNarrativeText(mapState.world_view_summary.summary),
+        updatedAt: mapState.world_view_summary.updated_at,
         watchNext: '',
       };
     }
     return null;
-  }, [activeSignalNode, state]);
+  }, [activeSignalNode, mapState]);
 
   const dashboardQuestionPool = useMemo(
     () =>
@@ -1100,12 +1530,188 @@ export default function DashboardClient({
   );
   const questionList = dashboardQuestionPool;
   const evaluationSummary = state?.evaluation_summary || null;
-  const sourceRefreshSummary = state?.source_refresh_summary || null;
+  const sourceRefreshSummary =
+    state?.source_refresh_summary || geoTimelineState?.source_refresh_summary || techAiTimelineState?.source_refresh_summary || null;
+  const repoDiscoverySnapshot =
+    sourceRefreshSummary?.repo_discovery_snapshot || sourceStatusState?.source_refresh_summary?.repo_discovery_snapshot || null;
   const livebenchSummary = state?.livebench_summary || null;
-  const dailyBriefItems = useMemo(() => buildDailyBriefItems(state), [state]);
+  const sourceHealth =
+    state?.source_health || geoTimelineState?.source_health || techAiTimelineState?.source_health || sourceStatusState?.source_health || null;
+  const refreshJob = sourceRefreshSummary?.refresh_job || null;
+  const sourceHealthTotal = sourceHealth
+    ? sourceHealth.stable_source_count + sourceHealth.watchlist_source_count + sourceHealth.blocked_or_unknown_source_count
+    : 0;
+  const hasSourceHealthSummary = sourceHealthTotal > 0;
+  const rssCandidateCount = repoDiscoverySnapshot?.rss_candidate_count ?? null;
+  const rssAddedCount = repoDiscoverySnapshot?.rss_added_count ?? null;
+  const rssRemovedCount = repoDiscoverySnapshot?.rss_removed_count ?? null;
+  const isTimelineScene = scene === 'global' || scene === 'geo-politics-daily' || scene === 'tech-ai';
+  const isMainWorldScene = isTimelineScene;
+  const sourceMonitorHeadline =
+    isMainWorldScene && typeof rssCandidateCount === 'number'
+      ? `候选 RSS ${rssCandidateCount} 个，本次后台处理新增 ${rssAddedCount ?? 0} 个，淘汰 ${rssRemovedCount ?? 0} 个。`
+      : isMainWorldScene && sourceHealth && hasSourceHealthSummary
+        ? `稳定信源 ${sourceHealth.stable_source_count} 条，观察 ${sourceHealth.watchlist_source_count} 条，待确认 ${sourceHealth.blocked_or_unknown_source_count} 条。`
+      : sourceRuntimeHeadline(sourceRefreshSummary, livebenchSummary, evaluationSummary);
+  const sourceMonitorSupport =
+    isMainWorldScene && (sourceRefreshSummary || repoDiscoverySnapshot)
+      ? `${sourceRefreshStatusLabel(refreshJob)}。每次更新先由后台巡检处理候选 RSS，前台只采用通过连通性、登记层级和刷新新鲜度过滤后的线索。`
+      : isMainWorldScene && sourceHealth && hasSourceHealthSummary
+        ? '按连通性、登记层级和刷新新鲜度分层；稳定信源优先采用，观察和待确认信源不单独作为强证据。'
+      : sourceRuntimeSupport(sourceRefreshSummary, livebenchSummary, evaluationSummary);
+  const timelineSignalState =
+    timelineScene === 'tech-ai'
+      ? techAiTimelineState || (scene === 'tech-ai' ? state : null)
+      : timelineScene === 'geo-politics-daily'
+        ? geoTimelineState || (scene === 'geo-politics-daily' ? state : null)
+        : state;
+  const mainWorldSignals = useMemo(
+    () => {
+      if (timelineScene === 'livebench') return [];
+      const quickSignals =
+        timelineScene === 'tech-ai'
+          ? quickTechAiSignals
+          : timelineScene === 'geo-politics-daily'
+            ? quickGeoSignals
+            : [];
+      const signals = uniqueDashboardSignals(
+        quickSignals,
+        timelineSignalState?.graph_signals,
+        timelineSignalState?.top_signals,
+        timelineSignalState?.knowledge_signals,
+      ).filter((signal) =>
+        timelineScene === 'tech-ai'
+          ? isTrustedTechAiDashboardSignal(signal)
+          : dashboardSignalMatchesScene(signal, timelineScene),
+      );
+      return signals
+        .sort((left, right) => {
+          if (timelineScene === 'tech-ai') {
+            return (
+              techAiSignalRank(left) - techAiSignalRank(right) ||
+              techAiRelevanceScore(right) - techAiRelevanceScore(left) ||
+              new Date(right.published_at).getTime() - new Date(left.published_at).getTime()
+            );
+          }
+          return (
+            mainWorldSignalRank(left) - mainWorldSignalRank(right) ||
+            mainWorldSignalPriority(right) - mainWorldSignalPriority(left) ||
+            new Date(right.published_at).getTime() - new Date(left.published_at).getTime()
+          );
+        })
+        .slice(0, timelineScene === 'tech-ai' ? 24 : 12);
+    },
+    [quickGeoSignals, quickTechAiSignals, timelineScene, timelineSignalState],
+  );
+  const mainWorldSignalGroups = useMemo(() => groupItemsByDay(mainWorldSignals, (signal) => signal.published_at), [mainWorldSignals]);
+  const livebenchTimelineGroups = useMemo(() => {
+    const sortedQuestions = [...questionList].sort(
+      (left, right) => new Date(livebenchQuestionTime(right)).getTime() - new Date(livebenchQuestionTime(left)).getTime(),
+    );
+    return groupItemsByDay(sortedQuestions, livebenchQuestionTime);
+  }, [questionList]);
+  const geoSignalState = scene === 'geo-politics-daily' ? state : null;
+  const geoDigestSignals = useMemo(
+    () =>
+      uniqueDashboardSignals(
+        quickGeoSignals,
+        geoSignalState?.graph_signals,
+        geoSignalState?.top_signals,
+        geoSignalState?.knowledge_signals,
+      )
+        .filter((signal) => dashboardSignalMatchesScene(signal, 'geo-politics-daily'))
+        .sort(
+          (left, right) =>
+            mainWorldSignalRank(left) - mainWorldSignalRank(right) ||
+            mainWorldSignalPriority(right) - mainWorldSignalPriority(left) ||
+            new Date(right.published_at).getTime() - new Date(left.published_at).getTime(),
+        )
+        .slice(0, 3),
+    [geoSignalState, quickGeoSignals],
+  );
+  const techSignalState = techAiTimelineState || (scene === 'tech-ai' ? state : null);
+  const techCurationSignals = useMemo(
+    () =>
+      uniqueDashboardSignals(
+        quickTechAiSignals,
+        techSignalState?.top_signals,
+        techSignalState?.knowledge_signals,
+        techSignalState?.graph_signals,
+      )
+        .filter(isTrustedTechAiDashboardSignal)
+        .sort(
+          (left, right) =>
+            techAiSignalRank(left) - techAiSignalRank(right) ||
+            new Date(right.published_at).getTime() - new Date(left.published_at).getTime(),
+        )
+        .slice(0, 12),
+    [quickTechAiSignals, techSignalState],
+  );
+  const dashboardBriefCards = useMemo(() => {
+    const livebenchLead = currentQuestions[0] || resolvedQuestions[0] || null;
+    const livebenchDailyItems = [...currentQuestions, ...resolvedQuestions];
+    return [
+      {
+        key: 'world',
+        label: '主世界日报',
+        title: '地缘与公共风险日报',
+        summary: signalDailyDigest(geoDigestSignals, '地缘、公共安全和区域风险信号会在这里先聚合成今日摘要。'),
+        meta: geoDigestSignals.length > 0 ? `${geoDigestSignals.length} 条精选线索` : '暂无精选',
+        view: 'geo-politics-daily' as TimelineView,
+        tone: 'border-sky-100 bg-sky-50/70 text-sky-800',
+      },
+      {
+        key: 'ai',
+        label: 'AI 日报',
+        title: '模型、Agent 与产业日报',
+        summary: signalDailyDigest(techCurationSignals, 'AI Hot、模型、Agent、论文和开源信源会在这里形成今日 AI 日报。'),
+        meta: techCurationSignals.length > 0 ? `${techCurationSignals.length} 条 AI 线索` : '暂无精选',
+        view: 'tech-ai' as TimelineView,
+        tone: 'border-lime-100 bg-lime-50/70 text-lime-800',
+      },
+      {
+        key: 'livebench',
+        label: '演绎日报',
+        title: '题池与结算日报',
+        summary: livebenchDailyDigest(livebenchDailyItems, '预测题会作为校准闭环保留，用来检验信源判断是否真正有用。'),
+        meta: livebenchLead ? questionTimingLabel(livebenchLead) : '暂无题目',
+        view: 'livebench' as TimelineView,
+        tone: 'border-violet-100 bg-violet-50/70 text-violet-800',
+      },
+    ];
+  }, [currentQuestions, geoDigestSignals, resolvedQuestions, techCurationSignals]);
+  const activeDailyCard = dashboardBriefCards.find((card) => card.view === timelineScene) || dashboardBriefCards[0];
+  const dailyReportItems = useMemo(() => {
+    if (timelineScene === 'livebench') {
+      return [...currentQuestions, ...resolvedQuestions].slice(0, 3).map((preview) => ({
+        key: preview.question_id,
+        title: livebenchDailyTopicLabel(preview),
+        summary: questionModeratorLabel(preview),
+        meta: questionTimingLabel(preview),
+        href: worldHref(preview.href, scene),
+      }));
+    }
+
+    const signals = timelineScene === 'tech-ai' ? techCurationSignals : mainWorldSignals;
+    return signals.slice(0, 3).map((signal) => ({
+      key: signal.id,
+      title: readableSignalTitle(signal),
+      summary: readableSignalSummary(signal, 132),
+      meta: `${readableSignalSourceLine(signal)} · ${techAiTimeLabel(signal.published_at)}`,
+      href: worldHref(signalDetailHref(signal.id), timelineScene),
+    }));
+  }, [currentQuestions, mainWorldSignals, resolvedQuestions, scene, techCurationSignals, timelineScene]);
+  const sourceKnowledgeHref = worldHref('/source-knowledge', scene);
+  const mainSkillHref = '/api/v1/openclaw/skill.md';
+  const aihotSkillHref = '/api/v1/openclaw/aihot.skill.md';
   const skillEntry = useMemo(() => {
-    const base = state?.skill_entry || null;
-    if (!base) return null;
+    const base = state?.skill_entry || {
+      mode: 'bound' as const,
+      title: '信源 Skill',
+      description: '',
+      copy_hint: '',
+      url: mainSkillHref,
+    };
     return {
       ...base,
       description:
@@ -1115,35 +1721,41 @@ export default function DashboardClient({
   }, [state?.skill_entry]);
   const handleCopySkillEntry = async () => {
     if (!skillEntry?.url) return;
-    const copied = await copyTextWithFallback(skillEntry.url);
+    const skillUrl = typeof window === 'undefined' ? skillEntry.url : new URL(skillEntry.url, window.location.origin).toString();
+    const copied = await copyTextWithFallback(skillUrl);
     if (!copied) return;
     setSkillEntryCopied(true);
     window.setTimeout(() => setSkillEntryCopied(false), 1600);
   };
+  const handleBriefCardClick = (view: TimelineView) => {
+    setTimelineScene(view);
+    window.setTimeout(() => {
+      timelinePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] text-slate-900">
+    <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f6f7f9_0%,#fbfcfd_42%,#f4f7f6_100%)] text-slate-900">
       <div className="relative mx-auto flex w-full max-w-none flex-col gap-4 px-4 py-4 sm:px-6 2xl:px-8">
-        <section className={`${shellCardClass()} animate-fade-in-soft px-3 py-3 sm:px-4`}>
-          <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_88%_12%,rgba(191,219,254,0.42)_0%,rgba(255,255,255,0)_24%),linear-gradient(135deg,rgba(248,250,252,0.98),rgba(241,245,249,0.96))] p-3 shadow-[0_18px_38px_rgba(15,23,42,0.06)] sm:p-4">
+        <section className="animate-fade-in-soft rounded-[28px] border border-slate-200/75 bg-white/78 p-4 shadow-[0_18px_44px_rgba(15,23,42,0.055)] backdrop-blur-sm">
+          <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,250,252,0.94)_58%,rgba(247,250,248,0.92))] p-3 sm:p-4">
             <div
               className="pointer-events-none absolute right-[-2rem] top-[-2rem] h-40 w-40 rounded-full blur-3xl"
-              style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(59,130,246,0) 72%)' }}
+              style={{ background: 'radial-gradient(circle, rgba(20,184,166,0.12) 0%, rgba(20,184,166,0) 72%)' }}
             />
             <div className="relative z-10 flex flex-col gap-3">
-              <div className="flex flex-col gap-3 rounded-[24px] border border-white/60 bg-white/25 px-3 py-3 backdrop-blur-[2px]">
+              <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">世界总览</p>
-                    <h1 className="mt-1 font-serif text-[2.1rem] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2.55rem]">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">世界脉络</p>
+                    <h1 className="mt-1 font-serif text-[1.9rem] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2.35rem]">
                       世界脉络
                     </h1>
                     <p className="mt-1.5 max-w-2xl text-[13px] leading-6 text-slate-600">
-                      实时信号、地球落点、题池和信源状态在同一张看板里。
+                      只露出地缘和 AI 两条主线；其余信源继续在后台参与筛选、去重和质量判断。
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-slate-200 bg-white/92 px-3 py-1 text-xs text-slate-500">3D 地球</span>
                     <span className="rounded-full border border-slate-200 bg-white/92 px-3 py-1 text-xs text-slate-500">
                       {sceneDisplayLabel(scene)}
                     </span>
@@ -1163,15 +1775,15 @@ export default function DashboardClient({
                   </div>
                 </div>
 
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)] xl:items-stretch">
+                <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(440px,1.1fr)] xl:items-stretch">
                   {skillEntry ? (
-                    <div className="h-full rounded-[22px] border border-slate-200 bg-white/95 px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
-                      <div className="flex h-full flex-col gap-3">
+                    <div className="h-full rounded-[22px] border border-slate-200/70 bg-white/86 px-4 py-3">
+                      <div className="flex h-full flex-col gap-2.5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <span className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
                               <Link2 className="h-3.5 w-3.5" />
-                              信源 Skill
+                              Skill 接入
                             </span>
                             <p className="mt-2 text-[13px] leading-6 text-slate-900">
                               {skillEntry.description || '把这个地址交给虾，主口径是过去 30 天信源查询与整理。'}
@@ -1179,25 +1791,59 @@ export default function DashboardClient({
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <a
-                              href={skillEntry.url}
+                              href={mainSkillHref}
                               target="_blank"
                               rel="noreferrer"
                               className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-500 transition hover:text-slate-900"
                             >
-                              打开
+                              打开 Skill
                             </a>
                             <button
                               type="button"
                               onClick={() => void handleCopySkillEntry()}
                               className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-500 transition hover:text-slate-900"
                             >
-                              {skillEntryCopied ? '已复制' : '复制'}
+                              {skillEntryCopied ? '已复制' : '复制地址'}
                             </button>
                           </div>
                         </div>
 
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/90 px-3 py-2.5">
-                          <code className="block break-all text-[12px] font-medium leading-6 text-slate-800">{skillEntry.url}</code>
+                        <div className="rounded-full border border-slate-200/80 bg-slate-50/80 px-4 py-2 text-[12px] font-medium text-slate-700">
+                          OpenClaw Skill 已绑定
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <button
+                            type="button"
+                            onClick={() => handleBriefCardClick(timelineScene === 'tech-ai' ? 'tech-ai' : 'geo-politics-daily')}
+                            className="rounded-[18px] border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300 hover:shadow-[0_10px_22px_rgba(15,23,42,0.055)]"
+                          >
+                            <span className="block text-[12px] font-semibold text-slate-900">精选线索</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">进入当前主线时间线</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleBriefCardClick('tech-ai')}
+                            className="rounded-[18px] border border-lime-200 bg-lime-50/65 px-3 py-2 text-left transition hover:border-lime-300 hover:shadow-[0_10px_22px_rgba(77,124,15,0.07)]"
+                          >
+                            <span className="block text-[12px] font-semibold text-lime-950">AI 日报</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-lime-700">AI Hot 与模型线索</span>
+                          </button>
+                          <a
+                            href={sourceKnowledgeHref}
+                            className="rounded-[18px] border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300 hover:shadow-[0_10px_22px_rgba(15,23,42,0.055)]"
+                          >
+                            <span className="block text-[12px] font-semibold text-slate-900">全部信源</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">看信源池和接入治理</span>
+                          </a>
+                          <a
+                            href={aihotSkillHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-[18px] border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300 hover:shadow-[0_10px_22px_rgba(15,23,42,0.055)]"
+                          >
+                            <span className="block text-[12px] font-semibold text-slate-900">AI Hot Skill</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">给模型读取 AI 信源</span>
+                          </a>
                         </div>
                         <p className="text-[12px] leading-5 text-slate-500">
                           {skillEntry.copy_hint || '信源查询会沉淀为复盘样本，后续回答会吸收验证过的方法。'}
@@ -1210,67 +1856,166 @@ export default function DashboardClient({
                     </div>
                   )}
 
-                  <div className="rounded-[22px] border border-slate-200 bg-white/95 px-4 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
+                  <div className="rounded-[22px] border border-slate-200/70 bg-white/86 px-4 py-3">
                     <div className="flex h-full flex-col">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-[11px] font-medium tracking-[0.12em] text-slate-400">今日简报</p>
+                          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">信源监测</p>
                           <p className="mt-2 text-[13px] leading-6 text-slate-900">
-                            三条主线只保留当天最值得读的一句：国际时政、科技、AI。
+                            {sourceMonitorHeadline}
+                          </p>
+                          <p className="mt-1 text-[12px] leading-5 text-slate-500">
+                            {sourceMonitorSupport}
                           </p>
                         </div>
+                        <span className={`shrink-0 rounded-full border px-3 py-1 text-[11px] ${sourceRefreshStatusTone(refreshJob)}`}>
+                          {sourceRefreshStatusLabel(refreshJob)}
+                        </span>
                       </div>
 
-                      <div className="mt-3 grid grid-cols-1 gap-2 xl:grid-cols-3">
-                        {dailyBriefItems.map((item) => (
-                          <button
-                            key={item.key}
-                            type="button"
-                            onClick={() => setScene(item.key)}
-                            className={`min-w-0 rounded-[18px] border px-3 py-2.5 text-left transition hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)] ${scene === item.key ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-200 bg-slate-50/85 text-slate-900'}`}
-                            title={item.summary}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <p className={`whitespace-nowrap text-[11px] font-semibold tracking-[0.08em] ${scene === item.key ? 'text-white/70' : 'text-slate-400'}`}>
-                                {item.label}
-                              </p>
-                              <span className={`whitespace-nowrap text-[11px] ${scene === item.key ? 'text-white/60' : 'text-slate-400'}`}>
-                                {formatTime(state?.generated_at)}
-                              </span>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                        {isMainWorldScene ? (
+                          <>
+                            <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-4 py-2.5">
+                              <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">候选 RSS</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-900">{rssCandidateCount ?? '--'} 个</p>
                             </div>
-                            <p className={`mt-1 line-clamp-2 text-[12px] font-semibold leading-5 ${scene === item.key ? 'text-white' : 'text-slate-950'}`}>
-                              {item.title}
+                            <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-4 py-2.5">
+                              <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">本次新增</p>
+                              <p className="mt-1 text-sm font-semibold text-emerald-700">
+                                {typeof rssAddedCount === 'number' ? signedCount(rssAddedCount) : '--'}
+                              </p>
+                            </div>
+                            <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-4 py-2.5">
+                              <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">本次淘汰</p>
+                              <p className="mt-1 text-sm font-semibold text-rose-700">
+                                {typeof rssRemovedCount === 'number' ? removedCount(rssRemovedCount) : '--'}
+                              </p>
+                            </div>
+                            <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-4 py-2.5">
+                              <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">上次巡检</p>
+                              <p className="mt-1 text-sm font-semibold text-slate-900">
+                                {latestSourceRefreshTime(
+                                  refreshJob?.finished_at,
+                                  sourceRefreshSummary?.repo_discovery_snapshot?.last_refreshed_at,
+                                )}
+                              </p>
+                            </div>
+                            <p className="rounded-[18px] border border-slate-200/70 bg-white/72 px-3 py-2 text-[11px] leading-5 text-slate-500 sm:col-span-2 xl:col-span-4">
+                              更新链路：每轮先由后台抽取和处理 RSS 候选，再预热运行时缓存并做自愈检查；前台只展示通过筛选后的线索，不把未验证候选直接推到时间线。
                             </p>
-                            <p className={`mt-1 line-clamp-3 text-[11px] leading-5 ${scene === item.key ? 'text-white/70' : 'text-slate-500'}`}>
-                              {item.summary}
-                            </p>
-                          </button>
-                        ))}
+                          </>
+                        ) : (
+                          <>
+                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">入口池</p>
+                            <span className="whitespace-nowrap text-[11px] text-slate-400">
+                              {latestSourceRefreshTime(
+                                sourceRefreshSummary?.skillhub_snapshot?.last_refreshed_at,
+                                sourceRefreshSummary?.source_skill_snapshot?.last_refreshed_at,
+                                sourceRefreshSummary?.monitor_runtime.latest_poll_finished_at,
+                                sourceRefreshSummary?.refresh_job?.finished_at,
+                              )}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
+                            入口 {sourceRefreshSummary?.source_skill_snapshot?.active_hub_count || 0} 个，沉淀 {sourceRefreshSummary?.source_skill_snapshot?.yielded_skill_count || 0} 条。
+                          </p>
+                        </div>
+
+                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">目录候选</p>
+                            <span className="whitespace-nowrap text-[11px] text-slate-400">
+                              {latestSourceRefreshTime(
+                                sourceRefreshSummary?.repo_discovery_snapshot?.last_refreshed_at,
+                                sourceRefreshSummary?.refresh_job?.finished_at,
+                              )}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
+                            本地沉淀 {sourceRefreshSummary?.repo_discovery_snapshot?.local_repo_count || 0} 组样本，候选 {sourceRefreshSummary?.repo_discovery_snapshot?.github_candidate_count || 0} 条。
+                            目录扩充 {sourceRefreshSummary?.repo_discovery_snapshot?.directory_candidate_count || 0} 条。
+                          </p>
+                          <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                            可转信源 {sourceRefreshSummary?.repo_discovery_snapshot?.endpoint_candidate_count || 0} 条，方法样本 {sourceRefreshSummary?.repo_discovery_snapshot?.method_candidate_count || 0} 条。
+                          </p>
+                        </div>
+
+                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">稳定</p>
+                            <span className="whitespace-nowrap text-[11px] text-slate-400">
+                              {sourceHealth ? `${sourceHealth.stable_source_count} 条` : '--'}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
+                            观察 {sourceHealth?.watchlist_source_count || 0} 条，待确认 {sourceHealth?.blocked_or_unknown_source_count || 0} 条。
+                          </p>
+                        </div>
+
+                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">题池</p>
+                            <span className="whitespace-nowrap text-[11px] text-slate-400">
+                              {evaluationSummary ? `${evaluationSummary.resolved_question_count} 已结算` : '--'}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
+                            跟踪 {evaluationSummary?.active_question_count ?? livebenchSummary?.active_question_count ?? 0} 道，计分 {displayScoredQuestionCount(evaluationSummary)} 道。
+                          </p>
+                          <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                            待核票 {livebenchSummary?.settlement_pending_count || 0} 道。
+                          </p>
+                        </div>
+                          </>
+                        )}
                       </div>
-                      <p className="mt-2 text-[11px] leading-5 text-slate-400">
-                        {sourceRuntimeHeadline(sourceRefreshSummary, livebenchSummary, evaluationSummary)}
-                      </p>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div className="flex flex-col gap-2 rounded-[20px] border border-slate-200/80 bg-slate-50/80 px-3 py-2">
-                <div className="flex flex-wrap gap-2">
-                  {subworlds.map((world) => (
-                    <button
-                      key={world.key}
-                      type="button"
-                      onClick={() => setScene(world.key)}
-                      className={`rounded-full border px-3 py-1.5 text-xs transition ${scenePickerButtonClass(scene === world.key)}`}
-                      title={world.summary}
-                    >
-                      {world.title} {world.signal_count}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
+          </div>
+        </section>
+
+        <section className="grid gap-3 xl:grid-cols-[0.82fr_1.18fr] xl:items-stretch">
+          <div className="rounded-[26px] border border-slate-200/75 bg-white/86 px-5 py-4 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">今日简报</p>
+            <h2 className="mt-2 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">
+              先看三份日报
+            </h2>
+            <p className="mt-2 max-w-xl text-[13px] leading-6 text-slate-600">
+              主世界日报、AI 日报和演绎日报各保留一条当前最值得读的线索；后台继续用全量信源做筛选、去重和复盘。
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {dashboardBriefCards.map((card) => {
+              const content = (
+                <article className={`h-full rounded-[24px] border ${card.tone} px-4 py-4 text-left transition hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.07)]`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="rounded-full border border-white/80 bg-white/75 px-2.5 py-1 text-[11px] font-semibold">
+                      {card.label}
+                    </span>
+                    <span className="text-[11px] opacity-70">{card.meta}</span>
+                  </div>
+                  <h3 className="mt-3 line-clamp-2 text-[15px] font-semibold leading-6 text-slate-950">{card.title}</h3>
+                  <p className="mt-2 line-clamp-3 text-[12px] leading-6 text-slate-600">{card.summary}</p>
+                </article>
+              );
+              return (
+                <button
+                  key={card.key}
+                  type="button"
+                  onClick={() => handleBriefCardClick(card.view)}
+                  className="block h-full w-full"
+                  aria-label={`切换到${card.label}`}
+                >
+                  {content}
+                </button>
+              );
+            })}
           </div>
         </section>
 
@@ -1302,67 +2047,26 @@ export default function DashboardClient({
             </CardContent>
           </Card>
         ) : null}
-
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(260px,0.82fr)_minmax(560px,1.46fr)_minmax(300px,0.9fr)] xl:items-start 2xl:grid-cols-[minmax(340px,0.9fr)_minmax(680px,1.35fr)_minmax(420px,0.95fr)]">
-          <Card className={`${shellCardClass()} xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
-            <CardContent className="flex h-full min-h-0 flex-col gap-3 p-3">
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className={`text-[11px] font-medium tracking-[0.08em] ${alertBoard.titleClassName}`}>
-                      {alertBoard.title}
-                    </p>
-                    <span className="text-[11px] text-slate-400">{alertNodes.length} 条</span>
-                  </div>
-                  {alertNodes.length > 0 ? (
-                    alertNodes.map((node, index) => (
-                      <article
-                        key={`${node.node_id}-${node.published_at}-${index}`}
-                        className={`min-w-0 rounded-[20px] border p-4 transition hover:opacity-95 ${severitySoftTone(node.severity)}`}
-                        onMouseEnter={() => setActiveSignalId(node.node_id)}
-                      >
-                        <div className="mb-2 flex min-w-0 items-start gap-2">
-                          <Badge className={`shrink-0 rounded-full border ${severityTone(node.severity)}`}>{severityLabel(node.severity)}</Badge>
-                          <p className="min-w-0 flex-1 break-words text-sm font-medium leading-6 text-slate-900">
-                            {cleanPresentationText(node.display_title || node.title)}
-                          </p>
-                        </div>
-                        <p className="break-words text-xs leading-6 text-slate-600">
-                          {compactText(cleanPresentationText(node.display_summary || node.summary), 128)}
-                        </p>
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          <span className="min-w-0 flex-1 break-words">
-                            {cleanPresentationText(node.geo.label || node.geo.region)}
-                          </span>
-                          <span className="shrink-0 text-slate-400">{formatTime(node.updated_at || node.published_at)}</span>
-                        </div>
-                      </article>
-                    ))
-                  ) : (
-                    <div className="rounded-[20px] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm leading-7 text-slate-500">
-                      {alertBoard.emptyText}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+        {isTimelineScene ? (
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(620px,1.35fr)_minmax(360px,0.82fr)] xl:items-start 2xl:grid-cols-[minmax(760px,1.42fr)_minmax(420px,0.82fr)]">
           <Card id="world-map-panel" ref={worldMapPanelRef} className={shellCardClass()}>
             <CardContent className="flex h-full min-h-0 flex-col p-3">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
                 <div>
-                  <h2 className="font-serif text-xl font-semibold tracking-[-0.02em] text-slate-950">3D 地球时间地图</h2>
-                  <p className="text-xs text-slate-500">把焦点放回地图，正在发生的事会先落到这颗地球上。</p>
+                  <h2 className="font-serif text-xl font-semibold tracking-[-0.02em] text-slate-950">
+                    3D 地球时间地图
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    把焦点放回地图，正在发生的事会先落到这颗地球上。
+                  </p>
                 </div>
                 <div className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs text-slate-500">
-                  最近更新 {state ? formatTime(state.generated_at) : '--'}
+                  最近更新 {mapState ? formatTime(mapState.generated_at) : '--'}
                 </div>
               </div>
 
               {focusCard ? (
-                <div className="mb-3 rounded-[20px] border border-emerald-200/80 bg-[linear-gradient(135deg,rgba(240,253,248,0.96),rgba(247,254,250,0.92))] px-4 py-3 shadow-[0_10px_22px_rgba(16,185,129,0.07)]">
+                <div className="mb-3 rounded-[28px] border border-emerald-200/70 bg-[linear-gradient(135deg,rgba(240,253,248,0.96),rgba(247,254,250,0.92))] px-4 py-3 shadow-[0_10px_22px_rgba(16,185,129,0.06)]">
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
                     <span className="rounded-full border border-emerald-200 bg-white/85 px-2.5 py-1 font-semibold text-emerald-700">
                       {focusCard.label}
@@ -1376,7 +2080,7 @@ export default function DashboardClient({
                     </div>
                     {focusCard.watchNext ? (
                       <div className="rounded-full border border-emerald-200/90 bg-white/85 px-3 py-1.5 text-[11px] leading-5 text-emerald-800 lg:max-w-[22rem]">
-                        <span className="font-semibold text-emerald-700">下一步：</span>
+                        <span className="font-semibold text-emerald-700">线索：</span>
                         {compactText(focusCard.watchNext, 64)}
                       </div>
                     ) : null}
@@ -1409,7 +2113,7 @@ export default function DashboardClient({
 
               <div
                 id="world-globe-shell"
-                className="mx-auto w-full shrink-0 overflow-hidden rounded-[24px] border border-slate-200/80"
+                className="mx-auto w-full shrink-0 overflow-hidden rounded-[30px] border border-slate-200/70"
                 style={{ height: 'clamp(400px, 42vw, 680px)', maxWidth: 'clamp(400px, 42vw, 680px)' }}
               >
                 {/* 中间栏固定保留 3D 地球，左右信息都围绕它组织。 */}
@@ -1424,7 +2128,7 @@ export default function DashboardClient({
                 />
               </div>
 
-              <div className="mt-3 grid gap-2 rounded-[18px] border border-slate-200 bg-slate-50/75 px-3 py-3 text-xs text-slate-600 sm:grid-cols-3">
+              <div className="mt-3 grid gap-2 rounded-[24px] border border-slate-200/70 bg-slate-50/65 px-3 py-3 text-xs text-slate-600 sm:grid-cols-3">
                 <div className="flex items-center justify-between gap-2 rounded-full border border-red-100 bg-white px-3 py-2 text-red-700">
                   <span className="inline-flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-[#ff5c73] shadow-[0_0_12px_rgba(255,92,115,0.75)]" />
@@ -1447,9 +2151,11 @@ export default function DashboardClient({
                   <span>{markerLevelCounts.monitoring}</span>
                 </div>
               </div>
-              <div className="mt-2 rounded-[18px] border border-slate-200 bg-white/85 px-3 py-3">
+              <div className="mt-2 rounded-[24px] border border-slate-200/70 bg-white/80 px-3 py-3">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-medium tracking-[0.08em] text-slate-400">全部信号</p>
+                  <p className="text-[11px] font-medium tracking-[0.08em] text-slate-400">
+                    {sceneDisplayLabel(mapScene)}信号
+                  </p>
                   <span className="text-[11px] text-slate-400">{markers.length} 条</span>
                 </div>
                 <div className="max-h-[132px] space-y-1.5 overflow-y-auto pr-1 2xl:max-h-[150px]">
@@ -1473,8 +2179,11 @@ export default function DashboardClient({
                           <span className="block truncate text-[12px] font-medium text-slate-800">
                             {signal.title}
                           </span>
-                          <span className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                            <span>{signal.locationLabel || signal.scene}</span>
+                          <span className="mt-1 block line-clamp-2 text-[11px] leading-5 text-slate-500">
+                            {signal.summary}
+                          </span>
+                          <span className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                            <span>{signal.locationLabel || signal.sourceName || signal.scene}</span>
                             <span>{formatTime(signal.timestamp)}</span>
                           </span>
                         </span>
@@ -1490,6 +2199,178 @@ export default function DashboardClient({
             </CardContent>
           </Card>
 
+          {isMainWorldScene ? (
+          <Card ref={timelinePanelRef} className={`${shellCardClass()} xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
+            <CardHeader className="border-b border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,0.82))] py-4">
+              <div className="flex flex-col gap-3">
+                <div className="space-y-1">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <Radio className="h-4 w-4" />
+                    {timelineViewLabel(timelineScene)}
+                  </CardTitle>
+                  <p className="text-xs text-slate-500">先读今日摘要，下面保留按时间排列的原始线索。</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {subworlds.map((world) => (
+                    <button
+                      key={`timeline-scene-${world.key}`}
+                      type="button"
+                      onClick={() => setTimelineScene(world.key === 'tech-ai' ? 'tech-ai' : 'geo-politics-daily')}
+                      className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                        timelineScene === world.key
+                          ? 'border-slate-900 bg-slate-900 text-white'
+                          : 'border-slate-200 bg-white/85 text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                      }`}
+                      title={world.summary}
+                    >
+                      {world.title}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setTimelineScene('livebench')}
+                    className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                      timelineScene === 'livebench'
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-slate-200 bg-white/85 text-slate-600 hover:border-slate-300 hover:text-slate-900'
+                    }`}
+                    title="预测题池、待结算问题和已结算问题。"
+                  >
+                    演绎日报
+                  </button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="flex h-full min-h-0 flex-col gap-3 p-3">
+              <section className={`rounded-[24px] border ${activeDailyCard.tone} px-4 py-4`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="rounded-full border border-white/80 bg-white/75 px-2.5 py-1 text-[11px] font-semibold">
+                    {activeDailyCard.label}
+                  </span>
+                  <span className="text-[11px] opacity-70">{activeDailyCard.meta}</span>
+                </div>
+                <h3 className="mt-3 text-[17px] font-semibold leading-7 text-slate-950">{activeDailyCard.title}</h3>
+                <p className="mt-2 text-[13px] leading-7 text-slate-700">{activeDailyCard.summary}</p>
+                {dailyReportItems.length > 0 ? (
+                  <div className="mt-4 grid gap-2">
+                    {dailyReportItems.map((item) => (
+                      <a
+                        key={`daily-report-item-${item.key}`}
+                        href={item.href}
+                        className="group rounded-[18px] border border-white/80 bg-white/72 px-3 py-3 transition hover:border-white hover:bg-white/92 hover:shadow-[0_10px_22px_rgba(15,23,42,0.06)]"
+                      >
+                        <p className="text-[11px] leading-5 text-slate-400">{item.meta}</p>
+                        <h4 className="mt-1 flex items-start gap-2 text-[13px] font-semibold leading-6 text-slate-950">
+                          <span className="min-w-0 flex-1">{item.title}</span>
+                          <ArrowRight className="mt-1 h-3.5 w-3.5 shrink-0 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-70" />
+                        </h4>
+                        <p className="mt-1 line-clamp-2 text-[12px] leading-6 text-slate-600">{item.summary}</p>
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+
+              <p className="rounded-[18px] border border-slate-200/80 bg-slate-50/70 px-3 py-2 text-[12px] leading-6 text-slate-500">
+                {timelineScene === 'livebench'
+                  ? `下方按到期和结算时间保留演绎题池，当前跟踪 ${currentQuestions.length} 道。`
+                  : `下方按发布时间保留${timelineViewLabel(timelineScene)}原始线索，信源分层只作为证据权重。`}
+              </p>
+
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+                {timelineScene === 'livebench' ? (
+                  livebenchTimelineGroups.length > 0 ? (
+                    livebenchTimelineGroups.map((group) => (
+                      <div key={`livebench-timeline-group-${group.day}`} className="grid gap-3 sm:grid-cols-[64px_minmax(0,1fr)]">
+                        <div className="pt-3 text-sm font-semibold text-slate-500">{group.day}</div>
+                        <div className="relative space-y-3 border-l border-slate-200 pl-4">
+                          {group.items.map((preview) => {
+                            const aggregate = preview.aggregate_vote;
+                            return (
+                              <a
+                                key={`livebench-timeline-${preview.question_id}`}
+                                href={worldHref(preview.href, scene)}
+                                className={`group relative block rounded-[28px] border bg-white/92 p-4 transition hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(15,23,42,0.07)] ${questionCardAccentClass(preview)}`}
+                              >
+                                <span className="absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full bg-violet-400 shadow-[0_0_0_4px_rgba(139,92,246,0.14)]" />
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className={`rounded-full border px-2.5 py-1 text-[11px] ${liveQuestionStatusTone(preview.status)}`}>
+                                    {preview.settlement_status === 'pending_official' ? '待核票' : liveQuestionStatusLabel(preview.status)}
+                                  </span>
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
+                                    {preview.topic_label}
+                                  </span>
+                                  <span className="ml-auto text-[11px] text-slate-400">{techAiTimeLabel(livebenchQuestionTime(preview))}</span>
+                                </div>
+                                <p className="mt-3 text-[15px] font-semibold leading-7 text-slate-950">{livebenchDailyTopicLabel(preview)}</p>
+                                <p className="mt-2 text-[13px] leading-7 text-slate-600">{questionModeratorLabel(preview)}</p>
+                                <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                  <span className={`rounded-full border px-2.5 py-1 ${voteSideTone(aggregate.side)}`}>
+                                    {questionAggregateLabel(preview)}
+                                  </span>
+                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                                    {questionTimingLabel(preview)}
+                                  </span>
+                                </div>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-500">
+                      当前还没有可展示的演绎题目。
+                    </div>
+                  )
+                ) : mainWorldSignalGroups.length > 0 ? (
+                  mainWorldSignalGroups.map((group) => (
+                    <div key={`main-world-group-${group.day}`} className="grid gap-3 sm:grid-cols-[64px_minmax(0,1fr)]">
+                      <div className="pt-3 text-sm font-semibold text-slate-500">{group.day}</div>
+                      <div className="relative space-y-3 border-l border-slate-200 pl-4">
+                        {group.items.map((signal) => (
+                          <a
+                            key={signal.id}
+                            href={worldHref(signalDetailHref(signal.id), timelineScene)}
+                            className="group relative block rounded-[28px] border border-slate-200/80 bg-white/92 p-4 transition hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(15,23,42,0.07)]"
+                          >
+                            <span className="absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_0_4px_rgba(56,189,248,0.14)]" />
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`rounded-full border px-2.5 py-1 text-[11px] ${severitySoftTone(signal.severity)}`}>
+                                {severityLabel(signal.severity)}
+                              </span>
+                              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
+                                {readableSignalSourceLine(signal)}
+                              </span>
+                              <span className="ml-auto text-[11px] text-slate-400">{techAiTimeLabel(signal.published_at)}</span>
+                            </div>
+                            <p className="mt-3 text-[15px] font-semibold leading-7 text-slate-950">{readableSignalTitle(signal)}</p>
+                            <p className="mt-2 text-[13px] leading-7 text-slate-600">
+                              {readableSignalSummary(signal, 190)}
+                            </p>
+                            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                              {readableSignalTags(signal.tags, 3).map((tag) => (
+                                <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-500">
+                    {timelineScene === 'tech-ai' && !techAiTimelineState
+                      ? '正在加载 AI 时间线。'
+                      : `当前还没有可展示的${timelineViewLabel(timelineScene)}信号。`}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          ) : (
           <Card id="arena-panel" className={`${shellCardClass()} xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
             <CardHeader className="border-b border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,0.82))] py-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1578,9 +2459,9 @@ export default function DashboardClient({
                             {regionDisplayLabel(preview.region_label)}
                           </span>
                         </div>
-                          <p className="mt-3 text-[15px] font-semibold leading-7 text-slate-950">{questionTitleLabel(preview)}</p>
+                        <p className="mt-3 text-[15px] font-semibold leading-7 text-slate-950">{questionTitleLabel(preview)}</p>
                         <div className="mt-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
-                            <p className="text-[11px] font-medium tracking-[0.08em] text-slate-400">主持人简报</p>
+                          <p className="text-[11px] font-medium tracking-[0.08em] text-slate-400">主持人简报</p>
                           <p className="mt-1 text-[13px] leading-7 text-slate-700">{questionModeratorLabel(preview)}</p>
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-500">
@@ -1615,7 +2496,9 @@ export default function DashboardClient({
               </div>
             </CardContent>
           </Card>
+          )}
         </section>
+        ) : null}
       </div>
     </main>
   );

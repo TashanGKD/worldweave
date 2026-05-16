@@ -1,11 +1,16 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { getWorldState } from '@/lib/world/runtime';
+import { readableSignalTags } from '@/lib/world/dashboard-presentation';
+import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
+import type { WorldScene } from '@/lib/world/types';
 
 type PageProps = {
   params: Promise<{
     id: string;
+  }>;
+  searchParams?: Promise<{
+    scene?: string;
   }>;
 };
 
@@ -29,9 +34,10 @@ function signalSceneLabel(scene: string) {
     finance: '市场',
     health: '公共卫生',
     'weak-signal': '弱信号',
-    'geo-politics-daily': '国际时政',
-    'technology-daily': '科技',
-    'ai-daily': 'AI',
+    'geo-politics-daily': '国际时政日报',
+    'technology-daily': '科技日报',
+    'ai-daily': 'AI 日报',
+    'tech-ai': 'AI 日报',
   };
 
   return labels[scene] || scene;
@@ -43,21 +49,54 @@ function validationStatusLabel(value: string) {
   return '待确认';
 }
 
-export default async function SignalDetailPage({ params }: PageProps) {
-  const { id } = await params;
-  const state = await getWorldState('global');
-  const node = state.nodes.find((item) => item.node_id === id);
-  const topSignal = state.top_signals.find((item) => item.id === id);
-  const knowledgeSignal = state.knowledge_signals.find((item) => item.id === id);
-  const signal = topSignal || knowledgeSignal || null;
+function normalizeDetailScene(value?: string | null): WorldScene {
+  if (value === 'tech-ai' || value === 'geo-politics-daily' || value === 'finance' || value === 'global') return value;
+  return 'geo-politics-daily';
+}
 
-  if (!node && !signal) {
+async function loadDetailState(scene: WorldScene) {
+  return (await getCachedWorldDashboardState(scene)) || getWorldDashboardState(scene);
+}
+
+type DetailState = Awaited<ReturnType<typeof loadDetailState>>;
+
+function detailSceneSearchOrder(scene: WorldScene): WorldScene[] {
+  const alternates: WorldScene[] = scene === 'tech-ai' ? ['geo-politics-daily', 'global'] : ['tech-ai', 'global'];
+  return [scene, ...alternates.filter((item) => item !== scene)];
+}
+
+function findSignalDetail(state: DetailState, id: string) {
+  return {
+    node: state.nodes.find((item) => item.node_id === id) || null,
+    signal:
+      state.top_signals.find((item) => item.id === id) ||
+      state.knowledge_signals.find((item) => item.id === id) ||
+      state.graph_signals.find((item) => item.id === id) ||
+      null,
+  };
+}
+
+export default async function SignalDetailPage({ params, searchParams }: PageProps) {
+  const { id } = await params;
+  const query = searchParams ? await searchParams : {};
+  const scene = normalizeDetailScene(query?.scene);
+  let state: DetailState | null = null;
+  let node: ReturnType<typeof findSignalDetail>['node'] = null;
+  let signal: ReturnType<typeof findSignalDetail>['signal'] = null;
+
+  for (const candidateScene of detailSceneSearchOrder(scene)) {
+    state = await loadDetailState(candidateScene);
+    ({ node, signal } = findSignalDetail(state, id));
+    if (node || signal) break;
+  }
+
+  if (!state || (!node && !signal)) {
     notFound();
   }
 
-  const title = signal?.title || node?.title || signal?.display_title || node?.display_title || id;
-  const summary = signal?.summary || node?.summary || signal?.display_summary || node?.display_summary || '暂无更多摘要。';
-  const sourceName = signal?.source_name || node?.source_name || 'Unknown';
+  const title = signal?.display_title || node?.display_title || signal?.title || node?.title || id;
+  const summary = signal?.display_summary || node?.display_summary || signal?.summary || node?.summary || '这条线索暂时只有结构化信息，等待后续来源补充。';
+  const sourceName = signal?.source_name || node?.source_name || '未标注来源';
   const sourceUrl = signal?.source_url || node?.source_url || '';
   const region = signal?.region || node?.geo?.region || '--';
   const location = signal?.location_name || node?.geo?.label || '--';
@@ -66,17 +105,12 @@ export default async function SignalDetailPage({ params }: PageProps) {
   const updatedAt = node?.updated_at || node?.last_report_at || publishedAt;
   const tags = signal?.tags || node?.tags || [];
   const alignmentTags = signal?.alignment_tags || node?.alignment_tags || [];
+  const displayTags = readableSignalTags([...tags, ...alignmentTags], 10);
   const reliability = signal?.source_reliability;
   const relatedQuestions = [
-    ...(state.livebench_arena?.active_questions || []),
-    ...(state.livebench_arena?.watchlist_questions || []),
-    ...(state.livebench_arena?.resolved_questions || []),
-  ]
-    .filter((snapshot) =>
-      snapshot.references.some((reference) => reference.signal_id === id) ||
-      snapshot.zvec_chunks.some((chunk) => chunk.signal_id === id),
-    )
-    .slice(0, 8);
+    ...(state.pending_question_previews || []),
+    ...(state.resolved_question_previews || []),
+  ].slice(0, 4);
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
@@ -120,7 +154,7 @@ export default async function SignalDetailPage({ params }: PageProps) {
                       </a>
                     </p>
                   ) : (
-                <p>原始链接：当前上游没有提供可直达链接，页面显示结构化详情。</p>
+                    <p>原始链接：当前上游没有提供可直达链接，页面显示结构化详情。</p>
                   )}
                 </div>
               </div>
@@ -128,7 +162,7 @@ export default async function SignalDetailPage({ params }: PageProps) {
               <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
                 <p className="text-sm font-medium text-slate-900">标签</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {[...tags, ...alignmentTags].filter(Boolean).slice(0, 24).map((tag) => (
+                  {displayTags.map((tag) => (
                     <span key={tag} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">
                       {tag}
                     </span>
@@ -141,27 +175,27 @@ export default async function SignalDetailPage({ params }: PageProps) {
                 {relatedQuestions.length > 0 ? (
                   <div className="mt-3 space-y-3">
                     {relatedQuestions.map((snapshot) => (
-                      <article key={snapshot.question.question_id} className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                      <article key={snapshot.question_id} className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
                         <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                            {snapshot.question.topic_bucket || 'world'}
+                            {snapshot.topic_label || 'world'}
                           </span>
                           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                            {validationStatusLabel(snapshot.question.status === 'resolved' ? 'confirmed' : 'pending')}
+                            {validationStatusLabel(snapshot.status === 'resolved' ? 'confirmed' : 'pending')}
                           </span>
                         </div>
                         <p className="mt-2 text-sm leading-7 text-slate-700">
-                          {snapshot.question.title_zh || snapshot.question.title}
+                          {snapshot.title}
                         </p>
                         <p className="mt-1 text-xs leading-6 text-slate-500">
-                          这道题当前主要用这条信源做证据补强，并和平台规则一起判断。
+                          这道题与当前场景同池展示，可作为后续校准和复盘参考。
                         </p>
                         <div className="mt-2 space-y-1 text-[11px] text-slate-400">
-                          <p>结算时间：{formatTime(snapshot.question.resolve_at || snapshot.question.close_at || snapshot.question.updated_at)}</p>
-                          {snapshot.question.platform_question_url || snapshot.question.origin_url ? (
+                          <p>结算时间：{formatTime(snapshot.resolve_at || snapshot.official_resolved_at)}</p>
+                          {snapshot.platform_question_url ? (
                             <p>
                               <a
-                                href={snapshot.question.platform_question_url || snapshot.question.origin_url || '#'}
+                                href={snapshot.platform_question_url}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-sky-700 underline underline-offset-4"
@@ -197,7 +231,7 @@ export default async function SignalDetailPage({ params }: PageProps) {
               <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
                 <p className="text-sm font-medium text-slate-900">说明</p>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  这个详情页现在是纯知识库入口，用来承接单条信源的中文化内容、标签、信源状态，以及它在题池里被哪些问题引用。
+                  这里保留单条线索的中文摘要、来源、标签和信源状态；后续题池复盘会优先引用这类已经整理过的线索。
                 </p>
               </div>
             </div>

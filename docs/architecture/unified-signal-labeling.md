@@ -19,12 +19,14 @@
 
 MiniMax 负责把不同来源的原始信号对齐到统一结构：
 
-- 判断 `severity`
-- 判断 `relevance_score`
-- 生成标准 `tags`
-- 给出一句简短 `reason`
+- 生成中文可读的 `display_title` / `display_summary`
+- 做 AI 强相关二分类，只输出 `isAiRelated`
+- 判断是否是低信息信号，如地点串、来源名、模板句、标题清单、结构化快照
+- 给出少量必要标签，如 `eventType`、`dailyBucket`、`tagsZh`
 
-这一步发生在 `classifySignalRowsWithMiniMax()`，是信源无关的。
+这一步发生在 `classifySignalRowsWithMiniMax()`，提示词由 `signal-normalization.ts` 统一维护，是信源无关的。
+
+MiniMax 不负责最终评分、排序、精选阈值或前端布局。那些规则必须留在代码中，保证系统可控、可解释、可回归测试。
 
 ## 来源兼容，不做来源特权
 
@@ -69,3 +71,15 @@ MiniMax 负责把不同来源的原始信号对齐到统一结构：
 - 视觉只表达当前等级，不暴露内部来源偏见
 
 如果后续接入新源，需要优先补的是 MiniMax 标注和 `alignment_tags`，而不是再加一个新的来源专属前端分支。
+
+## 低信息信号处理
+
+低信息信号不应该进入主展示池。典型低信息输入包括：
+
+- 只有地点或来源名
+- `信源更新`、`结构化更新`、`Bundle Feed` 一类模板标题
+- 只列出若干标题，没有具体事件摘要
+- 接口样本、行情快照、结构化对象快照
+- 模型明确返回 `lowInformation=true`
+
+这些行会在评分前被过滤。前端不得再通过硬编码标题替换来弥补低信息信号。

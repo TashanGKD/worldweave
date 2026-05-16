@@ -124,41 +124,39 @@ function slimInitialSignal<T extends { title?: string; summary?: string; display
   };
 }
 
-function slimInitialQuestionPreview(preview: InitialDashboardState['pending_question_previews'][number]) {
-  return {
-    ...preview,
-    title: cleanInitialText(preview.title, 140),
-    background: cleanInitialText(preview.background, 180),
-    moderator_line: cleanInitialText(preview.moderator_line, 180),
-  };
-}
+type InitialScene = 'tech-ai' | 'geo-politics-daily';
 
-function buildInitialNextSteps(state: InitialDashboardState) {
-  const primaryTitle = cleanInitialText(state.pending_question_previews?.[0]?.title, 120);
-  const steps = primaryTitle
-    ? [`当前题池重点：「${primaryTitle}」。题目页包含主持人串讲、阵营回复和信源依据。`]
-    : ['题池、信源和模型表现会持续刷新。'];
-  if ((state.evaluation_summary?.scored_question_count || 0) > 0) {
-    steps.push('模型表现页展示最近已结算题的预测误差和校准变化。');
-  } else {
-    steps.push('已结算题会在补齐可计分投票后进入模型表现。');
+function buildInitialNextSteps(state: InitialDashboardState, scene: InitialScene) {
+  if (scene === 'geo-politics-daily') {
+    const primaryTitle = cleanInitialText(state.top_signals?.[0]?.display_title || state.top_signals?.[0]?.title, 120);
+    const steps = primaryTitle
+      ? [`当前地缘重点：「${primaryTitle}」。`]
+      : ['地缘信号会持续刷新。'];
+    steps.push('只露出地缘和 AI 两条主线，其他信源继续参与后台筛选。');
+    return steps;
   }
-  steps.push('虾接入后，信源查询会沉淀为判断样本，并用于后续回答复盘。');
+  const primaryTitle = cleanInitialText(state.top_signals?.[0]?.display_title || state.top_signals?.[0]?.title, 120);
+  const steps = primaryTitle
+    ? [`当前 AI 重点：「${primaryTitle}」。`]
+    : ['AI 信源、精选和事件簇会持续刷新。'];
+  steps.push('优先保留 AI 强相关线索，泛科技和其他信息不进入 AI 首屏。');
+  steps.push('虾接入后，可以直接查信号和 AI Hot 线索回答，不必先走知识库。');
   return steps;
 }
 
-function slimInitialDashboardState(state: InitialDashboardState | null): InitialDashboardState | null {
+function slimInitialDashboardState(state: InitialDashboardState | null, scene: InitialScene): InitialDashboardState | null {
   if (!state) return state;
   const { livebench_arena: _livebenchArena, source_catalog: _sourceCatalog, source_knowledge: _sourceKnowledge, ...rest } = state as InitialDashboardState & Record<string, unknown>;
   return {
     ...rest,
+    scene,
     nodes: selectInitialNodes(state.nodes || []),
     graph_signals: (state.graph_signals || []).slice(0, 8).map(slimInitialSignal),
     top_signals: (state.top_signals || []).slice(0, 12).map(slimInitialSignal),
     knowledge_signals: (state.knowledge_signals || []).slice(0, 4).map(slimInitialSignal),
-    pending_question_previews: (state.pending_question_previews || []).slice(0, 8).map(slimInitialQuestionPreview),
-    resolved_question_previews: (state.resolved_question_previews || []).slice(0, 12).map(slimInitialQuestionPreview),
-    what_to_do_next: buildInitialNextSteps(state),
+    pending_question_previews: [],
+    resolved_question_previews: [],
+    what_to_do_next: buildInitialNextSteps(state, scene),
     quick_links: (state.quick_links || []).map((link) => ({
       ...link,
       description: cleanInitialText(link.description, 100),
@@ -166,8 +164,19 @@ function slimInitialDashboardState(state: InitialDashboardState | null): Initial
   };
 }
 
-export default async function Page() {
-  const scene = 'global' as const;
+type PageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+function resolveInitialScene(searchParams?: Record<string, string | string[] | undefined>) {
+  const rawScene = searchParams?.scene;
+  const scene = Array.isArray(rawScene) ? rawScene[0] : rawScene;
+  if (scene === 'geo-politics-daily' || scene === 'global' || scene === 'finance') return 'geo-politics-daily';
+  return 'tech-ai';
+}
+
+export default async function Page({ searchParams }: PageProps) {
+  const scene = resolveInitialScene(await searchParams);
   const requestHeaders = await headers();
   const requestOrigin = resolveRequestOrigin({ headers: requestHeaders });
   const [cachedState, cachedSubworlds] = await Promise.all([
@@ -184,8 +193,8 @@ export default async function Page() {
                 ...cachedState.skill_entry,
                 url: resolvePublicSkillUrl({ headers: requestHeaders, fallbackOrigin: requestOrigin }) || cachedState.skill_entry.url,
                 description:
-                  '把这个地址交给接入方即可。它用于近 30 天信源查询，也会把判断样本带回校准复盘。',
-                copy_hint: '每次查完信源，系统都会沉淀复盘样本，再把验证过的方法带回后续回答。',
+                  '把这个地址交给接入方即可。可直接查询近 30 天信号、AI Hot 和信源流；LiveBench 先作为独立入口保留。',
+                copy_hint: '模型可先用 signals/source-feed 接口回答，不必先走知识库召回。',
               }
             : null,
         }
@@ -194,7 +203,7 @@ export default async function Page() {
   return (
     <DashboardClient
       initialScene={scene}
-      initialState={slimInitialDashboardState(nextInitialState)}
+      initialState={slimInitialDashboardState(nextInitialState, scene)}
       initialSubworlds={cachedSubworlds}
     />
   );

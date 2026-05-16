@@ -186,9 +186,16 @@ function Read-WorldSourceContext([string]$BaseUrl) {
   }
 }
 
-function Read-QuestionSourceRecall([string]$BaseUrl, [string]$QuestionText) {
+function Test-AiQuestion([string]$QuestionText) {
+  return [regex]::IsMatch($QuestionText, '(?i)(\bai\b|llm|model|agent|openai|anthropic|claude|chatgpt|gemini|codex|人工智能|大模型|智能体|模型)')
+}
+
+function Read-QuestionSourceFeed([string]$BaseUrl, [string]$QuestionText) {
   $encodedQuery = [uri]::EscapeDataString($QuestionText)
-  return Invoke-JsonGet "$BaseUrl/api/v1/world/source-knowledge/recall?scene=global&limit=8&query=$encodedQuery"
+  if (Test-AiQuestion $QuestionText) {
+    return Invoke-JsonGet "$BaseUrl/api/v1/topiclab/source-feed/articles?scene=tech-ai&source=aihot&limit=8"
+  }
+  return Invoke-JsonGet "$BaseUrl/api/v1/topiclab/source-feed/articles?scene=global&limit=8&q=$encodedQuery"
 }
 
 function Read-XiaQuestionDetail([string]$BaseUrl, [string]$QuestionId) {
@@ -218,7 +225,7 @@ if (@($sourceContext.errors | Where-Object { $_ -match '^source_status:|^recent_
     timestamp = (Get-Date).ToUniversalTime().ToString("o")
     ok = $false
     submitted = $false
-    reason = "source_recall_prerequisite_failed"
+    reason = "source_feed_prerequisite_failed"
     base_url = $BaseUrl
     skill_url = "$BaseUrl/api/v1/openclaw/skill.md"
     xia_id = $XiaId
@@ -228,7 +235,7 @@ if (@($sourceContext.errors | Where-Object { $_ -match '^source_status:|^recent_
   [pscustomobject]@{
     ok = $false
     submitted = $false
-    reason = "source_recall_prerequisite_failed"
+    reason = "source_feed_prerequisite_failed"
     source_errors = $sourceContext.errors
     source_attached = $true
     cited_signal_count = @($voteBody.cited_signal_ids).Count
@@ -247,7 +254,7 @@ Write-ProgressLog "questions:done count=$($questions.Count)"
 $candidate = $null
 $candidateDetail = $null
 $candidateXiaDetail = $null
-$candidateRecall = $null
+$candidateSourceFeed = $null
 
 foreach ($question in $questions) {
   if ($question.settlement_status -ne "open") { continue }
@@ -258,15 +265,15 @@ foreach ($question in $questions) {
     Write-ProgressLog "question_detail:start question_id=$($question.question_id)"
     $detail = Read-XiaQuestionDetail $BaseUrl $question.question_id
     Write-ProgressLog "question_detail:done question_id=$($question.question_id)"
-    Write-ProgressLog "source_recall:start question_id=$($question.question_id)"
-    $recall = Read-QuestionSourceRecall $BaseUrl "$($question.title) $($question.background) $($question.topic_label) $($question.region_label)"
-    Write-ProgressLog "source_recall:done question_id=$($question.question_id) recalled=$($recall.recalled_count)"
+    Write-ProgressLog "source_feed:start question_id=$($question.question_id)"
+    $sourceFeed = Read-QuestionSourceFeed $BaseUrl "$($question.title) $($question.background) $($question.topic_label) $($question.region_label)"
+    Write-ProgressLog "source_feed:done question_id=$($question.question_id) returned=$(@($sourceFeed.list).Count) total=$($sourceFeed.total)"
     if (!$detail -or !$detail.preview) { continue }
-    if (!$recall -or [int]$recall.recalled_count -le 0) { continue }
+    if (!$sourceFeed -or @($sourceFeed.list).Count -le 0) { continue }
     $candidate = $question
     $candidateDetail = $detail
     $candidateXiaDetail = $detail
-    $candidateRecall = $recall
+    $candidateSourceFeed = $sourceFeed
   } catch {
     Write-ProgressLog "candidate_context:failed question_id=$($question.question_id) error=$($_.Exception.Message)"
     continue
@@ -281,7 +288,7 @@ if (!$candidate -or !$candidateDetail) {
     timestamp = (Get-Date).ToUniversalTime().ToString("o")
     ok = $true
     submitted = $false
-    reason = "no_open_question_with_source_recall"
+    reason = "no_open_question_with_source_feed"
     base_url = $BaseUrl
     skill_url = "$BaseUrl/api/v1/openclaw/skill.md"
     skill_mount = $skillMount
@@ -294,7 +301,7 @@ if (!$candidate -or !$candidateDetail) {
   [pscustomobject]@{
     ok = $true
     submitted = $false
-    reason = "no_open_question_with_source_recall"
+    reason = "no_open_question_with_source_feed"
     question_count = $questions.Count
     xia_id = $XiaId
     learning_log = $learningPath
@@ -313,24 +320,27 @@ if (!$questionTopic) {
 }
 $peerDigestYes = @($candidateXiaDetail.learning_context.peer_digest.yes) -join ' | '
 $peerDigestNo = @($candidateXiaDetail.learning_context.peer_digest.no) -join ' | '
-$recallLines = @(
-  @($candidateRecall.signals) | Select-Object -First 8 | ForEach-Object {
+$sourceFeedLines = @(
+  @($candidateSourceFeed.list) | Select-Object -First 8 | ForEach-Object {
     $title = [string]$_.title
-    $summary = [string]$_.summary
+    $summary = [string]$_.description
+    $sourceName = [string]$_.source_feed_name
     if ($title.Trim() -or $summary.Trim()) {
-      "- ${title}: $summary"
+      "- [$sourceName] ${title}: $summary"
     }
   } | Where-Object { $_ }
 )
-if ($recallLines.Count -eq 0) {
-  $recallLines = @("- 当前按题召回暂无可用线索。")
+if ($sourceFeedLines.Count -eq 0) {
+  $sourceFeedLines = @("- 当前 source-feed 暂无可用线索。")
 }
 $evidenceLines = @(
   @($candidateXiaDetail.evidence) | ForEach-Object {
     $section = $_
     @($section.references) | Select-Object -First 3 | ForEach-Object {
-      $title = [string]$_.title
-      $summary = [string]$_.summary
+      $title = [string]$_.label
+      if (!$title.Trim()) { $title = [string]$_.title }
+      $summary = [string]$_.note
+      if (!$summary.Trim()) { $summary = [string]$_.summary }
       if ($title.Trim() -or $summary.Trim()) {
         "- ${title}: $summary"
       }
@@ -338,7 +348,7 @@ $evidenceLines = @(
   } | Where-Object { $_ } | Select-Object -First 6
 )
 if ($evidenceLines.Count -eq 0) {
-  $evidenceLines = @("- 单题详情暂无额外证据，请以按题召回和题面规则为准。")
+  $evidenceLines = @("- 单题详情暂无额外证据，请以 source-feed 和题面规则为准。")
 }
 $taskTextLines = @(
   "question: $questionTitle",
@@ -349,8 +359,8 @@ $taskTextLines = @(
   "status: $($candidate.settlement_status)",
   "source_query:",
   $sourceContext.text,
-  "按题召回线索：",
-  ([string]::Join([Environment]::NewLine, $recallLines)),
+  "source-feed 线索：",
+  ([string]::Join([Environment]::NewLine, $sourceFeedLines)),
   "单题证据：",
   ([string]::Join([Environment]::NewLine, $evidenceLines)),
   "主持人背景：$($candidateXiaDetail.learning_context.host_background)",
@@ -696,7 +706,7 @@ if ([regex]::IsMatch($checkedVoteText, $forbiddenPattern)) {
     title = $candidate.title
     skipped_question_ids = $skipQuestionIdList
     source_context = $sourceContext
-    source_recall = $candidateRecall
+    source_feed = $candidateSourceFeed
     initial = $initial
     side = $side
     prediction = $prediction
@@ -737,7 +747,7 @@ $voteBody = @{
   human_readable_prediction = $prediction
   human_readable_why = $why
   what_changes_my_mind = $change
-  cited_signal_ids = @($candidateRecall.signals | Select-Object -First 5 | ForEach-Object { [string]$_.id })
+  cited_signal_ids = @($candidateSourceFeed.list | Select-Object -First 5 | ForEach-Object { [string]$_.id })
   source_attached = $true
   source_snapshot_id = $sourceSnapshotId
   source_context_generated_at = $sourceSnapshotGeneratedAt
@@ -770,7 +780,7 @@ try {
     resolve_at = $candidate.resolve_at
     skipped_question_ids = $skipQuestionIdList
     source_context = $sourceContext
-    source_recall = $candidateRecall
+    source_feed = $candidateSourceFeed
     source_attached = $true
     cited_signal_ids = @($voteBody.cited_signal_ids)
     source_snapshot_id = $sourceSnapshotId
@@ -832,7 +842,7 @@ try {
       title = $candidate.title
       skipped_question_ids = $skipQuestionIdList
       source_context = $sourceContext
-      source_recall = $candidateRecall
+      source_feed = $candidateSourceFeed
       source_attached = $true
       cited_signal_ids = @($voteBody.cited_signal_ids)
       initial = $initial
@@ -868,7 +878,7 @@ try {
     title = $candidate.title
     skipped_question_ids = $skipQuestionIdList
     source_context = $sourceContext
-    source_recall = $candidateRecall
+    source_feed = $candidateSourceFeed
     initial = $initial
     side = $side
     prediction = $prediction

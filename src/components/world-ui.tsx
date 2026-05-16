@@ -158,15 +158,16 @@ export function compactText(value?: string | null, max = 160) {
 
 export function sceneDisplayLabel(scene: WorldScene) {
   const labels: Record<string, string> = {
-    global: '全部信号',
+    global: '地缘',
     war: '冲突',
     technology: '科技',
     capacity: '产能与供应链',
     finance: '市场',
     health: '公共卫生',
     'weak-signal': '弱信号',
-    'geo-politics-daily': '国际时政',
-    'technology-daily': '科技',
+    'tech-ai': 'AI',
+    'geo-politics-daily': '地缘',
+    'technology-daily': 'AI',
     'ai-daily': 'AI',
   };
   return labels[scene] || scene;
@@ -308,7 +309,7 @@ export function aggregateSideSummary(aggregate: LiveBenchAggregateVote) {
 }
 
 export function shellCardClass() {
-  return 'overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/88 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur';
+  return 'overflow-hidden rounded-[34px] border border-white/80 bg-white/86 shadow-[0_18px_46px_rgba(15,23,42,0.055)] backdrop-blur';
 }
 
 export function markIcon() {
