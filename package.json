@@ -43,6 +43,7 @@
     "source:directory": "node ./scripts/extract-source-directory-candidates.mjs",
     "source:refresh:daemon": "node ./scripts/world-source-refresh-daemon.mjs",
     "start": "node ./scripts/world-start.mjs",
+    "test": "node --test tests/*.test.mjs",
     "ts-check": "node ./scripts/run-local-package-bin.mjs typescript bin/tsc -p tsconfig.json"
   },
   "dependencies": {
