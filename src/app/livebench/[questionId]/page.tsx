@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { aggregateSideSummary, cleanNarrativeText, cleanPresentationText, formatBrierScore, formatPercent, formatTime, liveQuestionStatusLabel, liveQuestionStatusTone, officialOutcomeLabel, regionDisplayLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, voteSideTone, worldHref } from '@/components/world-ui';
+import { aggregateSideSummary, cleanNarrativeText, cleanPresentationText, formatBrierScore, formatPercent, formatTime, liveQuestionStatusLabel, liveQuestionStatusTone, officialOutcomeLabel, regionDisplayLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, voteSideTone, worldHomeHref, worldHref } from '@/components/world-ui';
 import { getCachedLiveBenchQuestionDetail, getLiveBenchQuestionDetailFromStore } from '@/lib/world/livebench';
 import { getWorldLiveBenchQuestionDetail } from '@/lib/world/runtime';
 import type { LiveBenchQuestionDetail, LiveBenchQuestionPosition, LiveQuestionSide, WorldScene } from '@/lib/world/types';
@@ -105,7 +105,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
       <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-5">
           <div className="flex flex-wrap items-center gap-3">
-            <Link href={worldHref('/#arena-panel', scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
+            <Link href={worldHomeHref(scene, '#arena-panel')} className="text-sm text-slate-500 transition hover:text-slate-900">
               返回首页
             </Link>
             <Link href={worldHref('/livebench/evaluation', scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
@@ -134,7 +134,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
       <div className="mx-auto flex max-w-6xl flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <Link href={worldHref('/#arena-panel', scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
+            <Link href={worldHomeHref(scene, '#arena-panel')} className="text-sm text-slate-500 transition hover:text-slate-900">
               返回首页
             </Link>
             <Link href={worldHref('/livebench/evaluation', scene)} className="text-sm text-slate-500 transition hover:text-slate-900">

@@ -265,7 +265,12 @@ export function worldHref(href: string, scene: WorldScene = 'global') {
   if (scene !== 'global' && !url.searchParams.has('scene')) {
     url.searchParams.set('scene', scene);
   }
-  return `${url.pathname}${url.search}`;
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function worldHomeHref(scene: WorldScene = 'global', hash = '') {
+  const normalizedHash = hash && !hash.startsWith('#') ? `#${hash}` : hash;
+  return worldHref(`/worldweave/${normalizedHash}`, scene);
 }
 
 export function liveQuestionStatusLabel(status: LiveQuestionStatus) {

@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import Link from 'next/link';
 
-import { compactText, formatTime, shellCardClass, worldHref } from '@/components/world-ui';
+import { compactText, formatTime, shellCardClass, worldHomeHref } from '@/components/world-ui';
 import { resolveRequestOrigin } from '@/lib/request-origin';
 
 export const dynamic = 'force-dynamic';
@@ -134,7 +134,7 @@ export default async function TopicLabPreviewPage({ searchParams }: PageProps) {
     <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_42%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href={worldHref('/', scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
+          <Link href={worldHomeHref(scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
             返回世界脉络
           </Link>
           <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">

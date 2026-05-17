@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { worldHomeHref } from '@/components/world-ui';
 import { isLowValueTechAiProductUpdate, readableSignalTags } from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
 import type { WorldScene } from '@/lib/world/types';
@@ -140,7 +141,7 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
     <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-4">
-          <Link href="../" className="text-sm text-slate-500 transition hover:text-slate-900">
+          <Link href={worldHomeHref(scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
             返回世界脉络
           </Link>
         </div>
