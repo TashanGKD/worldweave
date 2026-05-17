@@ -54,7 +54,7 @@ const DAILY_META: Record<
     eyebrow: '地缘与公共风险',
     subtitle: '把今天最值得先看的地缘、冲突、外交和公共安全线索整理在一页。',
     empty: '当前还没有可展示的地缘日报线索。',
-    href: '/?scene=geo-politics-daily',
+    href: '../?scene=geo-politics-daily',
     tone: 'border-teal-200 bg-[linear-gradient(135deg,#f0faf4,#fbfdf8)] text-[#08201c]',
     softTone: 'border-[#d4ded8] bg-white/90',
     iconTone: 'border-teal-200 bg-white text-[#087265]',
@@ -65,7 +65,7 @@ const DAILY_META: Record<
     eyebrow: 'AI Hot、模型与产品',
     subtitle: '围绕 AI Hot、模型、Agent、论文、开源和产业动态整理今日重点。',
     empty: '当前还没有可展示的 AI 日报线索。',
-    href: '/?scene=tech-ai',
+    href: '../?scene=tech-ai',
     tone: 'border-teal-200 bg-[linear-gradient(135deg,#f0faf4,#fbfdf8)] text-[#08201c]',
     softTone: 'border-[#d4ded8] bg-white/90',
     iconTone: 'border-teal-200 bg-white text-[#087265]',
@@ -76,7 +76,7 @@ const DAILY_META: Record<
     eyebrow: '题池与结算',
     subtitle: '把正在跟踪和已经结算的问题集中成一页，便于看判断是否经得起后续结果检验。',
     empty: '当前还没有可展示的演绎题目。',
-    href: '/',
+    href: '../',
     tone: 'border-teal-200 bg-[linear-gradient(135deg,#f0faf4,#fbfdf8)] text-[#08201c]',
     softTone: 'border-[#d4ded8] bg-white/90',
     iconTone: 'border-teal-200 bg-white text-[#087265]',
@@ -142,6 +142,11 @@ function questionLabel(preview: LiveBenchQuestionPreview) {
   return '跟踪中';
 }
 
+function dailySignalHref(id: string | undefined, scene: WorldScene) {
+  const href = worldHref(signalDetailHref(id), scene);
+  return href.startsWith('/') ? `..${href}` : href;
+}
+
 type PageProps = {
   params?: Promise<{ kind?: string }>;
 };
@@ -177,13 +182,13 @@ export default async function DailyPage({ params }: PageProps) {
             返回世界脉络
           </Link>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Link href="/daily/geo" className={`rounded-full border px-3 py-1.5 transition ${kind === 'geo' ? 'border-teal-300 bg-[#eefaf4] text-[#087265]' : 'border-[#d3ddd7] bg-white/85 text-slate-500 hover:border-teal-300 hover:text-[#08201c]'}`}>
+            <Link href="./geo" className={`rounded-full border px-3 py-1.5 transition ${kind === 'geo' ? 'border-teal-300 bg-[#eefaf4] text-[#087265]' : 'border-[#d3ddd7] bg-white/85 text-slate-500 hover:border-teal-300 hover:text-[#08201c]'}`}>
               主世界日报
             </Link>
-            <Link href="/daily/ai" className={`rounded-full border px-3 py-1.5 transition ${kind === 'ai' ? 'border-teal-300 bg-[#eefaf4] text-[#087265]' : 'border-[#d3ddd7] bg-white/85 text-slate-500 hover:border-teal-300 hover:text-[#08201c]'}`}>
+            <Link href="./ai" className={`rounded-full border px-3 py-1.5 transition ${kind === 'ai' ? 'border-teal-300 bg-[#eefaf4] text-[#087265]' : 'border-[#d3ddd7] bg-white/85 text-slate-500 hover:border-teal-300 hover:text-[#08201c]'}`}>
               AI 日报
             </Link>
-            <Link href="/daily/livebench" className={`rounded-full border px-3 py-1.5 transition ${kind === 'livebench' ? 'border-teal-300 bg-[#eefaf4] text-[#087265]' : 'border-[#d3ddd7] bg-white/85 text-slate-500 hover:border-teal-300 hover:text-[#08201c]'}`}>
+            <Link href="./livebench" className={`rounded-full border px-3 py-1.5 transition ${kind === 'livebench' ? 'border-teal-300 bg-[#eefaf4] text-[#087265]' : 'border-[#d3ddd7] bg-white/85 text-slate-500 hover:border-teal-300 hover:text-[#08201c]'}`}>
               演绎日报
             </Link>
           </div>
@@ -215,7 +220,7 @@ export default async function DailyPage({ params }: PageProps) {
               {lead ? <p className="mt-3 text-sm leading-7 text-slate-600">{readableSignalSummary(lead, 260)}</p> : null}
               {lead ? (
                 <Link
-                  href={worldHref(signalDetailHref(lead.id), meta.scene)}
+                  href={dailySignalHref(lead.id, meta.scene)}
                   className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#d3ddd7] bg-white px-4 py-2 text-sm font-medium text-[#08201c] transition hover:border-teal-300"
                 >
                   阅读原线索
@@ -229,7 +234,7 @@ export default async function DailyPage({ params }: PageProps) {
                     {signals.slice(1, 4).map((signal) => (
                       <Link
                         key={`side-${signal.id}`}
-                        href={worldHref(signalDetailHref(signal.id), meta.scene)}
+                        href={dailySignalHref(signal.id, meta.scene)}
                       className="block border-l-2 border-[#d3ddd7] pl-3 text-[13px] font-medium leading-6 text-slate-800 transition hover:border-teal-400 hover:text-slate-950"
                       >
                         {readableSignalTitle(signal)}
@@ -249,7 +254,7 @@ export default async function DailyPage({ params }: PageProps) {
                 signals.slice(0, 5).map((signal, index) => (
                   <Link
                     key={signal.id}
-                    href={worldHref(signalDetailHref(signal.id), meta.scene)}
+                    href={dailySignalHref(signal.id, meta.scene)}
                     className="group animate-rise-in block rounded-[24px] border border-[#d4ded8] bg-white/88 px-4 py-4 transition duration-300 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)]"
                     style={{ animationDelay: `${80 + index * 45}ms` }}
                   >
