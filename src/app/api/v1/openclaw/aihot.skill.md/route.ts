@@ -30,6 +30,9 @@ function withRequestPortWhenLocal(configuredOrigin: string | null | undefined, r
 function resolveSkillOrigin(request: Request) {
   const requestOrigin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
   const configuredOrigin = withRequestPortWhenLocal(resolveConfiguredPublicOrigin(), requestOrigin);
+  if (isLocalOrigin(requestOrigin)) {
+    return requestOrigin || new URL(request.url).origin;
+  }
   if (configuredOrigin && (!requestOrigin || isLocalOrigin(requestOrigin))) {
     return configuredOrigin;
   }
@@ -53,7 +56,8 @@ skill_url: ${apiBase}/openclaw/aihot.skill.md
 
 这个 Skill 用于查询 AI Hot、模型、Agent、开源、论文、AI 产品和 AI 产业线索。
 它参考 AI Hot 公开 Skill 的工作方式：直接调用公开 API，默认读取精选流；只有用户明确要求“日报”时才切到日报。
-它不是知识库前置流程；普通回答和 LiveBench 校准前的证据准备，都可以直接读下面的信号接口和 source-feed/API 接口。
+普通回答和 LiveBench 校准前的证据准备，都可以直接读下面的信号接口和 source-feed/API 接口。
+source-feed 的返回可以作为话题 source 使用；新旧话题来源只要按标题、摘要、来源和原文链接读取，就可以互相替换。
 
 ## 什么时候用
 
@@ -96,7 +100,7 @@ User-Agent: Mozilla/5.0 (compatible; worldweave-aihot-skill/1.0)
 - 每条都说明为什么值得关注。
 - 如果是工具或开源项目，补充它解决了什么具体问题。
 - 如果是融资、估值、算力或数据中心，说明它和 AI 产业链的关系。
-- 普通回答不要讲知识库流程；LiveBench 只在校准/评测场景中出现。
+- 普通回答只讲本次看到的 AI 线索；LiveBench 只在校准/评测场景中出现。
 
 ## LiveBench 使用
 

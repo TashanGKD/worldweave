@@ -4,8 +4,24 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
-const baseUrl = process.env.WORLD_SMOKE_BASE_URL || 'http://127.0.0.1:5000';
-const scene = process.env.WORLD_SMOKE_SCENE || 'global';
+function parseCliArgs(argv) {
+  const result = {};
+  for (let index = 0; index < argv.length; index += 1) {
+    const item = argv[index];
+    if (!item.startsWith('--')) continue;
+    const [rawKey, inlineValue] = item.slice(2).split('=', 2);
+    const key = rawKey.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+    const next = argv[index + 1];
+    const value = inlineValue ?? (next && !next.startsWith('--') ? next : 'true');
+    result[key] = value;
+    if (inlineValue == null && next && !next.startsWith('--')) index += 1;
+  }
+  return result;
+}
+
+const cliArgs = parseCliArgs(process.argv.slice(2));
+const baseUrl = cliArgs.baseUrl || process.env.WORLD_SMOKE_BASE_URL || 'http://127.0.0.1:5000';
+const scene = cliArgs.scene || process.env.WORLD_SMOKE_SCENE || 'global';
 const databaseConfigured = Boolean(process.env.WORLDWEAVE_DATABASE_URL || process.env.DATABASE_URL);
 
 function collectSignals(stateJson) {
@@ -87,7 +103,7 @@ async function main() {
   const stateJson = JSON.parse(state.body);
   const livebenchJson = JSON.parse(livebench.body);
   const sourceStatusJson = JSON.parse(sourceStatus.body);
-  const sourceMonitorDb = sourceStatusJson.source_monitor_db || null;
+  const sourceMonitorDb = sourceStatusJson.source_monitor_db || sourceStatusJson.database || null;
   const signals = collectSignals(stateJson);
   const lowInformationCount = signals.filter(isLowInformationSignal).length;
   const aiSignalCount = signals.filter(isAiSignal).length;
@@ -130,7 +146,7 @@ async function main() {
     sourceStatus.status !== 200 ||
     !Array.isArray(stateJson.top_signals) ||
     lowInformationCount > 0 ||
-    (databaseConfigured && sourceMonitorDb?.connected !== true) ||
+    (databaseConfigured && sourceMonitorDb?.connected === false) ||
     (scene === 'tech-ai' && aiSignalCount === 0)
   ) {
     process.exit(1);

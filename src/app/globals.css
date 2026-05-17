@@ -168,6 +168,31 @@ body {
   }
 }
 
+@keyframes pageRiseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tashanScan {
+  0% {
+    transform: translateX(-18%);
+    opacity: 0.18;
+  }
+  45% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(18%);
+    opacity: 0.28;
+  }
+}
+
 .animate-float-drift {
   animation: pageFloatDrift 16s ease-in-out infinite;
   will-change: transform;
@@ -180,6 +205,24 @@ body {
 
 .animate-fade-in-soft {
   animation: pageFadeIn 0.35s ease-out;
+}
+
+.animate-rise-in {
+  animation: pageRiseIn 0.42s ease-out both;
+}
+
+.animate-tashan-scan {
+  animation: tashanScan 6s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float-drift,
+  .animate-float-drift-reverse,
+  .animate-fade-in-soft,
+  .animate-rise-in,
+  .animate-tashan-scan {
+    animation: none !important;
+  }
 }
 
 .text-clamp-2,

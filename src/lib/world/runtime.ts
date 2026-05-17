@@ -95,6 +95,12 @@ type SignalRow = {
   content_md?: string | null;
 };
 
+type EventClusterResult = {
+  rows: SignalRow[];
+  clusterCount: number;
+  collapsedCount: number;
+};
+
 type RawWorldMonitorItem = Record<string, unknown>;
 
 type SignalAlignment = SignalNormalization;
@@ -848,9 +854,9 @@ const MINIMAX_BASE_URL = resolveMiniMaxBaseUrl();
 const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-M2.5';
 const TRANSLATION_BATCH_SIZE = resolveRuntimeInteger('WORLD_TRANSLATION_BATCH_SIZE', 2, 1, 8);
 const VISIBLE_TRANSLATION_BATCH_SIZE = resolveRuntimeInteger('WORLD_VISIBLE_TRANSLATION_BATCH_SIZE', 12, 1, 48);
-const TRANSLATION_PRIME_LIMIT = resolveRuntimeInteger('WORLD_TRANSLATION_PRIME_LIMIT', 8, 0, 48);
-const ALIGNMENT_BATCH_SIZE = resolveRuntimeInteger('WORLD_ALIGNMENT_BATCH_SIZE', 2, 1, 8);
-const ALIGNMENT_PRIME_LIMIT = resolveRuntimeInteger('WORLD_ALIGNMENT_PRIME_LIMIT', 4, 0, 24);
+const TRANSLATION_PRIME_LIMIT = resolveRuntimeInteger('WORLD_TRANSLATION_PRIME_LIMIT', 16, 0, 48);
+const ALIGNMENT_BATCH_SIZE = resolveRuntimeInteger('WORLD_ALIGNMENT_BATCH_SIZE', 4, 1, 8);
+const ALIGNMENT_PRIME_LIMIT = resolveRuntimeInteger('WORLD_ALIGNMENT_PRIME_LIMIT', 24, 0, 48);
 const MINIMAX_RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
 const MINIMAX_DEFAULT_TIMEOUT_MS = 35000;
 const MINIMAX_DEFAULT_RETRY_LIMIT = 3;
@@ -870,14 +876,18 @@ const SELECTED_SOURCE_COOLDOWN_MS = 20 * 60 * 1000;
 const SELECTED_SOURCE_COOLDOWN_THRESHOLD = 2;
 const SOURCE_FEED_SOURCE_LIMIT = 3;
 const CATALOG_SOURCE_FETCH_CONCURRENCY = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_FETCH_CONCURRENCY', 2, 1, 64);
-const CATALOG_SOURCE_REFRESH_BATCH_SIZE = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_REFRESH_BATCH_SIZE', 24, 1, 1000);
+const CATALOG_SOURCE_REFRESH_BATCH_SIZE = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_REFRESH_BATCH_SIZE', 48, 1, 1000);
 const CATALOG_SOURCE_MAX_RESPONSE_BYTES = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_MAX_RESPONSE_BYTES', 384 * 1024, 64 * 1024, 8 * 1024 * 1024);
 const SIGNALS_CACHE_TTL_MS = 5 * 60 * 1000;
 const MARKET_SNAPSHOT_CACHE_TTL_MS = 2 * 60 * 1000;
 const WEEKLY_PREDICTION_WINDOW_DAYS = 7;
 const TRANSLATION_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-translation-cache.json');
 const ALIGNMENT_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-alignment-cache.json');
-const SIGNAL_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-signal-cache.json');
+const SIGNAL_CACHE_FILE = path.join(
+  process.cwd(),
+  '.cache',
+  resolveRuntimeCacheFileName(process.env.WORLD_SIGNAL_CACHE_FILE, 'world-signal-cache.json'),
+);
 const CATALOG_SOURCE_CURSOR_FILE = path.join(process.cwd(), '.cache', 'world-catalog-source-cursor.json');
 const DASHBOARD_SNAPSHOT_FILE = path.join(process.cwd(), '.cache', 'world-dashboard-snapshot.json');
 const LATEST_WORLD_STATE_FILE = path.join(process.cwd(), '.cache', 'latest-world-state.json');
@@ -893,6 +903,12 @@ function resolveRuntimeInteger(envKey: string, fallback: number, min: number, ma
   const raw = Number(process.env[envKey]);
   if (!Number.isFinite(raw)) return fallback;
   return Math.min(Math.max(Math.floor(raw), min), max);
+}
+
+function resolveRuntimeCacheFileName(raw: string | undefined, fallback: string): string {
+  const candidate = raw?.trim();
+  if (!candidate) return fallback;
+  return path.basename(candidate);
 }
 
 async function readRuntimeJson<T>(filePath: string): Promise<T | null> {
@@ -1075,6 +1091,23 @@ function normalizeTag(tag: string | null | undefined): string {
     .trim()
     .toLowerCase()
     .replace(/[_\s]+/g, '-');
+}
+
+function extractTaggedString(tags: string[] | null | undefined, prefix: string): string | null {
+  const normalizedPrefix = normalizeTag(prefix);
+  const tag = (tags || []).map(normalizeTag).find((item) => item.startsWith(normalizedPrefix));
+  return tag ? tag.slice(normalizedPrefix.length) || null : null;
+}
+
+function extractTaggedNumber(tags: string[] | null | undefined, prefix: string): number | null {
+  const value = extractTaggedString(tags, prefix);
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function publicAlignmentTags(tags: string[] | null | undefined): string[] {
+  return (tags || []).filter((tag) => !normalizeTag(tag).startsWith('upstream:score:'));
 }
 
 const QUICK_PLACE_TRANSLATIONS: Record<string, string> = {
@@ -1791,6 +1824,321 @@ function mergeSignalRows(rows: SignalRow[]): SignalRow[] {
   }
 
   return [...bySignature.values()];
+}
+
+const EVENT_CLUSTER_STOPWORDS = new Set([
+  'about',
+  'after',
+  'again',
+  'against',
+  'amid',
+  'from',
+  'into',
+  'more',
+  'news',
+  'over',
+  'report',
+  'reports',
+  'said',
+  'says',
+  'than',
+  'that',
+  'their',
+  'this',
+  'update',
+  'with',
+  'without',
+  '当前',
+  '更新',
+  '消息',
+  '报道',
+  '相关',
+  '最新',
+]);
+
+function eventClusterTokens(row: SignalRow): Set<string> {
+  const text = normalizeSignatureText([
+    row.title,
+    row.description,
+    row.location,
+    row.country,
+    ...(row.tags || []),
+  ].filter(Boolean).join(' '));
+  const tokens = text
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !EVENT_CLUSTER_STOPWORDS.has(token));
+  return new Set(tokens.slice(0, 80));
+}
+
+function eventTitleTokens(row: SignalRow): Set<string> {
+  const title = normalizeSignatureText(normalizeText(row.title));
+  return new Set(
+    title
+      .split(' ')
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3 && !EVENT_CLUSTER_STOPWORDS.has(token))
+      .slice(0, 40),
+  );
+}
+
+function rowLooksLikeTechAi(row: SignalRow): boolean {
+  const haystack = rowTextHaystack(row);
+  return /(\bai\b|aihot|source:aihot|llm|openai|anthropic|claude|chatgpt|gemini|deepmind|模型|大模型|智能体|agent|github|code|代码|开源|论文|benchmark|sota)/.test(haystack);
+}
+
+function techEntityOverlap(left: Set<string>, right: Set<string>): number {
+  const entities = new Set([
+    'openai',
+    'anthropic',
+    'claude',
+    'chatgpt',
+    'gemini',
+    'deepmind',
+    'google',
+    'meta',
+    'mistral',
+    'nvidia',
+    'github',
+    'bun',
+    'cursor',
+    'windsurf',
+    'deepseek',
+    'qwen',
+    'kimi',
+    'minimax',
+    'huggingface',
+    'openrouter',
+  ]);
+  let count = 0;
+  for (const token of left) {
+    if (entities.has(token) && right.has(token)) count += 1;
+  }
+  return count;
+}
+
+function techActionOverlap(left: Set<string>, right: Set<string>): number {
+  const actions = new Set([
+    'release',
+    'launch',
+    'announce',
+    'available',
+    'open',
+    'source',
+    'benchmark',
+    'funding',
+    'acquisition',
+    'lawsuit',
+    'agent',
+    'code',
+    'codex',
+    'shortcut',
+    'shortcuts',
+    'keyboard',
+    'feedback',
+    'memory',
+    'leak',
+    'rewrite',
+    '发布',
+    '上线',
+    '开源',
+    '融资',
+    '收购',
+    '诉讼',
+    '代码',
+  ]);
+  let count = 0;
+  for (const token of left) {
+    if (actions.has(token) && right.has(token)) count += 1;
+  }
+  return count;
+}
+
+function eventRowDay(row: SignalRow): number | null {
+  const value = Date.parse(row.event_time || row.last_seen_at || row.created_at || '');
+  if (!Number.isFinite(value)) return null;
+  return Math.floor(value / 86_400_000);
+}
+
+function eventRowsCloseInTime(left: SignalRow, right: SignalRow): boolean {
+  const leftDay = eventRowDay(left);
+  const rightDay = eventRowDay(right);
+  if (leftDay === null || rightDay === null) return true;
+  return Math.abs(leftDay - rightDay) <= 3;
+}
+
+function eventRowsSharePlace(left: SignalRow, right: SignalRow): boolean {
+  const leftCountry = normalizeSignatureText(normalizeText(left.country));
+  const rightCountry = normalizeSignatureText(normalizeText(right.country));
+  const leftLocation = normalizeSignatureText(normalizeText(left.location));
+  const rightLocation = normalizeSignatureText(normalizeText(right.location));
+
+  if (leftLocation && rightLocation && leftLocation === rightLocation) return true;
+  if (leftCountry && rightCountry && leftCountry === rightCountry) return true;
+
+  const latA = typeof left.latitude === 'number' ? left.latitude : null;
+  const lngA = typeof left.longitude === 'number' ? left.longitude : null;
+  const latB = typeof right.latitude === 'number' ? right.latitude : null;
+  const lngB = typeof right.longitude === 'number' ? right.longitude : null;
+  if (latA === null || lngA === null || latB === null || lngB === null) return false;
+  return Math.abs(latA - latB) <= 1.2 && Math.abs(lngA - lngB) <= 1.2;
+}
+
+function eventRowsShareSourceUrl(left: SignalRow, right: SignalRow): boolean {
+  const leftUrl = normalizeSourceUrl(normalizeText(left.source_url));
+  const rightUrl = normalizeSourceUrl(normalizeText(right.source_url));
+  return Boolean(leftUrl && rightUrl && leftUrl === rightUrl);
+}
+
+function tokenOverlapScore(left: Set<string>, right: Set<string>): { overlap: number; jaccard: number } {
+  if (!left.size || !right.size) return { overlap: 0, jaccard: 0 };
+  let overlap = 0;
+  for (const token of left) {
+    if (right.has(token)) overlap += 1;
+  }
+  return {
+    overlap,
+    jaccard: overlap / Math.max(1, left.size + right.size - overlap),
+  };
+}
+
+function signalRowsLookLikeSameEvent(left: SignalRow, right: SignalRow): boolean {
+  if (eventRowsShareSourceUrl(left, right)) return true;
+  if (!eventRowsCloseInTime(left, right)) return false;
+
+  const leftTokens = eventClusterTokens(left);
+  const rightTokens = eventClusterTokens(right);
+  const leftTitleTokens = eventTitleTokens(left);
+  const rightTitleTokens = eventTitleTokens(right);
+  const titleOverlap = tokenOverlapScore(leftTitleTokens, rightTitleTokens);
+
+  if (rowLooksLikeTechAi(left) || rowLooksLikeTechAi(right)) {
+    const entityOverlap = techEntityOverlap(leftTokens, rightTokens);
+    const actionOverlap = techActionOverlap(leftTokens, rightTokens);
+    return (
+      (titleOverlap.jaccard >= 0.55 && titleOverlap.overlap >= 4) ||
+      (entityOverlap >= 1 && actionOverlap >= 1 && titleOverlap.jaccard >= 0.32 && titleOverlap.overlap >= 3)
+    );
+  }
+
+  const overlap = tokenOverlapScore(leftTokens, rightTokens);
+  if (overlap.jaccard >= 0.42 && overlap.overlap >= 3) return true;
+
+  const samePlace = eventRowsSharePlace(left, right);
+  if (samePlace && overlap.overlap >= 3 && overlap.jaccard >= 0.22) return true;
+  if (samePlace && overlap.overlap >= 2 && (leftTokens.has('outbreak') || rightTokens.has('outbreak'))) return true;
+  if (samePlace && overlap.overlap >= 2 && (leftTokens.has('strike') || rightTokens.has('strike') || leftTokens.has('strikes') || rightTokens.has('strikes'))) return true;
+
+  return false;
+}
+
+function sourceAuthorityScore(row: SignalRow): number {
+  const category = classifySignalRowSourceCategory(row);
+  const tier = classifyUnifiedSourceTier(row, category);
+  const haystack = rowTextHaystack(row);
+  const intake = (extractTaggedNumber(row.alignment_tags, 'intake:score:') || Math.round(Number(row.relevance_score || 0) * 100)) / 100;
+  const tierScore = tier === 't1' ? 0.18 : tier === 't1.5' ? 0.13 : tier === 't2' ? 0.08 : 0.03;
+  const sourceScore =
+    category === 'world-monitor'
+      ? 0.24
+      : haystack.includes('source:aihot')
+        ? 0.23
+        : category === 'public-anchor'
+          ? 0.18
+          : category === 'source-feed'
+            ? 0.1
+            : 0.08;
+  const officialBoost = /(official|官网|官方|newsroom|engineering-blog|developers-blog|github-releases|source:world-monitor|source:aihot)/.test(haystack)
+    ? 0.06
+    : 0;
+  const contentScore = clamp(normalizeText(row.description).length / 800, 0, 0.08);
+  return sourceScore + tierScore + officialBoost + intake * 0.36 + Number(row.severity || 0) * 0.015 + contentScore;
+}
+
+function mergeEventClusterRows(rows: SignalRow[]): SignalRow {
+  const primary = [...rows].sort(
+    (left, right) =>
+      sourceAuthorityScore(right) - sourceAuthorityScore(left) ||
+      Number(right.relevance_score || 0) - Number(left.relevance_score || 0) ||
+      new Date(right.event_time || right.created_at || 0).getTime() - new Date(left.event_time || left.created_at || 0).getTime(),
+  )[0];
+  const related = rows.filter((row) => row !== primary);
+  const sourceNames = [...new Set(rows.map((row) => normalizeText(row.source_name)).filter(Boolean))].slice(0, 8);
+  const relatedReports = related
+    .map((row) => {
+      const source = normalizeText(row.source_name) || 'unknown source';
+      const title = normalizeText(row.title) || normalizeText(row.description);
+      return title ? `${source}: ${title}` : source;
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+  const mergedTags = [...new Set(rows.flatMap((row) => row.tags || []).filter(Boolean))];
+  const mergedAlignmentTags = uniqueAlignmentTags([
+    rows.length > 1 ? 'event:clustered' : null,
+    rows.length > 1 ? `event:related-count:${rows.length - 1}` : null,
+    rows.length > 1 ? `event:source-count:${sourceNames.length}` : null,
+    rows.length > 1 ? `event:primary-source:${normalizeTag(primary.source_name || 'unknown')}` : null,
+    ...(primary.alignment_tags || []),
+    ...related.flatMap((row) => row.alignment_tags || []),
+  ]);
+  return {
+    ...primary,
+    title: primary.title,
+    description:
+      normalizeText(primary.description).length >= 24
+        ? primary.description
+        : rows
+            .map((row) => row.description)
+            .filter(Boolean)
+            .sort((left, right) => normalizeText(right).length - normalizeText(left).length)[0] || primary.description,
+    event_time: rows.map((row) => row.event_time).filter(Boolean).sort()[0] || primary.event_time,
+    created_at: rows.map((row) => row.created_at).filter(Boolean).sort().reverse()[0] || primary.created_at,
+    severity: Math.max(...rows.map((row) => Number(row.severity || 0))) || primary.severity,
+    relevance_score: Math.max(...rows.map((row) => Number(row.relevance_score || 0))) || primary.relevance_score,
+    tags: mergedTags,
+    alignment_tags: mergedAlignmentTags,
+    intensity: Math.max(...rows.map((row) => Number(row.intensity || 0))) || primary.intensity,
+    mention_count: Math.max(...rows.map((row) => Number(row.mention_count || 0))) || primary.mention_count,
+    urgency_reason:
+      rows.length > 1
+        ? `${normalizeText(primary.urgency_reason) || '同一事件多来源聚合'}；合并 ${rows.length} 条报道，主条来自 ${normalizeText(primary.source_name) || '当前最高权威来源'}。`
+        : primary.urgency_reason,
+    content_md:
+      rows.length > 1
+        ? [
+            normalizeText(primary.content_md),
+            `相关来源：${sourceNames.join('、')}`,
+            relatedReports.length ? `补充报道：${relatedReports.join('；')}` : '',
+          ].filter(Boolean).join('\n\n')
+        : primary.content_md,
+    last_seen_at: rows.map((row) => row.last_seen_at).filter(Boolean).sort().reverse()[0] || primary.last_seen_at,
+  };
+}
+
+function clusterRelatedSignalRows(rows: SignalRow[]): EventClusterResult {
+  const clusters: SignalRow[][] = [];
+  for (const row of rows) {
+    let matchedCluster: SignalRow[] | null = null;
+    for (const cluster of clusters) {
+      if (cluster.some((candidate) => signalRowsLookLikeSameEvent(row, candidate))) {
+        matchedCluster = cluster;
+        break;
+      }
+    }
+    if (matchedCluster) {
+      matchedCluster.push(row);
+    } else {
+      clusters.push([row]);
+    }
+  }
+
+  const mergedRows = clusters.map(mergeEventClusterRows);
+  const collapsedCount = rows.length - mergedRows.length;
+  return {
+    rows: mergedRows,
+    clusterCount: clusters.filter((cluster) => cluster.length > 1).length,
+    collapsedCount,
+  };
 }
 
 async function fetchIcArticleDetailRow(articleId: string): Promise<Partial<SignalRow> | null> {
@@ -2795,12 +3143,23 @@ function isLowInformationSignalTitle(title: string, summary: string): boolean {
   const normalized = normalizeText(title);
   if (!normalized || normalized.length < 8) return Boolean(normalizeText(summary));
   if (!summary) return false;
+  const normalizedSummary = normalizeText(summary);
+  const titleWords = normalized.split(/\s+/).filter(Boolean);
+  const hasConcreteSummaryEvent = /\b(kill|killed|seize|seized|launch|launched|strike|strikes|attack|attacks|warn|warns|approve|approves|report|reports|say|says|face|faces|rise|falls?|arrest|arrests|abduct|abduction|convict|convictions|lawsuit|case|announces?|eliminated|crisis|fire|injur|death|deaths|outbreak)\b/iu.test(normalizedSummary);
   const locationParts = normalized.split(/[，,]/).map((part) => part.trim()).filter(Boolean);
   if (
     locationParts.length >= 2 &&
     locationParts.length <= 4 &&
     normalized.length <= 96 &&
     !/\b(kill|killed|seize|seized|launch|launched|strike|strikes|attack|attacks|warn|warns|approve|approves|report|reports|say|says|face|faces|rise|falls?)\b/iu.test(normalized)
+  ) {
+    return true;
+  }
+  if (
+    titleWords.length <= 3 &&
+    normalized.length <= 36 &&
+    hasConcreteSummaryEvent &&
+    !/\b(virus|disease|cholera|measles|ebola|hantavirus|nipah|marburg|model|agent|codex|openai|anthropic|claude|gemini|deepseek|kimi)\b/iu.test(normalized)
   ) {
     return true;
   }
@@ -2814,6 +3173,16 @@ function signalSummaryHeadline(summary: string): string {
     .split(/(?<=[。！？!?])\s+|[。！？!?]\s*/)
     .find((part) => part.trim().length >= 16);
   return concreteDisplayText(sentence ? sentence.trim() : normalizeText(summary), 96);
+}
+
+function isAiHotSourceSignal(signal: Pick<WorldSignal, 'alignmentTags' | 'sourceName' | 'sourceUrl' | 'tags'>): boolean {
+  const haystack = normalizeTag([
+    signal.sourceName,
+    signal.sourceUrl,
+    signal.tags.join(' '),
+    signal.alignmentTags.join(' '),
+  ].join(' '));
+  return haystack.includes('aihot') || haystack.includes('aihotskill');
 }
 
 function signalMatchesScene(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' | 'sourceName' | 'sourceUrl' | 'title' | 'summary' | 'tags'>, scene: WorldScene): boolean {
@@ -2839,6 +3208,7 @@ function signalMatchesScene(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' 
   }
 
   if (normalizedScene === 'geo-politics-daily' || normalizedScene === 'geopoliticsdaily' || normalizedScene === 'international-politics-daily' || normalizedScene === 'internationalpoliticsdaily') {
+    if (isAiHotSourceSignal(signal)) return false;
     if (['war', 'finance', 'health', 'capacity'].includes(signalScene)) return true;
     return /(conflict|war|military|diplomacy|sanction|election|policy|minister|parliament|tariff|macro|market|publichealth|health|outbreak|shipping|energy|geopolitic|地缘|外交|冲突|制裁|选举|政策|公共卫生|航运|能源)/.test(haystack);
   }
@@ -3540,12 +3910,15 @@ function scoreSignals(rows: SignalRow[]): WorldSignal[] {
       hotspotScore,
       explorationScore,
       coverageGap,
+      clusterNotes: normalizeText(raw.content_md).slice(0, 1200) || undefined,
     };
   });
 }
 
 function toEvidenceSignal(signal: WorldSignal): WorldEvidenceSignal {
   const localized = getLocalizedSignal(signal);
+  const alignmentTags = signal.alignmentTags || [];
+  const exposedAlignmentTags = publicAlignmentTags(alignmentTags);
   const concreteTitle = concreteDisplayText(applyQuickTextTranslations(signal.title), 120);
   const concreteSummary = concreteDisplayText(applyQuickTextTranslations(signal.summary), 240);
   const titleNeedsFallback =
@@ -3576,7 +3949,7 @@ function toEvidenceSignal(signal: WorldSignal): WorldEvidenceSignal {
     latitude: signal.latitude,
     longitude: signal.longitude,
     tags: signal.tags,
-    alignment_tags: signal.alignmentTags,
+    alignment_tags: exposedAlignmentTags,
     intensity: signal.intensity,
     mention_count: signal.mentionCount,
     urgency_reason: signal.urgencyReason,
@@ -3588,6 +3961,9 @@ function toEvidenceSignal(signal: WorldSignal): WorldEvidenceSignal {
     hotspot_score: signal.hotspotScore,
     exploration_score: signal.explorationScore,
     coverage_gap: signal.coverageGap,
+    intake_score: extractTaggedNumber(alignmentTags, 'intake:score:') ?? null,
+    intake_decision: extractTaggedString(alignmentTags, 'intake:decision:'),
+    intake_tier: extractTaggedString(alignmentTags, 'intake:tier:'),
   };
 }
 
@@ -5126,6 +5502,110 @@ function collectAiHotItems(data: unknown): RawWorldMonitorItem[] {
   return [...directItems, ...sectionItems];
 }
 
+type AiHotSourceTier = 't1' | 't1.5' | 't2';
+
+function classifyAiHotSourceTier(sourceName: string, url: string): AiHotSourceTier {
+  const sourceText = `${sourceName} ${url}`;
+  const normalized = normalizeTag(sourceText);
+  if (
+    /官网|官方|blog|newsroom|github-releases|developers-blog|hugging-face-blog|openai|anthropic|claude|google-developers|deepmind|meta-ai|mistral|perplexity|runway|notion|krea|minimax|moonshot|kimi|baidu|sensetime|openrouter/.test(
+      normalized,
+    ) &&
+    !/^x[:：-]/i.test(sourceName.trim())
+  ) {
+    return 't1';
+  }
+  if (
+    /^x[:：-]/i.test(sourceName.trim()) &&
+    /openai|anthropic|claude|google|deepmind|meta|xai|grok|mistral|perplexity|runway|notion|krea|minimax|moonshot|kimi|baidu|sensetime|kling|openrouter|nvidia|huggingface|hugging-face/.test(
+      normalized,
+    )
+  ) {
+    return 't1.5';
+  }
+  return 't2';
+}
+
+function aiHotCategoryWeight(category: string) {
+  switch (category) {
+    case 'ai-models':
+      return 0.11;
+    case 'ai-products':
+      return 0.09;
+    case 'industry':
+      return 0.07;
+    case 'paper':
+      return 0.06;
+    case 'tip':
+      return 0.02;
+    default:
+      return 0.04;
+  }
+}
+
+function aiHotSourceTierWeight(tier: AiHotSourceTier) {
+  if (tier === 't1') return 0.18;
+  if (tier === 't1.5') return 0.12;
+  return 0.06;
+}
+
+function aiHotEntityWeight(haystack: string) {
+  if (/(openai|anthropic|claude|google|deepmind|meta|xai|grok|nvidia|英伟达|奥特曼|sam-altman|sama)/.test(haystack)) {
+    return 0.08;
+  }
+  if (/(huggingface|hugging-face|mistral|perplexity|moonshot|kimi|minimax|runway|krea|notion|baidu|sensetime|kling|openrouter|langchain|cursor|windsurf|github)/.test(haystack)) {
+    return 0.05;
+  }
+  return 0;
+}
+
+function aiHotHardSignalWeight(haystack: string, category: string) {
+  let score = 0;
+  if (/(发布|上线|推出|release|launch|ships?|announces?|available|open-source|开源|github|api|sdk|cli|benchmark|sota|leaderboard|agent|智能体|模型|大模型|融资|收购|合作|监管|lawsuit|诉讼)/.test(haystack)) {
+    score += 0.06;
+  }
+  if (category === 'paper' && /(数据集|dataset|benchmark|sota|code|github|开源|机器人|推理|reasoning|agent|智能体)/.test(haystack)) {
+    score += 0.04;
+  }
+  if (category === 'tip' && !/(官方|openai|anthropic|claude|google|github|agent|智能体|workflow|工作流|code|代码|实践)/.test(haystack)) {
+    score -= 0.04;
+  }
+  if (/(podcast|播客|观点|opinion|鸡汤|感想|转发)/.test(haystack)) {
+    score -= 0.03;
+  }
+  return score;
+}
+
+function scoreAiHotSelectedItem(input: {
+  title: string;
+  titleEn: string;
+  summary: string;
+  sourceName: string;
+  sourceUrl: string;
+  category: string;
+  index: number;
+  total: number;
+}) {
+  const sourceTier = classifyAiHotSourceTier(input.sourceName, input.sourceUrl);
+  const haystack = normalizeTag([input.title, input.titleEn, input.summary, input.sourceName, input.sourceUrl].join(' '));
+  const orderBoost = input.total > 1 ? 0.06 * (1 - input.index / Math.max(1, input.total - 1)) : 0.06;
+  const relevanceScore = clamp(
+    0.58 +
+      aiHotSourceTierWeight(sourceTier) +
+      aiHotCategoryWeight(input.category) +
+      aiHotEntityWeight(haystack) +
+      aiHotHardSignalWeight(haystack, input.category) +
+      orderBoost,
+    0.58,
+    0.94,
+  );
+  return {
+    sourceTier,
+    relevanceScore: Number(relevanceScore.toFixed(3)),
+    severity: relevanceScore >= 0.86 ? 4 : relevanceScore >= 0.75 ? 3 : 2,
+  };
+}
+
 function normalizeAiHotSnapshot(data: unknown): SignalRow[] {
   const seen = new Set<string>();
   const items = collectAiHotItems(data)
@@ -5158,6 +5638,16 @@ function normalizeAiHotSnapshot(data: unknown): SignalRow[] {
     const category = normalizeTag(item.category);
     const eventTime = parseIsoDay(item.publishedAt || new Date().toISOString());
     const sourceName = cleanDisplayText(item.source || 'AI HOT');
+    const score = scoreAiHotSelectedItem({
+      title: item.title,
+      titleEn: item.titleEn,
+      summary: item.summary,
+      sourceName,
+      sourceUrl: item.url,
+      category,
+      index,
+      total: items.length,
+    });
     return {
       id: generateStableId('selected-source', `aihot-item-${item.id || item.url || item.title}`),
       title: cleanDisplayText(item.title),
@@ -5170,11 +5660,20 @@ function normalizeAiHotSnapshot(data: unknown): SignalRow[] {
       country: '',
       latitude: anchor?.latitude ?? null,
       longitude: anchor?.longitude ?? null,
-      severity: 2,
-      relevance_score: Math.max(0.62, 0.82 - index * 0.025),
-      tags: ['technology', 'ai', 'aihot', 'ai-news', 'source-feed', 'daily:ai', category].filter(Boolean),
-      alignment_tags: ['source:selected-source', 'source:aihot', 'source:news-feed', 'category:ai-daily', category ? `aihot:category:${category}` : ''],
-      urgency_reason: 'AI HOT selected public item',
+      severity: score.severity,
+      relevance_score: score.relevanceScore,
+      tags: ['technology', 'ai', 'aihot', 'ai-news', 'source-feed', 'daily:ai', category, `aihot-tier:${score.sourceTier}`].filter(Boolean),
+      alignment_tags: [
+        'source:selected-source',
+        'source:aihot',
+        'source:news-feed',
+        'category:ai-daily',
+        'aihot:selected',
+        `aihot:tier:${score.sourceTier}`,
+        'aihot:scoring:code-formula',
+        category ? `aihot:category:${category}` : '',
+      ],
+      urgency_reason: `AI HOT selected item; tier=${score.sourceTier}; category=${category || 'unknown'}; relevance=${score.relevanceScore}`,
       last_seen_at: new Date().toISOString(),
       source_type: 'api-json',
       source_feed_name: 'AI HOT',
@@ -6577,6 +7076,7 @@ function normalizeEvents(data: unknown): SignalRow[] {
   return markers.map((item) => {
     const relevanceScore = asNumber(item.relevanceScore);
     const uniqueKey = `${asText(item.sourceUrl) || asText(item.id) || asText(item.headline)}-${asText(item.timestamp)}`;
+    const alignmentTags = uniqueAlignmentTags(['source:world-monitor', 'wm:events']);
     return {
       id: generateStableId('event', uniqueKey),
       title: asText(item.title) || asText(item.headline) || 'Unknown Event',
@@ -6596,7 +7096,9 @@ function normalizeEvents(data: unknown): SignalRow[] {
         asText(item.subEventType),
         asText(item.actor1),
         asText(item.actor2),
+        ...alignmentTags,
       ].filter(Boolean),
+      alignment_tags: alignmentTags,
       last_seen_at: new Date().toISOString(),
     };
   });
@@ -6612,6 +7114,7 @@ function normalizeOutbreaks(data: unknown): SignalRow[] {
 
   return outbreaks.map((item) => {
     const uniqueKey = `${asText(item.don_id) || asText(item.id) || asText(item.disease)}-${asText(item.publication_date)}`;
+    const alignmentTags = uniqueAlignmentTags(['source:world-monitor', 'wm:outbreaks']);
     return {
       id: generateStableId('outbreak', uniqueKey),
       title: asText(item.disease) || asText(item.name) || 'Unknown Outbreak',
@@ -6626,7 +7129,8 @@ function normalizeOutbreaks(data: unknown): SignalRow[] {
       longitude: asNumber(item.longitude) ?? asNumber(item.lng),
       severity: asNumber(item.severity) ?? 3,
       relevance_score: 0.8,
-      tags: ['outbreak', asText(item.disease)].filter(Boolean),
+      tags: ['outbreak', asText(item.disease), ...alignmentTags].filter(Boolean),
+      alignment_tags: alignmentTags,
       last_seen_at: new Date().toISOString(),
     };
   });
@@ -6950,6 +7454,150 @@ function applyIngestionStabilityPolicy(rows: SignalRow[]): { rows: SignalRow[]; 
   };
 }
 
+type UnifiedSourceTier = 't1' | 't1.5' | 't2' | 't3';
+type UnifiedIntakeDecision = 'main' | 'candidate' | 'archive';
+
+function rowTextHaystack(row: SignalRow) {
+  return normalizeTag(
+    [
+      row.title,
+      row.description,
+      row.source_name,
+      row.source_url,
+      row.source_type,
+      row.source_feed_name,
+      ...(row.tags || []),
+      ...(row.alignment_tags || []),
+    ].join(' '),
+  );
+}
+
+function classifyUnifiedSourceTier(row: SignalRow, category: SignalRowSourceCategory): UnifiedSourceTier {
+  const haystack = rowTextHaystack(row);
+  const sourceName = normalizeText(row.source_name);
+  if (category === 'world-monitor' || haystack.includes('source:world-monitor') || /world-monitor/.test(haystack)) return 't1';
+  if (haystack.includes('source:aihot') || /aihot|ai-hot|ai-hot/.test(haystack)) return 't1';
+  if (
+    /(官网|官方|official|newsroom|engineering-blog|developers-blog|github-releases|openai|anthropic|claude|deepmind|google|meta-ai|mistral|nvidia|huggingface|hugging-face|who|treasury|fda|arxiv|openalex|semantic-scholar|pubmed)/.test(
+      haystack,
+    ) &&
+    !/^x[:：-]/i.test(sourceName)
+  ) {
+    return 't1';
+  }
+  if (/^x[:：-]/i.test(sourceName) && /(openai|anthropic|claude|google|deepmind|meta|xai|mistral|nvidia|runway|krea|notion|kimi|minimax|baidu|sensetime|kling)/.test(haystack)) {
+    return 't1.5';
+  }
+  if (category === 'public-anchor' || category === 'other') return 't2';
+  return /weak-signal|reddit|bsky|forum|podcast|newsletter/.test(haystack) ? 't3' : 't2';
+}
+
+function unifiedTierWeight(tier: UnifiedSourceTier) {
+  if (tier === 't1') return 0.24;
+  if (tier === 't1.5') return 0.18;
+  if (tier === 't2') return 0.12;
+  return 0.06;
+}
+
+function unifiedContentRelevance(row: SignalRow, category: SignalRowSourceCategory) {
+  const haystack = rowTextHaystack(row);
+  if (category === 'world-monitor') return 0.12;
+  if (haystack.includes('source:aihot')) return 0.22;
+  const aiMatch = /(\bai\b|llm|openai|anthropic|claude|chatgpt|gemini|deepmind|模型|大模型|智能体|agent|benchmark|sota|huggingface|github|paper|论文|开源)/.test(haystack);
+  const worldMatch = /(war|conflict|strike|missile|drone|ceasefire|sanction|diplomacy|outbreak|epidemic|energy|supply-chain|shipping|election|regulation|战争|冲突|导弹|停火|制裁|外交|疫情|能源|供应链|监管)/.test(haystack);
+  const financeInfraMatch = /(treasury|yield|cpi|gdp|fda|market|shipping|crypto|oil|gas|capacity|logistics)/.test(haystack);
+  let score = 0;
+  if (aiMatch) score += 0.16;
+  if (worldMatch) score += 0.16;
+  if (financeInfraMatch) score += 0.08;
+  return clamp(score, 0, 0.22);
+}
+
+function unifiedEventValue(row: SignalRow, category: SignalRowSourceCategory) {
+  const haystack = rowTextHaystack(row);
+  const visibleText = normalizeTag([row.title, row.description].join(' '));
+  let score = 0;
+  if ((row.severity || 0) >= 4) score += 0.09;
+  if ((row.relevance_score || 0) >= 0.75) score += 0.05;
+  if ((row.intensity || 0) >= 3) score += 0.05;
+  if ((row.mention_count || 0) >= 5) score += 0.04;
+  if (/(发布|上线|推出|release|launch|announce|available|开源|open-source|api|sdk|cli|benchmark|sota|融资|收购|合作|监管|lawsuit|attack|strike|kills|dead|fatal|outbreak|ceasefire|sanction)/.test(haystack)) {
+    score += 0.08;
+  }
+  if (category === 'source-feed' && /(信源更新|结构化更新|当前样本|标题清单|source-feed|bundle-feed)/.test(haystack)) {
+    score -= 0.1;
+  }
+  if (/(opinion|podcast|播客|观点|鸡汤|转发|retweet|soft|marketing|sponsored)/.test(haystack)) {
+    score -= 0.08;
+  }
+  if (/(反馈|好玩|有趣|感谢|thanks|feedback|fun|community-win|community-victory|day0|day-0)/.test(visibleText)) {
+    score -= 0.07;
+  }
+  return clamp(score, 0, 0.24);
+}
+
+function unifiedFreshnessScore(row: SignalRow, now = Date.now()) {
+  const timestamp = Date.parse(row.event_time || row.last_seen_at || row.created_at || '');
+  if (!Number.isFinite(timestamp)) return 0.04;
+  const ageHours = Math.max(0, (now - timestamp) / 36e5);
+  if (ageHours <= 6) return 0.1;
+  if (ageHours <= 24) return 0.08;
+  if (ageHours <= 72) return 0.05;
+  return 0.02;
+}
+
+function unifiedIntakeThreshold(tier: UnifiedSourceTier, category: SignalRowSourceCategory) {
+  if (category === 'world-monitor') return 0.44;
+  if (tier === 't1') return 0.5;
+  if (tier === 't1.5') return 0.56;
+  if (tier === 't2') return 0.62;
+  return 0.7;
+}
+
+function applyUnifiedIntakeScoring(rows: SignalRow[]): SignalRow[] {
+  const now = Date.now();
+  const scoredRows = rows.map((row) => {
+    const category = classifySignalRowSourceCategory(row);
+    const tier = classifyUnifiedSourceTier(row, category);
+    const upstream = clamp(Number(row.relevance_score || 0), 0, 1);
+    const tierScore = category === 'world-monitor' ? Math.min(unifiedTierWeight(tier), 0.18) : unifiedTierWeight(tier);
+    const upstreamWeight = category === 'world-monitor' ? 0.34 : 0.22;
+    const score = clamp(
+      tierScore +
+        unifiedContentRelevance(row, category) +
+        unifiedEventValue(row, category) +
+        unifiedFreshnessScore(row, now) +
+        upstream * upstreamWeight,
+      0,
+      1,
+    );
+    const threshold = unifiedIntakeThreshold(tier, category);
+    const decision: UnifiedIntakeDecision =
+      score >= threshold ? 'main' : score >= Math.max(0.42, threshold - 0.12) ? 'candidate' : 'archive';
+    const nextRelevance = decision === 'main' ? Math.max(upstream, score) : Math.max(upstream * 0.85, score * 0.82);
+    const nextSeverity =
+      decision === 'main' && score >= 0.78
+        ? Math.max(Number(row.severity || 1), 4)
+        : decision === 'candidate'
+          ? Math.min(Number(row.severity || 1), 3)
+          : Math.min(Number(row.severity || 1), 2);
+    return {
+      ...row,
+      severity: nextSeverity,
+      relevance_score: Number(clamp(nextRelevance, 0, 0.96).toFixed(3)),
+      alignment_tags: uniqueAlignmentTags([
+        `upstream:score:${Math.round(upstream * 100)}`,
+        `intake:tier:${tier}`,
+        `intake:decision:${decision}`,
+        `intake:score:${Math.round(score * 100)}`,
+        'intake:scoring:code-formula',
+        ...(row.alignment_tags || []),
+      ]),
+    };
+  });
+  return scoredRows.filter((row) => !(row.alignment_tags || []).includes('intake:decision:archive'));
+}
+
 type LoadSignalsOptions = {
   allowExpiredDiskCache?: boolean;
   preferCached?: boolean;
@@ -6957,6 +7605,17 @@ type LoadSignalsOptions = {
   allowModelRefresh?: boolean;
   forceRefresh?: boolean;
 };
+
+async function fetchJsonWithTimeout(url: string, timeoutMs: number): Promise<unknown> {
+  const response = await fetch(url, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} while loading ${url}`);
+  }
+  return response.json();
+}
 
 async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOptions, 'allowModelRefresh'> = {}): Promise<WorldSignal[]> {
   if (runtime.signalsRefreshInFlight) {
@@ -6980,26 +7639,11 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
         monitorRecommendedRowsRes,
         catalogSourceRowsRes,
       ] = await Promise.allSettled([
-        fetch(`${baseUrl}/api/events`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(20000),
-        }),
-        fetch(`${baseUrl}/api/outbreaks`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(20000),
-        }),
-        fetch(`${baseUrl}/api/signal-markers`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(20000),
-        }),
-        fetch(`${informationCollectionBaseUrl}/api/v1/articles?limit=80&offset=0`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(12000),
-        }),
-        fetch(`${informationCollectionBaseUrl}/api/v1/literature/recent?limit=40&offset=0`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(12000),
-        }),
+        fetchJsonWithTimeout(`${baseUrl}/api/events`, 20000),
+        fetchJsonWithTimeout(`${baseUrl}/api/outbreaks`, 20000),
+        fetchJsonWithTimeout(`${baseUrl}/api/signal-markers`, 20000),
+        fetchJsonWithTimeout(`${informationCollectionBaseUrl}/api/v1/articles?limit=80&offset=0`, 12000),
+        fetchJsonWithTimeout(`${informationCollectionBaseUrl}/api/v1/literature/recent?limit=40&offset=0`, 12000),
         loadPublicAnchorRows(),
         loadSelectedHighQualityRows(),
         loadMonitorRecommendedRows(),
@@ -7008,50 +7652,35 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
 
       const allSignals: SignalRow[] = [];
 
-      if (eventsRes.status === 'fulfilled' && eventsRes.value.ok) {
-        try {
-          const data = await eventsRes.value.json();
-          allSignals.push(...normalizeEvents(data));
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse events:', e);
-        }
+      if (eventsRes.status === 'fulfilled') {
+        allSignals.push(...normalizeEvents(eventsRes.value));
+      } else {
+        console.warn('[loadSignals] Failed to fetch events:', eventsRes.reason);
       }
 
-      if (outbreaksRes.status === 'fulfilled' && outbreaksRes.value.ok) {
-        try {
-          const data = await outbreaksRes.value.json();
-          allSignals.push(...normalizeOutbreaks(data));
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse outbreaks:', e);
-        }
+      if (outbreaksRes.status === 'fulfilled') {
+        allSignals.push(...normalizeOutbreaks(outbreaksRes.value));
+      } else {
+        console.warn('[loadSignals] Failed to fetch outbreaks:', outbreaksRes.reason);
       }
 
-      if (signalMarkersRes.status === 'fulfilled' && signalMarkersRes.value.ok) {
-        try {
-          const data = await signalMarkersRes.value.json();
-          allSignals.push(...normalizeSignalMarkers(data));
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse signal markers:', e);
-        }
+      if (signalMarkersRes.status === 'fulfilled') {
+        allSignals.push(...normalizeSignalMarkers(signalMarkersRes.value));
+      } else {
+        console.warn('[loadSignals] Failed to fetch signal markers:', signalMarkersRes.reason);
       }
 
-      if (icArticlesRes.status === 'fulfilled' && icArticlesRes.value.ok) {
-        try {
-          const data = await icArticlesRes.value.json();
-          const icArticleRows = await enrichIcArticleRows(normalizeIcArticles(data));
-          allSignals.push(...icArticleRows);
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse IC articles:', e);
-        }
+      if (icArticlesRes.status === 'fulfilled') {
+        const icArticleRows = await enrichIcArticleRows(normalizeIcArticles(icArticlesRes.value));
+        allSignals.push(...icArticleRows);
+      } else {
+        console.warn('[loadSignals] Failed to fetch IC articles:', icArticlesRes.reason);
       }
 
-      if (icLiteratureRes.status === 'fulfilled' && icLiteratureRes.value.ok) {
-        try {
-          const data = await icLiteratureRes.value.json();
-          allSignals.push(...normalizeIcLiterature(data));
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse IC literature:', e);
-        }
+      if (icLiteratureRes.status === 'fulfilled') {
+        allSignals.push(...normalizeIcLiterature(icLiteratureRes.value));
+      } else {
+        console.warn('[loadSignals] Failed to fetch IC literature:', icLiteratureRes.reason);
       }
 
       if (publicAnchorRowsRes.status === 'fulfilled') {
@@ -7109,9 +7738,12 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
           console.warn(`[loadSignals] Dropped ${dropped} low-information source-feed rows before scoring`);
         },
       });
-      const mergedSignals = mergeSignalRows(publishableRows);
+      const intakeScoredRows = applyUnifiedIntakeScoring(publishableRows);
+      const exactMergedRows = mergeSignalRows(intakeScoredRows);
+      const eventClusteredRows = clusterRelatedSignalRows(exactMergedRows);
+      const mergedSignals = eventClusteredRows.rows;
       console.log(
-        `[loadSignals] Loaded ${mergedSignals.length} merged signals from world-monitor.com with knowledge supplements (emitted ${stabilizedRows.stats.total_emitted_count}, kept ${publishableRows.length}, collapsed ${stabilizedRows.stats.total_collapsed_count})`,
+        `[loadSignals] Loaded ${mergedSignals.length} merged signals from world-monitor.com with knowledge supplements (emitted ${stabilizedRows.stats.total_emitted_count}, kept ${intakeScoredRows.length}/${publishableRows.length}, exact_collapsed ${intakeScoredRows.length - exactMergedRows.length}, event_clusters ${eventClusteredRows.clusterCount}, event_collapsed ${eventClusteredRows.collapsedCount}, source_collapsed ${stabilizedRows.stats.total_collapsed_count})`,
       );
       const scoredSignals = scoreSignals(mergedSignals);
       const staleCachedPayload = await readSignalDiskCachePayload(true);
@@ -8146,7 +8778,7 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
         region: signal.region,
       },
       tags: signal.tags,
-      alignment_tags: signal.alignmentTags,
+      alignment_tags: publicAlignmentTags(signal.alignmentTags),
       intensity: signal.intensity,
       mention_count: signal.mentionCount,
       urgency_reason: cleanDisplayText(signal.urgencyReason || ''),
@@ -8196,7 +8828,7 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
         region: signal.region,
       },
       tags: signal.tags,
-      alignment_tags: signal.alignmentTags,
+      alignment_tags: publicAlignmentTags(signal.alignmentTags),
       intensity: signal.intensity,
       mention_count: signal.mentionCount,
       urgency_reason: cleanDisplayText(signal.urgencyReason || ''),
@@ -8485,7 +9117,7 @@ export async function getWorldDashboardState(
       ].map((signal) => [signal.id, signal]),
     ).values(),
   );
-  if (allowModelRefresh && !isTechAiScene) {
+  if (allowModelRefresh) {
     await primeSignalTranslations([
       ...visibleSignalsForTranslation,
       ...scopedSignals.slice(12, 12 + TRANSLATION_PRIME_LIMIT),

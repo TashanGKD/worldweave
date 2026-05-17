@@ -132,7 +132,7 @@ function buildInitialNextSteps(state: InitialDashboardState, scene: InitialScene
     const steps = primaryTitle
       ? [`当前地缘重点：「${primaryTitle}」。`]
       : ['地缘信号会持续刷新。'];
-    steps.push('只露出地缘和 AI 两条主线，其他信源继续参与后台筛选。');
+    steps.push('首页只呈现地缘和 AI 两条主线，其他来源作为补充材料。');
     return steps;
   }
   const primaryTitle = cleanInitialText(state.top_signals?.[0]?.display_title || state.top_signals?.[0]?.title, 120);
@@ -140,7 +140,7 @@ function buildInitialNextSteps(state: InitialDashboardState, scene: InitialScene
     ? [`当前 AI 重点：「${primaryTitle}」。`]
     : ['AI 信源、精选和事件簇会持续刷新。'];
   steps.push('优先保留 AI 强相关线索，泛科技和其他信息不进入 AI 首屏。');
-  steps.push('虾接入后，可以直接查信号和 AI Hot 线索回答，不必先走知识库。');
+  steps.push('虾接入后，可以直接查当前信源和 AI Hot 线索。');
   return steps;
 }
 
@@ -193,8 +193,8 @@ export default async function Page({ searchParams }: PageProps) {
                 ...cachedState.skill_entry,
                 url: resolvePublicSkillUrl({ headers: requestHeaders, fallbackOrigin: requestOrigin }) || cachedState.skill_entry.url,
                 description:
-                  '把这个地址交给接入方即可。可直接查询近 30 天信号、AI Hot 和信源流；LiveBench 先作为独立入口保留。',
-                copy_hint: '模型可先用 signals/source-feed 接口回答，不必先走知识库召回。',
+                  '把这个地址交给接入方即可。可查询近 30 天信源、AI Hot 和主世界日报。',
+                copy_hint: '日常回答先读精选线索；需要深挖时再进入全部信源。',
               }
             : null,
         }

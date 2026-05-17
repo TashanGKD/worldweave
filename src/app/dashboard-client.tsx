@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { ArrowRight, Link2, Radio, RefreshCw } from 'lucide-react';
+import { ArrowRight, Bot, FileText, Globe2, Link2, Radio, RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -207,10 +207,16 @@ type PageClientProps = {
 
 type TimelineView = 'geo-politics-daily' | 'tech-ai' | 'livebench';
 
+const DAILY_PAGE_HREFS: Record<TimelineView, string> = {
+  'geo-politics-daily': '/daily/geo',
+  'tech-ai': '/daily/ai',
+  livebench: '/daily/livebench',
+};
+
 function timelineViewLabel(view: TimelineView) {
-  if (view === 'tech-ai') return 'AI 日报';
-  if (view === 'livebench') return '演绎日报';
-  return '地缘日报';
+  if (view === 'tech-ai') return 'AI 线索';
+  if (view === 'livebench') return '演绎题池';
+  return '地缘线索';
 }
 
 const DEFAULT_SUBWORLDS: WorldSubworld[] = [
@@ -591,7 +597,10 @@ function ageOpacityFromTimestamp(timestamp: string, memoryDays: number) {
   return Number((1 - ratio * 0.82).toFixed(2));
 }
 
-function markerDisplayLevel(node: Pick<WorldStateNode, 'severity'>): 'high' | 'elevated' | 'monitoring' {
+function markerDisplayLevel(node: Pick<WorldStateNode, 'severity' | 'display_level'>): 'high' | 'elevated' | 'monitoring' {
+  if (node.display_level === 'high' || node.display_level === 'elevated' || node.display_level === 'monitoring') {
+    return node.display_level;
+  }
   if (node.severity >= 4) return 'high';
   if (node.severity >= 3) return 'elevated';
   return 'monitoring';
@@ -770,37 +779,35 @@ function livebenchQuestionTime(preview: LiveBenchQuestionPreview) {
   return preview.official_resolved_at || preview.resolve_at || new Date().toISOString();
 }
 
-function signedCount(value: number | null | undefined) {
-  const normalized = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-  return `${normalized >= 0 ? '+' : ''}${normalized}`;
-}
-
-function removedCount(value: number | null | undefined) {
-  const normalized = typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0;
-  return `${normalized}`;
-}
-
-function sourceRefreshStatusLabel(job: WorldDashboardSourceRefreshSummary['refresh_job'] | null | undefined) {
-  if (!job) return '未见巡检记录';
-  if (job.running) return '巡检运行中';
-  if (job.ok) return '刷新链路正常';
-  if (job.directory_ok && job.world_cache_ok === false) return '目录已更新，运行时预热失败';
-  if (job.directory_ok) return '目录已更新，运行时待复核';
-  return '刷新链路需复核';
-}
-
-function sourceRefreshStatusTone(job: WorldDashboardSourceRefreshSummary['refresh_job'] | null | undefined) {
-  if (!job) return 'border-slate-200 bg-slate-50 text-slate-500';
-  if (job.running) return 'border-sky-200 bg-sky-50 text-sky-700';
-  if (job.ok) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (job.directory_ok) return 'border-amber-200 bg-amber-50 text-amber-700';
-  return 'border-rose-200 bg-rose-50 text-rose-700';
-}
-
 function markerDotClass(level: 'high' | 'elevated' | 'monitoring') {
   if (level === 'high') return 'bg-[#ff5c73] shadow-[0_0_12px_rgba(255,92,115,0.65)]';
   if (level === 'elevated') return 'bg-[#28d7ff] shadow-[0_0_12px_rgba(40,215,255,0.6)]';
   return 'bg-[#86ffd8] shadow-[0_0_12px_rgba(134,255,216,0.65)]';
+}
+
+function signalDisplayLevel(signal: Pick<DashboardSignal, 'display_level' | 'severity'>): 'high' | 'elevated' | 'monitoring' {
+  if (signal.display_level === 'high' || signal.display_level === 'elevated' || signal.display_level === 'monitoring') {
+    return signal.display_level;
+  }
+  if (signal.severity >= 4) return 'high';
+  if (signal.severity >= 3) return 'elevated';
+  return 'monitoring';
+}
+
+function timelineTabClass(active: boolean) {
+  return active
+    ? 'border-slate-300 bg-white text-[#08201c] shadow-[0_10px_22px_rgba(20,43,39,0.07)]'
+    : 'border-[#d3ddd7] bg-white/82 text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-[#08201c]';
+}
+
+function SignalLevelDots() {
+  return (
+    <span className="mt-2 inline-flex items-center gap-1.5" aria-label="高热点、升温、监测">
+      <span className="h-2 w-2 rounded-full bg-[#ff5c73] shadow-[0_0_8px_rgba(255,92,115,0.45)]" />
+      <span className="h-2 w-2 rounded-full bg-[#28d7ff] shadow-[0_0_8px_rgba(40,215,255,0.42)]" />
+      <span className="h-2 w-2 rounded-full bg-[#86ffd8] shadow-[0_0_8px_rgba(134,255,216,0.42)]" />
+    </span>
+  );
 }
 
 function performanceSummaryHeadline(summary: LiveBenchPlatformModelSummary | null | undefined) {
@@ -859,57 +866,6 @@ function performanceSummarySupport(summary: LiveBenchPlatformModelSummary | null
   return `已结算 ${summary.resolved_question_count} 题，计分覆盖 ${formatPercent(coverage)}，当前还有 ${summary.active_question_count} 道题在跟踪。`;
 }
 
-function sourceRuntimeHeadline(
-  summary: WorldDashboardSourceRefreshSummary | null | undefined,
-  livebench: WorldDashboardLiveBenchSummary | null | undefined,
-  evaluation: LiveBenchPlatformModelSummary | null | undefined,
-) {
-  if (!summary) return '信源摘要还在同步。';
-  const resolved = evaluation?.resolved_question_count ?? livebench?.resolved_question_count ?? 0;
-  const active = evaluation?.active_question_count ?? livebench?.active_question_count ?? 0;
-  const job = summary.refresh_job;
-  const status = job?.running ? '正在校验' : job && !job.ok ? '部分完成' : '完成';
-  return `本次看板校验${status}，监测池 ${summary.monitor_runtime.monitor_source_count} 条，高质量 ${summary.monitor_runtime.high_quality_source_count} 条，题池已结算 ${resolved} 道、跟踪 ${active} 道。`;
-}
-
-function latestSourceRefreshTime(...values: Array<string | null | undefined>) {
-  let latest: string | null = null;
-  let latestMs = 0;
-  for (const value of values) {
-    if (!value) continue;
-    const ms = new Date(value).getTime();
-    if (!Number.isFinite(ms) || ms <= latestMs) continue;
-    latest = value;
-    latestMs = ms;
-  }
-  return formatTime(latest);
-}
-
-function sourceRuntimeSupport(
-  summary: WorldDashboardSourceRefreshSummary | null | undefined,
-  livebench: WorldDashboardLiveBenchSummary | null | undefined,
-  evaluation: LiveBenchPlatformModelSummary | null | undefined,
-) {
-  if (!summary) return '治理摘要同步后会补上变动和冷却情况。';
-  const job = summary.refresh_job;
-  const resolved = evaluation?.resolved_question_count ?? livebench?.resolved_question_count ?? 0;
-  const scored = evaluation ? displayScoredQuestionCount(evaluation) : resolved;
-  const jobLine = job
-    ? job.running
-      ? '巡检任务正在运行。'
-      : job.ok
-        ? `巡检任务已完成，最近结束 ${formatTime(job.finished_at)}。`
-        : `巡检任务部分完成，最近结束 ${formatTime(job.finished_at)}；失败源保留旧缓存，等待下轮重试。`
-    : '';
-  return [
-    `最近一轮变动 ${summary.monitor_runtime.changed_source_count} 条，临时降权 ${summary.monitor_runtime.cooling_down_count} 条，待补位 ${summary.monitor_runtime.next_batch_count} 条。`,
-    `题池核票 ${resolved} 道，进入计分 ${scored} 道。`,
-    jobLine,
-  ]
-    .filter(Boolean)
-    .join(' ');
-}
-
 function livebenchPoolHeadline(summary: WorldDashboardLiveBenchSummary | null | undefined) {
   if (!summary) return '题池覆盖还在同步。';
   const pendingSettlement = summary.settlement_pending_count || 0;
@@ -939,12 +895,12 @@ function summarizeEmptySignalCheck(
         : 'stale';
   const message =
     status === 'fresh'
-      ? '前台为空，但信源健康检查显示最新 signal 仍在健康线内；需要继续检查前端过滤条件。'
+      ? '当前页面暂时没有足够线索，但最近内容仍在正常更新。'
       : status === 'deferred'
-        ? '前台为空，已请求信源检查；较重的刷新任务已交给后台巡检链路。'
-        : status === 'error'
-          ? '前台为空，信源健康检查未返回可用结果；已请求后台刷新链路检查。'
-          : '前台为空，信源健康检查显示最新 signal 已过期；已请求后台刷新链路补跑。';
+        ? '当前页面暂时没有足够线索，系统会继续补齐可读内容。'
+      : status === 'error'
+          ? '当前页面暂时没有足够线索，正在等待下一次内容更新。'
+          : '当前页面暂时没有足够线索，最近内容可能偏旧。';
   return {
     status,
     checkedAt: new Date().toISOString(),
@@ -1422,7 +1378,7 @@ export default function DashboardClient({
       status: 'checking',
       checkedAt: new Date().toISOString(),
       reason,
-      message: '前台没有显示足够信号，正在检查信源刷新状态。',
+      message: '当前页面暂时没有足够线索，正在检查内容状态。',
     });
 
     void (async () => {
@@ -1530,35 +1486,8 @@ export default function DashboardClient({
   );
   const questionList = dashboardQuestionPool;
   const evaluationSummary = state?.evaluation_summary || null;
-  const sourceRefreshSummary =
-    state?.source_refresh_summary || geoTimelineState?.source_refresh_summary || techAiTimelineState?.source_refresh_summary || null;
-  const repoDiscoverySnapshot =
-    sourceRefreshSummary?.repo_discovery_snapshot || sourceStatusState?.source_refresh_summary?.repo_discovery_snapshot || null;
   const livebenchSummary = state?.livebench_summary || null;
-  const sourceHealth =
-    state?.source_health || geoTimelineState?.source_health || techAiTimelineState?.source_health || sourceStatusState?.source_health || null;
-  const refreshJob = sourceRefreshSummary?.refresh_job || null;
-  const sourceHealthTotal = sourceHealth
-    ? sourceHealth.stable_source_count + sourceHealth.watchlist_source_count + sourceHealth.blocked_or_unknown_source_count
-    : 0;
-  const hasSourceHealthSummary = sourceHealthTotal > 0;
-  const rssCandidateCount = repoDiscoverySnapshot?.rss_candidate_count ?? null;
-  const rssAddedCount = repoDiscoverySnapshot?.rss_added_count ?? null;
-  const rssRemovedCount = repoDiscoverySnapshot?.rss_removed_count ?? null;
   const isTimelineScene = scene === 'global' || scene === 'geo-politics-daily' || scene === 'tech-ai';
-  const isMainWorldScene = isTimelineScene;
-  const sourceMonitorHeadline =
-    isMainWorldScene && typeof rssCandidateCount === 'number'
-      ? `候选 RSS ${rssCandidateCount} 个，本次后台处理新增 ${rssAddedCount ?? 0} 个，淘汰 ${rssRemovedCount ?? 0} 个。`
-      : isMainWorldScene && sourceHealth && hasSourceHealthSummary
-        ? `稳定信源 ${sourceHealth.stable_source_count} 条，观察 ${sourceHealth.watchlist_source_count} 条，待确认 ${sourceHealth.blocked_or_unknown_source_count} 条。`
-      : sourceRuntimeHeadline(sourceRefreshSummary, livebenchSummary, evaluationSummary);
-  const sourceMonitorSupport =
-    isMainWorldScene && (sourceRefreshSummary || repoDiscoverySnapshot)
-      ? `${sourceRefreshStatusLabel(refreshJob)}。每次更新先由后台巡检处理候选 RSS，前台只采用通过连通性、登记层级和刷新新鲜度过滤后的线索。`
-      : isMainWorldScene && sourceHealth && hasSourceHealthSummary
-        ? '按连通性、登记层级和刷新新鲜度分层；稳定信源优先采用，观察和待确认信源不单独作为强证据。'
-      : sourceRuntimeSupport(sourceRefreshSummary, livebenchSummary, evaluationSummary);
   const timelineSignalState =
     timelineScene === 'tech-ai'
       ? techAiTimelineState || (scene === 'tech-ai' ? state : null)
@@ -1653,54 +1582,33 @@ export default function DashboardClient({
     return [
       {
         key: 'world',
-        label: '主世界日报',
-        title: '地缘与公共风险日报',
+        label: '主世界',
+        title: '地缘与公共风险',
         summary: signalDailyDigest(geoDigestSignals, '地缘、公共安全和区域风险信号会在这里先聚合成今日摘要。'),
         meta: geoDigestSignals.length > 0 ? `${geoDigestSignals.length} 条精选线索` : '暂无精选',
         view: 'geo-politics-daily' as TimelineView,
-        tone: 'border-sky-100 bg-sky-50/70 text-sky-800',
+        href: DAILY_PAGE_HREFS['geo-politics-daily'],
       },
       {
         key: 'ai',
-        label: 'AI 日报',
-        title: '模型、Agent 与产业日报',
+        label: 'AI',
+        title: '模型、Agent 与产业',
         summary: signalDailyDigest(techCurationSignals, 'AI Hot、模型、Agent、论文和开源信源会在这里形成今日 AI 日报。'),
         meta: techCurationSignals.length > 0 ? `${techCurationSignals.length} 条 AI 线索` : '暂无精选',
         view: 'tech-ai' as TimelineView,
-        tone: 'border-lime-100 bg-lime-50/70 text-lime-800',
+        href: DAILY_PAGE_HREFS['tech-ai'],
       },
       {
         key: 'livebench',
-        label: '演绎日报',
-        title: '题池与结算日报',
+        label: '演绎',
+        title: '题池与结算反馈',
         summary: livebenchDailyDigest(livebenchDailyItems, '预测题会作为校准闭环保留，用来检验信源判断是否真正有用。'),
         meta: livebenchLead ? questionTimingLabel(livebenchLead) : '暂无题目',
         view: 'livebench' as TimelineView,
-        tone: 'border-violet-100 bg-violet-50/70 text-violet-800',
+        href: DAILY_PAGE_HREFS.livebench,
       },
     ];
   }, [currentQuestions, geoDigestSignals, resolvedQuestions, techCurationSignals]);
-  const activeDailyCard = dashboardBriefCards.find((card) => card.view === timelineScene) || dashboardBriefCards[0];
-  const dailyReportItems = useMemo(() => {
-    if (timelineScene === 'livebench') {
-      return [...currentQuestions, ...resolvedQuestions].slice(0, 3).map((preview) => ({
-        key: preview.question_id,
-        title: livebenchDailyTopicLabel(preview),
-        summary: questionModeratorLabel(preview),
-        meta: questionTimingLabel(preview),
-        href: worldHref(preview.href, scene),
-      }));
-    }
-
-    const signals = timelineScene === 'tech-ai' ? techCurationSignals : mainWorldSignals;
-    return signals.slice(0, 3).map((signal) => ({
-      key: signal.id,
-      title: readableSignalTitle(signal),
-      summary: readableSignalSummary(signal, 132),
-      meta: `${readableSignalSourceLine(signal)} · ${techAiTimeLabel(signal.published_at)}`,
-      href: worldHref(signalDetailHref(signal.id), timelineScene),
-    }));
-  }, [currentQuestions, mainWorldSignals, resolvedQuestions, scene, techCurationSignals, timelineScene]);
   const sourceKnowledgeHref = worldHref('/source-knowledge', scene);
   const mainSkillHref = '/api/v1/openclaw/skill.md';
   const aihotSkillHref = '/api/v1/openclaw/aihot.skill.md';
@@ -1715,14 +1623,15 @@ export default function DashboardClient({
     return {
       ...base,
       description:
-        '把这个地址交给接入方。它用于近 30 天信源查询、整理和回答；后台会用结算反馈持续复盘。',
-      copy_hint: '信源查询会沉淀为复盘样本，后续回答会吸收验证过的方法。',
+        '把这个地址交给接入方。它会按近 30 天信源回答问题，也能读取 AI Hot 和主世界日报。',
+      copy_hint: '日常回答优先用当前精选线索；需要深挖时再进入全部信源。',
     };
   }, [state?.skill_entry]);
+  const skillEntryHref = skillEntry?.url || mainSkillHref;
+  const skillEntryDisplayUrl = skillEntryHref;
   const handleCopySkillEntry = async () => {
     if (!skillEntry?.url) return;
-    const skillUrl = typeof window === 'undefined' ? skillEntry.url : new URL(skillEntry.url, window.location.origin).toString();
-    const copied = await copyTextWithFallback(skillUrl);
+    const copied = await copyTextWithFallback(skillEntryDisplayUrl);
     if (!copied) return;
     setSkillEntryCopied(true);
     window.setTimeout(() => setSkillEntryCopied(false), 1600);
@@ -1735,37 +1644,38 @@ export default function DashboardClient({
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f6f7f9_0%,#fbfcfd_42%,#f4f7f6_100%)] text-slate-900">
+    <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f5f7f4_0%,#fbfcf8_42%,#eef5f1_100%)] text-slate-900">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(20,184,166,0.58),rgba(217,159,72,0.45),transparent)]" />
       <div className="relative mx-auto flex w-full max-w-none flex-col gap-4 px-4 py-4 sm:px-6 2xl:px-8">
-        <section className="animate-fade-in-soft rounded-[28px] border border-slate-200/75 bg-white/78 p-4 shadow-[0_18px_44px_rgba(15,23,42,0.055)] backdrop-blur-sm">
-          <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,250,252,0.94)_58%,rgba(247,250,248,0.92))] p-3 sm:p-4">
+        <section className="animate-fade-in-soft rounded-[28px] border border-[#cfd8d2]/80 bg-white/82 p-4 shadow-[0_18px_44px_rgba(20,43,39,0.065)] backdrop-blur-sm">
+          <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,250,247,0.96)_58%,rgba(241,248,244,0.94))] p-3 sm:p-4">
             <div
-              className="pointer-events-none absolute right-[-2rem] top-[-2rem] h-40 w-40 rounded-full blur-3xl"
-              style={{ background: 'radial-gradient(circle, rgba(20,184,166,0.12) 0%, rgba(20,184,166,0) 72%)' }}
+              className="pointer-events-none absolute inset-x-6 top-0 h-px animate-tashan-scan"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(20,184,166,0.62), rgba(217,159,72,0.52), transparent)' }}
             />
             <div className="relative z-10 flex flex-col gap-3">
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                   <div className="min-w-0">
                     <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">世界脉络</p>
-                    <h1 className="mt-1 font-serif text-[1.9rem] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[2.35rem]">
+                    <h1 className="mt-1 font-serif text-[1.9rem] font-semibold text-[#08201c] sm:text-[2.35rem]">
                       世界脉络
                     </h1>
                     <p className="mt-1.5 max-w-2xl text-[13px] leading-6 text-slate-600">
-                      只露出地缘和 AI 两条主线；其余信源继续在后台参与筛选、去重和质量判断。
+                      首页只呈现地缘和 AI 两条主线；其他来源作为补充材料参与筛选。
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-slate-200 bg-white/92 px-3 py-1 text-xs text-slate-500">
+                    <span className="rounded-full border border-[#d7ded8] bg-white/92 px-3 py-1 text-xs text-slate-500">
                       {sceneDisplayLabel(scene)}
                     </span>
-                    <span className="rounded-full border border-slate-200 bg-white/92 px-3 py-1 text-xs text-slate-500">
+                    <span className="rounded-full border border-[#d7ded8] bg-white/92 px-3 py-1 text-xs text-slate-500">
                       最近更新 {state ? formatTime(state.generated_at) : '--'}
                     </span>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 rounded-full border-slate-200 bg-white/85 px-3 text-xs"
+                      className="h-8 rounded-full border-[#cbd8d1] bg-white/85 px-3 text-xs text-[#143d35] transition hover:border-teal-300 hover:bg-[#f1faf5]"
                       onClick={() => void loadDashboard(scene, { manual: true })}
                       disabled={refreshing}
                     >
@@ -1777,7 +1687,7 @@ export default function DashboardClient({
 
                 <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(440px,1.1fr)] xl:items-stretch">
                   {skillEntry ? (
-                    <div className="h-full rounded-[22px] border border-slate-200/70 bg-white/86 px-4 py-3">
+                    <div className="h-full rounded-[22px] border border-[#cfd8d2]/80 bg-white/88 px-4 py-3 shadow-[0_12px_30px_rgba(20,43,39,0.045)]">
                       <div className="flex h-full flex-col gap-2.5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
@@ -1788,65 +1698,72 @@ export default function DashboardClient({
                             <p className="mt-2 text-[13px] leading-6 text-slate-900">
                               {skillEntry.description || '把这个地址交给虾，主口径是过去 30 天信源查询与整理。'}
                             </p>
+                            <a
+                              href={skillEntryHref}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 block truncate rounded-2xl border border-[#d6ded8] bg-[#f6faf7] px-3 py-2 font-mono text-[11px] leading-5 text-slate-600 transition hover:border-teal-300 hover:bg-white hover:text-[#08201c]"
+                              title={skillEntryDisplayUrl}
+                            >
+                              {skillEntryDisplayUrl}
+                            </a>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <a
-                              href={mainSkillHref}
+                              href={skillEntryHref}
                               target="_blank"
                               rel="noreferrer"
-                              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-500 transition hover:text-slate-900"
+                              className="rounded-full border border-[#d3ddd7] bg-white px-3 py-1.5 text-[11px] text-slate-500 transition hover:border-teal-300 hover:text-[#08201c]"
                             >
                               打开 Skill
                             </a>
                             <button
                               type="button"
                               onClick={() => void handleCopySkillEntry()}
-                              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] text-slate-500 transition hover:text-slate-900"
+                              className="rounded-full border border-[#d3ddd7] bg-white px-3 py-1.5 text-[11px] text-slate-500 transition hover:border-teal-300 hover:text-[#08201c]"
                             >
                               {skillEntryCopied ? '已复制' : '复制地址'}
                             </button>
                           </div>
                         </div>
 
-                        <div className="rounded-full border border-slate-200/80 bg-slate-50/80 px-4 py-2 text-[12px] font-medium text-slate-700">
-                          OpenClaw Skill 已绑定
+                        <div className="rounded-full border border-teal-200/80 bg-[#effaf4] px-4 py-2 text-[12px] font-medium text-[#087265]">
+                          Skill 地址可直接接入
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2">
-                          <button
-                            type="button"
-                            onClick={() => handleBriefCardClick(timelineScene === 'tech-ai' ? 'tech-ai' : 'geo-politics-daily')}
-                            className="rounded-[18px] border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300 hover:shadow-[0_10px_22px_rgba(15,23,42,0.055)]"
+                          <a
+                            href={DAILY_PAGE_HREFS['geo-politics-daily']}
+                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
                           >
-                            <span className="block text-[12px] font-semibold text-slate-900">精选线索</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">进入当前主线时间线</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleBriefCardClick('tech-ai')}
-                            className="rounded-[18px] border border-lime-200 bg-lime-50/65 px-3 py-2 text-left transition hover:border-lime-300 hover:shadow-[0_10px_22px_rgba(77,124,15,0.07)]"
+                            <span className="block text-[12px] font-semibold text-[#08201c]">主世界</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">地缘与公共风险</span>
+                          </a>
+                          <a
+                            href={DAILY_PAGE_HREFS['tech-ai']}
+                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
                           >
-                            <span className="block text-[12px] font-semibold text-lime-950">AI 日报</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-lime-700">AI Hot 与模型线索</span>
-                          </button>
+                            <span className="block text-[12px] font-semibold text-[#08201c]">AI</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">AI Hot 与模型线索</span>
+                          </a>
                           <a
                             href={sourceKnowledgeHref}
-                            className="rounded-[18px] border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300 hover:shadow-[0_10px_22px_rgba(15,23,42,0.055)]"
+                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-amber-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(217,159,72,0.08)]"
                           >
-                            <span className="block text-[12px] font-semibold text-slate-900">全部信源</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">看信源池和接入治理</span>
+                            <span className="block text-[12px] font-semibold text-[#08201c]">全部信源</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">查看已接入来源</span>
                           </a>
                           <a
                             href={aihotSkillHref}
                             target="_blank"
                             rel="noreferrer"
-                            className="rounded-[18px] border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300 hover:shadow-[0_10px_22px_rgba(15,23,42,0.055)]"
+                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
                           >
-                            <span className="block text-[12px] font-semibold text-slate-900">AI Hot Skill</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">给模型读取 AI 信源</span>
+                            <span className="block text-[12px] font-semibold text-[#08201c]">AI Hot Skill</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">读取 AI 精选源</span>
                           </a>
                         </div>
                         <p className="text-[12px] leading-5 text-slate-500">
-                          {skillEntry.copy_hint || '信源查询会沉淀为复盘样本，后续回答会吸收验证过的方法。'}
+                          {skillEntry.copy_hint || '日常回答优先用当前精选线索；需要深挖时再进入全部信源。'}
                         </p>
                       </div>
                     </div>
@@ -1856,166 +1773,56 @@ export default function DashboardClient({
                     </div>
                   )}
 
-                  <div className="rounded-[22px] border border-slate-200/70 bg-white/86 px-4 py-3">
+                  <div className="rounded-[22px] border border-[#cfd8d2]/80 bg-white/88 px-4 py-3 shadow-[0_12px_30px_rgba(20,43,39,0.045)]">
                     <div className="flex h-full flex-col">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">信源监测</p>
+                          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">今日简报</p>
                           <p className="mt-2 text-[13px] leading-6 text-slate-900">
-                            {sourceMonitorHeadline}
+                            先看三份整理好的日报。
                           </p>
                           <p className="mt-1 text-[12px] leading-5 text-slate-500">
-                            {sourceMonitorSupport}
+                            每份只保留当前最值得读的精华线索，完整原始线索仍在下方时间线。
                           </p>
                         </div>
-                        <span className={`shrink-0 rounded-full border px-3 py-1 text-[11px] ${sourceRefreshStatusTone(refreshJob)}`}>
-                          {sourceRefreshStatusLabel(refreshJob)}
+                        <span className="shrink-0 rounded-full border border-teal-200 bg-[#effaf4] px-3 py-1 text-[11px] text-[#087265]">
+                          精华版
                         </span>
                       </div>
 
-                      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                        {isMainWorldScene ? (
-                          <>
-                            <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-4 py-2.5">
-                              <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">候选 RSS</p>
-                              <p className="mt-1 text-sm font-semibold text-slate-900">{rssCandidateCount ?? '--'} 个</p>
-                            </div>
-                            <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-4 py-2.5">
-                              <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">本次新增</p>
-                              <p className="mt-1 text-sm font-semibold text-emerald-700">
-                                {typeof rssAddedCount === 'number' ? signedCount(rssAddedCount) : '--'}
-                              </p>
-                            </div>
-                            <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-4 py-2.5">
-                              <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">本次淘汰</p>
-                              <p className="mt-1 text-sm font-semibold text-rose-700">
-                                {typeof rssRemovedCount === 'number' ? removedCount(rssRemovedCount) : '--'}
-                              </p>
-                            </div>
-                            <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-4 py-2.5">
-                              <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">上次巡检</p>
-                              <p className="mt-1 text-sm font-semibold text-slate-900">
-                                {latestSourceRefreshTime(
-                                  refreshJob?.finished_at,
-                                  sourceRefreshSummary?.repo_discovery_snapshot?.last_refreshed_at,
-                                )}
-                              </p>
-                            </div>
-                            <p className="rounded-[18px] border border-slate-200/70 bg-white/72 px-3 py-2 text-[11px] leading-5 text-slate-500 sm:col-span-2 xl:col-span-4">
-                              更新链路：每轮先由后台抽取和处理 RSS 候选，再预热运行时缓存并做自愈检查；前台只展示通过筛选后的线索，不把未验证候选直接推到时间线。
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">入口池</p>
-                            <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {latestSourceRefreshTime(
-                                sourceRefreshSummary?.skillhub_snapshot?.last_refreshed_at,
-                                sourceRefreshSummary?.source_skill_snapshot?.last_refreshed_at,
-                                sourceRefreshSummary?.monitor_runtime.latest_poll_finished_at,
-                                sourceRefreshSummary?.refresh_job?.finished_at,
-                              )}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
-                            入口 {sourceRefreshSummary?.source_skill_snapshot?.active_hub_count || 0} 个，沉淀 {sourceRefreshSummary?.source_skill_snapshot?.yielded_skill_count || 0} 条。
-                          </p>
-                        </div>
-
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">目录候选</p>
-                            <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {latestSourceRefreshTime(
-                                sourceRefreshSummary?.repo_discovery_snapshot?.last_refreshed_at,
-                                sourceRefreshSummary?.refresh_job?.finished_at,
-                              )}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
-                            本地沉淀 {sourceRefreshSummary?.repo_discovery_snapshot?.local_repo_count || 0} 组样本，候选 {sourceRefreshSummary?.repo_discovery_snapshot?.github_candidate_count || 0} 条。
-                            目录扩充 {sourceRefreshSummary?.repo_discovery_snapshot?.directory_candidate_count || 0} 条。
-                          </p>
-                          <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                            可转信源 {sourceRefreshSummary?.repo_discovery_snapshot?.endpoint_candidate_count || 0} 条，方法样本 {sourceRefreshSummary?.repo_discovery_snapshot?.method_candidate_count || 0} 条。
-                          </p>
-                        </div>
-
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">稳定</p>
-                            <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {sourceHealth ? `${sourceHealth.stable_source_count} 条` : '--'}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
-                            观察 {sourceHealth?.watchlist_source_count || 0} 条，待确认 {sourceHealth?.blocked_or_unknown_source_count || 0} 条。
-                          </p>
-                        </div>
-
-                        <div className="rounded-[18px] border border-slate-200 bg-slate-50/85 px-3 py-2.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="whitespace-nowrap text-[11px] tracking-[0.08em] text-slate-400">题池</p>
-                            <span className="whitespace-nowrap text-[11px] text-slate-400">
-                              {evaluationSummary ? `${evaluationSummary.resolved_question_count} 已结算` : '--'}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-900">
-                            跟踪 {evaluationSummary?.active_question_count ?? livebenchSummary?.active_question_count ?? 0} 道，计分 {displayScoredQuestionCount(evaluationSummary)} 道。
-                          </p>
-                          <p className="mt-1 text-[11px] leading-4 text-slate-500">
-                            待核票 {livebenchSummary?.settlement_pending_count || 0} 道。
-                          </p>
-                        </div>
-                          </>
-                        )}
+                      <div className="mt-3 grid flex-1 gap-2 lg:grid-cols-3">
+                        {dashboardBriefCards.map((card) => {
+                          const Icon = card.key === 'world' ? Globe2 : card.key === 'ai' ? Bot : FileText;
+                          return (
+                            <a
+                              key={`top-daily-card-${card.key}`}
+                              href={card.href}
+                              className="group animate-rise-in relative flex min-h-[9.5rem] flex-col overflow-hidden rounded-[20px] border border-[#d2ddd6] bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(243,250,246,0.92))] px-3.5 py-3 text-left text-[#08201c] transition duration-300 hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_18px_32px_rgba(20,43,39,0.09)]"
+                              style={{ animationDelay: `${120 + (card.key === 'ai' ? 80 : card.key === 'livebench' ? 160 : 0)}ms` } as CSSProperties}
+                            >
+                              <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(20,184,166,0.55),rgba(217,159,72,0.35),transparent)] opacity-70 transition group-hover:opacity-100" />
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-white/86 px-2 py-1 text-[11px] font-semibold text-[#087265]">
+                                  <Icon className="h-3.5 w-3.5" />
+                                  {card.label}
+                                </span>
+                                <span className="rounded-full border border-amber-200 bg-amber-50/60 px-2 py-1 text-[11px] text-[#8a5a12]">{card.meta}</span>
+                              </div>
+                              <h3 className="mt-3 line-clamp-2 text-[14px] font-semibold leading-6 text-slate-950">{card.title}</h3>
+                              <p className="mt-2 line-clamp-4 text-[12px] leading-6 text-slate-600">{card.summary}</p>
+                              <span className="mt-auto inline-flex items-center gap-1 pt-3 text-[12px] font-medium text-[#087265]">
+                                阅读精华
+                                <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                              </span>
+                            </a>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
-
-        <section className="grid gap-3 xl:grid-cols-[0.82fr_1.18fr] xl:items-stretch">
-          <div className="rounded-[26px] border border-slate-200/75 bg-white/86 px-5 py-4 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
-            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">今日简报</p>
-            <h2 className="mt-2 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">
-              先看三份日报
-            </h2>
-            <p className="mt-2 max-w-xl text-[13px] leading-6 text-slate-600">
-              主世界日报、AI 日报和演绎日报各保留一条当前最值得读的线索；后台继续用全量信源做筛选、去重和复盘。
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-3">
-            {dashboardBriefCards.map((card) => {
-              const content = (
-                <article className={`h-full rounded-[24px] border ${card.tone} px-4 py-4 text-left transition hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(15,23,42,0.07)]`}>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="rounded-full border border-white/80 bg-white/75 px-2.5 py-1 text-[11px] font-semibold">
-                      {card.label}
-                    </span>
-                    <span className="text-[11px] opacity-70">{card.meta}</span>
-                  </div>
-                  <h3 className="mt-3 line-clamp-2 text-[15px] font-semibold leading-6 text-slate-950">{card.title}</h3>
-                  <p className="mt-2 line-clamp-3 text-[12px] leading-6 text-slate-600">{card.summary}</p>
-                </article>
-              );
-              return (
-                <button
-                  key={card.key}
-                  type="button"
-                  onClick={() => handleBriefCardClick(card.view)}
-                  className="block h-full w-full"
-                  aria-label={`切换到${card.label}`}
-                >
-                  {content}
-                </button>
-              );
-            })}
           </div>
         </section>
 
@@ -2030,30 +1837,29 @@ export default function DashboardClient({
             <CardContent className="flex flex-col gap-2 p-4 text-sm leading-6 text-amber-900 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="font-semibold">
-                  {emptySignalCheck.status === 'checking' ? '信源检查中' : '前台空状态已触发检查'}
+                  {emptySignalCheck.status === 'checking' ? '正在检查内容' : '内容正在补齐'}
                 </p>
                 <p className="text-amber-800">{emptySignalCheck.message}</p>
                 <p className="text-xs text-amber-700">
-                  原因：{emptySignalCheck.reason}
+                  提示：{emptySignalCheck.reason}
                   {emptySignalCheck.latestSignalAgeHours != null
-                    ? `；最新 signal ${emptySignalCheck.latestSignalAgeHours} 小时前`
+                    ? `；最近内容约 ${emptySignalCheck.latestSignalAgeHours} 小时前`
                     : ''}
-                  {emptySignalCheck.syncStatus ? `；sync=${emptySignalCheck.syncStatus}` : ''}
                 </p>
               </div>
               <div className="shrink-0 rounded-full border border-amber-200 bg-white/70 px-3 py-1 text-xs text-amber-700">
-                {emptySignalCheck.status === 'checking' ? 'checking' : emptySignalCheck.freshnessStatus || emptySignalCheck.status}
+                {emptySignalCheck.status === 'checking' ? '检查中' : '等待更新'}
               </div>
             </CardContent>
           </Card>
         ) : null}
         {isTimelineScene ? (
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(620px,1.35fr)_minmax(360px,0.82fr)] xl:items-start 2xl:grid-cols-[minmax(760px,1.42fr)_minmax(420px,0.82fr)]">
-          <Card id="world-map-panel" ref={worldMapPanelRef} className={shellCardClass()}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(520px,1fr)_minmax(520px,1fr)] xl:items-start 2xl:grid-cols-[minmax(640px,1fr)_minmax(640px,1fr)]">
+          <Card id="world-map-panel" ref={worldMapPanelRef} className={`${shellCardClass()} xl:order-2`}>
             <CardContent className="flex h-full min-h-0 flex-col p-3">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
                 <div>
-                  <h2 className="font-serif text-xl font-semibold tracking-[-0.02em] text-slate-950">
+                  <h2 className="font-serif text-xl font-semibold text-[#08201c]">
                     3D 地球时间地图
                   </h2>
                   <p className="text-xs text-slate-500">
@@ -2066,21 +1872,21 @@ export default function DashboardClient({
               </div>
 
               {focusCard ? (
-                <div className="mb-3 rounded-[28px] border border-emerald-200/70 bg-[linear-gradient(135deg,rgba(240,253,248,0.96),rgba(247,254,250,0.92))] px-4 py-3 shadow-[0_10px_22px_rgba(16,185,129,0.06)]">
+                <div className="mb-3 animate-rise-in rounded-[28px] border border-teal-200/70 bg-[linear-gradient(135deg,rgba(240,250,244,0.96),rgba(252,250,241,0.92))] px-4 py-3 shadow-[0_10px_22px_rgba(20,43,39,0.06)]">
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                    <span className="rounded-full border border-emerald-200 bg-white/85 px-2.5 py-1 font-semibold text-emerald-700">
+                    <span className="rounded-full border border-teal-200 bg-white/85 px-2.5 py-1 font-semibold text-[#087265]">
                       {focusCard.label}
                     </span>
-                    <span className="text-emerald-600">{formatTime(focusCard.updatedAt)}</span>
+                    <span className="text-[#8a5a12]">{formatTime(focusCard.updatedAt)}</span>
                   </div>
                   <div className="mt-2 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[14px] font-semibold leading-6 text-emerald-950">{focusCard.title}</p>
-                      <p className="mt-1 text-[12px] leading-6 text-emerald-900">{compactText(focusCard.summary, 110)}</p>
+                      <p className="text-[14px] font-semibold leading-6 text-[#08201c]">{focusCard.title}</p>
+                      <p className="mt-1 text-[12px] leading-6 text-slate-700">{compactText(focusCard.summary, 110)}</p>
                     </div>
                     {focusCard.watchNext ? (
-                      <div className="rounded-full border border-emerald-200/90 bg-white/85 px-3 py-1.5 text-[11px] leading-5 text-emerald-800 lg:max-w-[22rem]">
-                        <span className="font-semibold text-emerald-700">线索：</span>
+                      <div className="rounded-full border border-teal-200/90 bg-white/85 px-3 py-1.5 text-[11px] leading-5 text-slate-700 lg:max-w-[22rem]">
+                        <span className="font-semibold text-[#087265]">线索：</span>
                         {compactText(focusCard.watchNext, 64)}
                       </div>
                     ) : null}
@@ -2170,7 +1976,7 @@ export default function DashboardClient({
                         }}
                         className={`flex w-full items-start gap-2 rounded-2xl border px-3 py-2 text-left transition ${
                           activeSignalId === signal.id
-                            ? 'border-sky-200 bg-sky-50/80'
+                            ? 'border-teal-200 bg-[#eefaf4]'
                             : 'border-slate-100 bg-slate-50/80 hover:border-slate-200 hover:bg-white'
                         }`}
                       >
@@ -2199,82 +2005,53 @@ export default function DashboardClient({
             </CardContent>
           </Card>
 
-          {isMainWorldScene ? (
-          <Card ref={timelinePanelRef} className={`${shellCardClass()} xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
-            <CardHeader className="border-b border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,0.82))] py-4">
+          {isTimelineScene ? (
+          <Card ref={timelinePanelRef} className={`${shellCardClass()} xl:order-1 xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
+            <CardHeader className="border-b border-[#dce5df] bg-[linear-gradient(180deg,rgba(249,252,249,0.98),rgba(255,255,255,0.86))] py-4">
               <div className="flex flex-col gap-3">
                 <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <Radio className="h-4 w-4" />
-                    {timelineViewLabel(timelineScene)}
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#08201c]">
+                    <Radio className="h-4 w-4 text-[#087265]" />
+                    线索时间线
                   </CardTitle>
-                  <p className="text-xs text-slate-500">先读今日摘要，下面保留按时间排列的原始线索。</p>
+                  <p className="text-xs text-slate-500">这里只保留原始线索流；日报精华从上方今日简报进入。</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {subworlds.map((world) => (
-                    <button
-                      key={`timeline-scene-${world.key}`}
-                      type="button"
-                      onClick={() => setTimelineScene(world.key === 'tech-ai' ? 'tech-ai' : 'geo-politics-daily')}
-                      className={`rounded-full border px-3 py-1.5 text-xs transition ${
-                        timelineScene === world.key
-                          ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-slate-200 bg-white/85 text-slate-600 hover:border-slate-300 hover:text-slate-900'
-                      }`}
-                      title={world.summary}
-                    >
-                      {world.title}
-                    </button>
-                  ))}
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <button
+                    type="button"
+                    onClick={() => setTimelineScene('geo-politics-daily')}
+                    className={`group rounded-[18px] border px-3 py-2.5 text-left transition duration-300 ${timelineTabClass(timelineScene === 'geo-politics-daily')}`}
+                  >
+                    <span className="block text-[12px] font-semibold">地缘线索</span>
+                    <span className="mt-1 block text-[11px] leading-5 opacity-70">冲突、外交、公共风险</span>
+                    <SignalLevelDots />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimelineScene('tech-ai')}
+                    className={`group rounded-[18px] border px-3 py-2.5 text-left transition duration-300 ${timelineTabClass(timelineScene === 'tech-ai')}`}
+                  >
+                    <span className="block text-[12px] font-semibold">AI 线索</span>
+                    <span className="mt-1 block text-[11px] leading-5 opacity-70">模型、Agent、开源</span>
+                    <SignalLevelDots />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setTimelineScene('livebench')}
-                    className={`rounded-full border px-3 py-1.5 text-xs transition ${
-                      timelineScene === 'livebench'
-                        ? 'border-slate-900 bg-slate-900 text-white'
-                        : 'border-slate-200 bg-white/85 text-slate-600 hover:border-slate-300 hover:text-slate-900'
-                    }`}
-                    title="预测题池、待结算问题和已结算问题。"
+                    className={`group rounded-[18px] border px-3 py-2.5 text-left transition duration-300 ${timelineTabClass(timelineScene === 'livebench')}`}
                   >
-                    演绎日报
+                    <span className="block text-[12px] font-semibold">演绎题池</span>
+                    <span className="mt-1 block text-[11px] leading-5 opacity-70">题池与结果</span>
+                    <SignalLevelDots />
                   </button>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="flex h-full min-h-0 flex-col gap-3 p-3">
-              <section className={`rounded-[24px] border ${activeDailyCard.tone} px-4 py-4`}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="rounded-full border border-white/80 bg-white/75 px-2.5 py-1 text-[11px] font-semibold">
-                    {activeDailyCard.label}
-                  </span>
-                  <span className="text-[11px] opacity-70">{activeDailyCard.meta}</span>
-                </div>
-                <h3 className="mt-3 text-[17px] font-semibold leading-7 text-slate-950">{activeDailyCard.title}</h3>
-                <p className="mt-2 text-[13px] leading-7 text-slate-700">{activeDailyCard.summary}</p>
-                {dailyReportItems.length > 0 ? (
-                  <div className="mt-4 grid gap-2">
-                    {dailyReportItems.map((item) => (
-                      <a
-                        key={`daily-report-item-${item.key}`}
-                        href={item.href}
-                        className="group rounded-[18px] border border-white/80 bg-white/72 px-3 py-3 transition hover:border-white hover:bg-white/92 hover:shadow-[0_10px_22px_rgba(15,23,42,0.06)]"
-                      >
-                        <p className="text-[11px] leading-5 text-slate-400">{item.meta}</p>
-                        <h4 className="mt-1 flex items-start gap-2 text-[13px] font-semibold leading-6 text-slate-950">
-                          <span className="min-w-0 flex-1">{item.title}</span>
-                          <ArrowRight className="mt-1 h-3.5 w-3.5 shrink-0 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-70" />
-                        </h4>
-                        <p className="mt-1 line-clamp-2 text-[12px] leading-6 text-slate-600">{item.summary}</p>
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
-              </section>
-
-              <p className="rounded-[18px] border border-slate-200/80 bg-slate-50/70 px-3 py-2 text-[12px] leading-6 text-slate-500">
+              <p className="rounded-[18px] border border-[#d8e3dd] bg-[#f7fbf8] px-3 py-2 text-[12px] leading-6 text-slate-500">
                 {timelineScene === 'livebench'
                   ? `下方按到期和结算时间保留演绎题池，当前跟踪 ${currentQuestions.length} 道。`
-                  : `下方按发布时间保留${timelineViewLabel(timelineScene)}原始线索，信源分层只作为证据权重。`}
+                  : `下方按发布时间保留${timelineViewLabel(timelineScene)}原始流。`}
               </p>
 
               <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
@@ -2290,9 +2067,9 @@ export default function DashboardClient({
                               <a
                                 key={`livebench-timeline-${preview.question_id}`}
                                 href={worldHref(preview.href, scene)}
-                                className={`group relative block rounded-[28px] border bg-white/92 p-4 transition hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(15,23,42,0.07)] ${questionCardAccentClass(preview)}`}
+                                className={`group relative block rounded-[28px] border bg-white/92 p-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)] ${questionCardAccentClass(preview)}`}
                               >
-                                <span className="absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full bg-violet-400 shadow-[0_0_0_4px_rgba(139,92,246,0.14)]" />
+                                <span className="absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full bg-[#28d7ff] shadow-[0_0_12px_rgba(40,215,255,0.6)]" />
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className={`rounded-full border px-2.5 py-1 text-[11px] ${liveQuestionStatusTone(preview.status)}`}>
                                     {preview.settlement_status === 'pending_official' ? '待核票' : liveQuestionStatusLabel(preview.status)}
@@ -2332,9 +2109,9 @@ export default function DashboardClient({
                           <a
                             key={signal.id}
                             href={worldHref(signalDetailHref(signal.id), timelineScene)}
-                            className="group relative block rounded-[28px] border border-slate-200/80 bg-white/92 p-4 transition hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(15,23,42,0.07)]"
+                            className="group relative block rounded-[28px] border border-[#d4ded8] bg-white/92 p-4 transition duration-300 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)]"
                           >
-                            <span className="absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full bg-sky-400 shadow-[0_0_0_4px_rgba(56,189,248,0.14)]" />
+                            <span className={`absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full ${markerDotClass(signalDisplayLevel(signal))}`} />
                             <div className="flex flex-wrap items-center gap-2">
                               <span className={`rounded-full border px-2.5 py-1 text-[11px] ${severitySoftTone(signal.severity)}`}>
                                 {severityLabel(signal.severity)}
@@ -2364,14 +2141,14 @@ export default function DashboardClient({
                   <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-500">
                     {timelineScene === 'tech-ai' && !techAiTimelineState
                       ? '正在加载 AI 时间线。'
-                      : `当前还没有可展示的${timelineViewLabel(timelineScene)}信号。`}
+                      : `当前还没有可展示的${timelineViewLabel(timelineScene)}。`}
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
           ) : (
-          <Card id="arena-panel" className={`${shellCardClass()} xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
+          <Card id="arena-panel" className={`${shellCardClass()} xl:order-1 xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
             <CardHeader className="border-b border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,0.82))] py-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-1">

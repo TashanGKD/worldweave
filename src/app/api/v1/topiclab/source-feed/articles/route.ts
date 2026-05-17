@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { resolveRequestOrigin } from '@/lib/request-origin';
+import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
 import type { WorldEvidenceSignal, WorldScene } from '@/lib/world/types';
 
@@ -167,7 +168,8 @@ export async function GET(request: Request) {
       ...(dashboard.graph_signals || []),
       ...(dashboard.knowledge_signals || []),
     ]).sort((left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime());
-    const filteredSignals = signals.filter(
+    const sceneSignals = scene === 'global' ? signals : signals.filter((signal) => dashboardSignalMatchesScene(signal, scene));
+    const filteredSignals = sceneSignals.filter(
       (signal) => signalMatchesQuery(signal, query) && signalMatchesCategory(signal, category) && signalMatchesSource(signal, source),
     );
     const list = filteredSignals
@@ -177,10 +179,13 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         list,
+        articles: list,
+        items: list,
         limit,
         offset,
         page,
         page_size: limit,
+        count: list.length,
         total: filteredSignals.length,
         has_more: offset + list.length < filteredSignals.length,
         filters: {

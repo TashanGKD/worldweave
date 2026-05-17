@@ -9,6 +9,7 @@ import {
   isRenderableDashboardState,
   isWorldRuntimeHeavyRefreshEnabled,
 } from '@/lib/world/runtime';
+import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
 import { isPublicEventSignal, isSourceSnapshotLikeSignal } from '@/lib/world/signal-quality';
 import type { WorldScene } from '@/lib/world/types';
 
@@ -63,6 +64,46 @@ function sanitizeCachedDashboardState(state: NonNullable<CachedDashboardState>) 
   };
 }
 
+function isAiHotLikeNode(node: unknown) {
+  const record = node && typeof node === 'object' ? (node as Record<string, unknown>) : {};
+  const text = [
+    record.source_name,
+    record.source_url,
+    record.title,
+    record.summary,
+    Array.isArray(record.tags) ? record.tags.join(' ') : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return /(aihot|ai hot|daily:ai|source:aihot)/i.test(text);
+}
+
+function filterCachedDashboardStateForScene(state: NonNullable<CachedDashboardState>, scene: WorldScene) {
+  if (scene === 'global') return state;
+  const graphSignals = (Array.isArray(state.graph_signals) ? state.graph_signals : []).filter((signal) =>
+    dashboardSignalMatchesScene(signal, scene),
+  );
+  const topSignals = (Array.isArray(state.top_signals) ? state.top_signals : []).filter((signal) =>
+    dashboardSignalMatchesScene(signal, scene),
+  );
+  const knowledgeSignals = (Array.isArray(state.knowledge_signals) ? state.knowledge_signals : []).filter((signal) =>
+    dashboardSignalMatchesScene(signal, scene),
+  );
+  const signalIds = new Set([...graphSignals, ...topSignals, ...knowledgeSignals].map((signal) => signal.id));
+  const nodes = (Array.isArray(state.nodes) ? state.nodes : []).filter((node) => {
+    if (scene === 'geo-politics-daily' && isAiHotLikeNode(node)) return false;
+    const nodeId = String((node as { node_id?: unknown }).node_id || '').replace(/:explore$/, '');
+    return signalIds.size === 0 || signalIds.has(nodeId);
+  });
+  return {
+    ...state,
+    nodes,
+    graph_signals: graphSignals,
+    top_signals: topSignals,
+    knowledge_signals: knowledgeSignals,
+  };
+}
+
 async function isDashboardStateCurrentWithSignals(state: CachedDashboardState): Promise<boolean> {
   if (!isDashboardStateFresh(state)) return false;
   const timestamp = new Date(state.generated_at).getTime();
@@ -79,8 +120,8 @@ function buildSkillEntry(origin: string | null) {
   return {
     mode: 'bound' as const,
     title: '信源 Skill',
-    description: '主口径是过去 30 天信源查询。模型可直接查信号、AI Hot 和信源流回答；LiveBench 先作为独立入口保留。',
-    copy_hint: '先接入主 skill；需要 AI Hot 时可直接调用 AI 场景信号接口，不必先走知识库。',
+    description: '可查询近 30 天信源、AI Hot 和主世界日报。',
+    copy_hint: '日常回答先读精选线索；需要深挖时再进入全部信源。',
     url: `${origin}/api/v1/openclaw/skill.md`,
   };
 }
@@ -105,7 +146,7 @@ function buildFallbackState(scene: WorldScene, requestOrigin: string | null) {
       stable_source_count: 0,
       watchlist_source_count: 0,
       blocked_or_unknown_source_count: 0,
-      note: '后台正在刷新世界看板，先返回可用入口。',
+      note: '世界看板正在更新，先返回可用入口。',
     },
     nodes: [],
     graph_signals: [],
@@ -114,7 +155,7 @@ function buildFallbackState(scene: WorldScene, requestOrigin: string | null) {
     skill_entry: buildSkillEntry(requestOrigin),
     world_view_summary: {
       title: '世界视图正在刷新',
-      summary: '地图与信号会在后台同步完成后补齐。',
+      summary: '地图与信号更新完成后会自动补齐。',
       updated_at: new Date().toISOString(),
     },
     pending_question_previews: [],
@@ -122,7 +163,7 @@ function buildFallbackState(scene: WorldScene, requestOrigin: string | null) {
     evaluation_summary: null,
     source_refresh_summary: null,
     livebench_summary: null,
-    what_to_do_next: ['主 skill 已可用，世界看板与信号会在后台继续刷新。'],
+    what_to_do_next: ['主 skill 已可用，世界看板与信号会继续更新。'],
     quick_links: buildSkillEntry(requestOrigin)?.url
       ? [
           {
@@ -156,7 +197,10 @@ export async function GET(request: Request) {
     const cachedStateCurrent =
       scene === 'tech-ai' ? await isDashboardStateCurrentWithSignals(cachedState) : isDashboardStateFresh(cachedState);
     if (!bypassCachedDashboard && !forceLive && !allowModelRefresh && cachedState && cachedStateRenderable) {
-      const responseState = cachedStatePolluted ? sanitizeCachedDashboardState(cachedState) : cachedState;
+      const responseState = filterCachedDashboardStateForScene(
+        cachedStatePolluted ? sanitizeCachedDashboardState(cachedState) : cachedState,
+        scene,
+      );
       return NextResponse.json(
         {
           ...responseState,

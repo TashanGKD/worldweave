@@ -2,29 +2,53 @@ import { NextResponse } from 'next/server';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { getWorldRepoDiscoverySnapshotSummary, getWorldSourceKnowledge } from '@/lib/world/runtime';
+import { getWorldSourceKnowledge } from '@/lib/world/runtime';
 import { readWorldApiSnapshot, writeWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { getWorldSourceMonitorDbStatus } from '@/lib/world/source-monitor-db';
-import type { WorldScene, WorldSourceKnowledgeState } from '@/lib/world/types';
+import { loadRuntimeCatalogSources } from '@/lib/world/source-catalog';
+import type { WorldScene, WorldSourceKnowledgeState, WorldSourceMonitorDbStatus } from '@/lib/world/types';
 
 const SOURCE_STATUS_FAST_TIMEOUT_MS = 2500;
 const SOURCE_STATUS_FRESH_TIMEOUT_MS = 45000;
 const SOURCE_STATUS_SNAPSHOT_MAX_AGE_MS = 90 * 60 * 1000;
 const SOURCE_STATUS_STALE_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SOURCE_LATEST_SIGNAL_STALE_HOURS = 48;
+const SOURCE_MONITOR_DB_STATUS_TIMEOUT_MS = 1200;
+
+function toPublicSourceStatus(state: WorldSourceKnowledgeState): WorldSourceKnowledgeState {
+  const { governance: _governance, source_refresh_summary: _sourceRefreshSummary, ...publicState } = state;
+  return publicState as WorldSourceKnowledgeState;
+}
 
 async function addSourceStatusExtras(state: WorldSourceKnowledgeState, sourceMonitorDb: Awaited<ReturnType<typeof getWorldSourceMonitorDbStatus>>) {
   return {
-    ...state,
-    source_refresh_summary: {
-      repo_discovery_snapshot: await getWorldRepoDiscoverySnapshotSummary(),
-    },
+    ...toPublicSourceStatus(state),
     source_monitor_db: sourceMonitorDb,
   };
 }
 
 function timeout<T>(ms: number, value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+}
+
+function sourceMonitorDbTimeoutStatus(): WorldSourceMonitorDbStatus {
+  return {
+    enabled: Boolean(process.env.WORLDWEAVE_DATABASE_URL || process.env.DATABASE_URL),
+    connected: null,
+    snapshot_table_ready: null,
+    latest_scene: null,
+    latest_snapshot_recorded_at: null,
+    latest_signal_published_at: null,
+    latest_signal_count: null,
+    error: 'source monitor database status timed out; serving source snapshot without blocking',
+  };
+}
+
+async function getFastSourceMonitorDbStatus(scene: WorldScene) {
+  return Promise.race([
+    getWorldSourceMonitorDbStatus(scene),
+    timeout<WorldSourceMonitorDbStatus>(SOURCE_MONITOR_DB_STATUS_TIMEOUT_MS, sourceMonitorDbTimeoutStatus()),
+  ]);
 }
 
 function isStateFresh(state: WorldSourceKnowledgeState | null, maxAgeMs: number) {
@@ -102,7 +126,8 @@ async function readFallbackSourceStatus(scene: WorldScene): Promise<WorldSourceK
       backendCounts.set(backend, (backendCounts.get(backend) || 0) + 1);
     }
     const primaryBackend = [...backendCounts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] || state.last_embedding_backend || null;
-    const direct = refresh.outputs?.connectivity_counts?.direct || 0;
+    const runtimeSourceCount = (await loadRuntimeCatalogSources().catch(() => [])).length;
+    const direct = runtimeSourceCount || refresh.outputs?.connectivity_counts?.direct || 0;
     const unstable = refresh.outputs?.connectivity_counts?.unstable || 0;
     const blocked = refresh.outputs?.connectivity_counts?.blocked_or_unknown || 0;
     const runtimeFailures = refresh.self_healing?.runtime_failure_count || 0;
@@ -169,7 +194,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const scene = (url.searchParams.get('scene') as WorldScene | null) || 'global';
-    const sourceMonitorDb = await getWorldSourceMonitorDbStatus(scene);
+    const sourceMonitorDb = await getFastSourceMonitorDbStatus(scene);
     const bypassSnapshot = url.searchParams.get('fresh') === '1' || request.headers.get('x-world-batch-refresh') === '1';
     let staleSnapshot: WorldSourceKnowledgeState | null = null;
     if (!bypassSnapshot) {

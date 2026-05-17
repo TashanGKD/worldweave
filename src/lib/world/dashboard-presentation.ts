@@ -377,7 +377,12 @@ export function techAiSignalRank(signal: DashboardSignalLike) {
 }
 
 export function dashboardSignalMatchesScene(signal: DashboardSignalLike, scene: WorldScene) {
-  if (scene === 'geo-politics-daily' || scene === 'global') {
+  if (scene === 'global') {
+    return true;
+  }
+  if (scene === 'geo-politics-daily') {
+    const sourceHaystack = `${signal.source_name} ${signal.source_url || ''} ${signal.tags.join(' ')} ${(signal.alignment_tags || []).join(' ')}`;
+    if (/(ai hot|aihot|source:aihot)/iu.test(sourceHaystack)) return false;
     const haystack = `${signal.scene} ${signal.title} ${signal.summary || ''} ${signal.tags.join(' ')}`;
     return !/(kim kardashian|celebrity|defamation|entertainment|local-news|quiz|reality show|mbappe|real madrid|football|soccer|sports|news brief|no specific event|location mention only|children driving incident|low significance administrative ban|名人|娱乐|诽谤|问答|测验|真人秀|足球|体育)/iu.test(haystack);
   }

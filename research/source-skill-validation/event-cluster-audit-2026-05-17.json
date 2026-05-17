@@ -1,0 +1,24 @@
+{
+  "generated_at": "2026-05-16T23:43:13.407Z",
+  "day_key": "2026-05-17",
+  "cache_path": ".cache/world-signal-cache-low-info-check.json",
+  "clusters": [
+    {
+      "id": "ic-article-de8b6584bc8b5873",
+      "title": "Anthropic 首超 OpenAI，Codex 手机端上线，Grok Build 贴脸开大 Claude Code！| AI Weekly 5.11-5.17",
+      "source_name": "AI信息Gap",
+      "scene": "technology",
+      "related_count": 1,
+      "source_count": 1,
+      "primary_source": "ai信息gap",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 AI信息Gap。",
+      "cluster_notes": "# Anthropic 首超 OpenAI，Codex 手机端上线，Grok Build 贴脸开大 Claude Code！| AI Weekly 5.11-5.17\n**作者：** AI信息Gap\n**时间：** 2026年5月17日 06:00\n\n### 本周 AI 快讯 | 1 分钟速览\n\n01 阿里「Qoder 1.0」发布，AI 编程升级为智能体自主开发工作台 ：Quest 独立视窗取代 IDE 内聊天，Agent 可跨项目并行执行并自动生成交付清单；Qoder 家族已有 6 款产品，全球用户超 500 万。\n\n02 月之暗面推出「Kimi WebBridge」，AI 携带登录态操作浏览器 ：Chrome/Edge 扩展全程本地运行，登录会话不传服务器；兼容 Claude Code、Cursor、Codex 等多种 Agent，K2.6 可协调 300 个并行子代理执行 4000 步。\n\n03 面壁智能开源「MiniCPM-V 4.6」端侧视觉模型，DeepSeek 专家模式限流 ：1.3B 参数搭配 Qwen3.5-0.8B 骨干，视觉编码计算减少 50% 以上，4GB 显存即可部署；DeepSeek 同周关闭专家模式文件上传，官方提示资源紧张。\n\n04 Anthropic 商业客户 34.4% 首超 OpenAI 的 32.3%，一周连发五项更新 ：Ramp 覆盖 5 万多家美国企业的消费数据，Claude Code 贡献全球 4% 的 GitHub 公开提交；同周推出中小企业 Claude、Agent View、Claude Platform on AWS 正式 GA。\n\n05 ChatGPT 开测「个人理财」，通过 Plaid 连接 12000 多家金融机构 ：5 月 15 日预览版上线，限美国 Pro 用户（新增 100 美元/月档位）；GPT-5.5 Thinking 驱动，内部金融评测得分 79/100，Pro 版 82.5 分。\n\n06 Codex 移动端上线，手机可远程审批和发起 AI 编程任务 ：5 月 15 日发布，所有计划含免费用户均可使用；Codex 周活已超 400 万，此前只能在桌面端操作，移动端补齐了最后一块短板。\n\n07 OpenAI 发布「Daybreak」安全项目，把漏洞扫描前置到开发阶段 ：5 月 12 日上线，面向企业客户；对标 Anthropic 的「Glasswing」方案，安全检查从上线前最后一关变成日常代码流程的一部分。\n\n08 谷歌推出「Googlebook」笔记本，Gemini「Spark」智能体泄露 ：Googlebook 首款为 Gemini 设计的笔记本，搭载「Magic Pointer」光标，联合五家 PC 厂商秋季上市；Spark 智能体可后台自主运行，I/O 2026 下周一开幕。\n",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:1",
+        "event:primary-source:ai信息gap"
+      ]
+    }
+  ]
+}

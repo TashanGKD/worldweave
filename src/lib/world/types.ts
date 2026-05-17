@@ -62,6 +62,7 @@ export interface WorldSignal {
   hotspotScore: number;
   explorationScore: number;
   coverageGap: number;
+  clusterNotes?: string;
 }
 
 export interface WorldEvidenceSignal {
@@ -90,6 +91,9 @@ export interface WorldEvidenceSignal {
   hotspot_score: number;
   exploration_score: number;
   coverage_gap: number;
+  intake_score?: number | null;
+  intake_decision?: string | null;
+  intake_tier?: string | null;
   source_reliability?: WorldSourceReliability;
 }
 
@@ -1102,8 +1106,8 @@ export interface WorldSourceKnowledgeState {
 
 export interface WorldSourceMonitorDbStatus {
   enabled: boolean;
-  connected: boolean;
-  snapshot_table_ready: boolean;
+  connected: boolean | null;
+  snapshot_table_ready: boolean | null;
   latest_scene: WorldScene | null;
   latest_snapshot_recorded_at: string | null;
   latest_signal_published_at: string | null;

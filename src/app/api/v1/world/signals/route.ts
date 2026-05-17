@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { resolveRequestOrigin } from '@/lib/request-origin';
+import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
 import type { WorldEvidenceSignal, WorldScene } from '@/lib/world/types';
 
@@ -60,7 +61,9 @@ export async function GET(request: Request) {
       ...(dashboard.top_signals || []),
       ...(dashboard.graph_signals || []),
       ...(dashboard.knowledge_signals || []),
-    ]).sort((left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime());
+    ])
+      .filter((signal) => scene === 'global' || dashboardSignalMatchesScene(signal, scene))
+      .sort((left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime());
 
     return NextResponse.json(
       {

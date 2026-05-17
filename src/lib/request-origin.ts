@@ -94,6 +94,15 @@ export function resolvePublicSkillUrl(input?: {
   fallbackOrigin?: string | null;
 }) {
   const requestOrigin = resolveRequestOrigin(input);
+  if (requestOrigin) {
+    try {
+      if (isLocalHostname(new URL(requestOrigin).hostname)) {
+        return buildOpenClawSkillUrl(requestOrigin);
+      }
+    } catch {
+      // Fall through to the configured public origin.
+    }
+  }
   const configuredOrigin = withRequestPortWhenLocal(resolveConfiguredPublicOrigin(), requestOrigin);
   if (configuredOrigin) return buildOpenClawSkillUrl(configuredOrigin);
 

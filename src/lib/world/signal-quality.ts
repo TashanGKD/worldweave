@@ -66,12 +66,20 @@ export function isLowInformationSourceRow(row: SourceQualityRow): boolean {
   const summary = normalizeText(row.description || '');
   const sourceName = normalizeText(row.source_name || '');
   const alignmentTags = (row.alignment_tags || []).map(normalizeTag);
+  const haystack = [title, summary, sourceName, ...(row.tags || []), ...(row.alignment_tags || [])].join(' ');
+  const visibleText = [title, summary].join(' ');
 
   if (alignmentTags.includes('model:low-information')) return true;
   if (!title && !summary) return true;
   if (/^(global feed|research feed|.+\s*feed|.+,\s*.+,\s*.+)$/i.test(title) && summary.length < 80) return true;
   if (/信源更新|结构化更新|世界新闻更新|Bundle Feed|Source Feed|Global Feed/i.test(title)) return true;
   if (/当前接口返回了结构化|当前接口样本摘要|当前样本前几项包括|本轮前几条标题|标题清单|行情快照仅作背景参考/i.test(summary)) {
+    return true;
+  }
+  if (
+    /Location in headline|Source country match|Local news source|High Goldstein intensity|^\d+\s+events? at location$/iu.test(haystack) &&
+    !/(attack|strike|missile|drone|outbreak|ceasefire|sanction|killed|death|deaths|evacuation|explosion|fire|clash|arrest|protest|爆炸|袭击|导弹|无人机|疫情|制裁|撤离|死亡|火灾|冲突|逮捕|抗议)/iu.test(visibleText)
+  ) {
     return true;
   }
   if (sourceName && title.toLowerCase() === sourceName.toLowerCase() && summary.length < 80) return true;
@@ -97,7 +105,7 @@ export function filterLowInformationSourceRows<Row extends SourceQualityRow>(
   const kept: Row[] = [];
   let dropped = 0;
   for (const row of rows) {
-    if (isSourceFeedLikeRow(row) && isLowInformationSourceRow(row)) {
+    if (isLowInformationSourceRow(row)) {
       dropped += 1;
       continue;
     }

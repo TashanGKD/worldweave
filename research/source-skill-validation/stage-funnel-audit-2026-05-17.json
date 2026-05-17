@@ -1,0 +1,67 @@
+{
+  "generated_at": "2026-05-16T23:43:13.348Z",
+  "day_key": "2026-05-17",
+  "log_path": ".cache/world-start-5022-low-info-check.out.log",
+  "cache_path": ".cache/world-signal-cache-low-info-check.json",
+  "all_funnels": [
+    {
+      "run": 1,
+      "loaded": 45,
+      "emitted": 172,
+      "kept": 46,
+      "publishable": 94,
+      "exactCollapsed": 0,
+      "eventClusters": 1,
+      "eventCollapsed": 1,
+      "sourceCollapsed": 76
+    },
+    {
+      "run": 2,
+      "loaded": 53,
+      "emitted": 167,
+      "kept": 54,
+      "publishable": 94,
+      "exactCollapsed": 0,
+      "eventClusters": 1,
+      "eventCollapsed": 1,
+      "sourceCollapsed": 72
+    }
+  ],
+  "latest_funnel": {
+    "run": 2,
+    "loaded": 53,
+    "emitted": 167,
+    "kept": 54,
+    "publishable": 94,
+    "exactCollapsed": 0,
+    "eventClusters": 1,
+    "eventCollapsed": 1,
+    "sourceCollapsed": 72
+  },
+  "cache_summary": {
+    "total_signals": 53,
+    "by_scene": {
+      "technology": 40,
+      "global": 2,
+      "finance": 11
+    },
+    "by_source_group": {
+      "rss-api-pool": 53
+    },
+    "clustered_count": 1,
+    "max_related_count": 1,
+    "cluster_samples": [
+      {
+        "title": "Anthropic 首超 OpenAI，Codex 手机端上线，Grok Build 贴脸开大 Claude Code！| AI Weekly 5.11-5.17",
+        "source_name": "AI信息Gap",
+        "scene": "technology",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:1",
+          "event:source-count:1",
+          "event:primary-source:ai信息gap"
+        ]
+      }
+    ]
+  }
+}
