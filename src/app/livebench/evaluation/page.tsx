@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import Link from 'next/link';
 
-import { cleanPresentationText, formatBrierScore, formatPercent, formatTime, officialOutcomeLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, worldHref } from '@/components/world-ui';
+import { cleanPresentationText, formatBrierScore, formatPercent, formatTime, officialOutcomeLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, worldHomeHref, worldHref } from '@/components/world-ui';
 import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { resolveRequestOrigin } from '@/lib/request-origin';
 import type { LiveBenchEvaluation, WorldScene } from '@/lib/world/types';
@@ -98,7 +98,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
     return (
       <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-5">
-          <Link href={worldHref('/#arena-panel', scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
+          <Link href={worldHomeHref(scene, '#arena-panel')} className="text-sm text-slate-500 transition hover:text-slate-900">
             返回首页
           </Link>
           <section className={shellCardClass()}>
@@ -133,7 +133,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
       <div className="mx-auto flex max-w-6xl flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <Link href={worldHref('/#arena-panel', scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
+            <Link href={worldHomeHref(scene, '#arena-panel')} className="text-sm text-slate-500 transition hover:text-slate-900">
               返回首页
             </Link>
           </div>

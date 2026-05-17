@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { compactText, formatTime, sceneDisplayLabel, shellCardClass, worldHref } from '@/components/world-ui';
+import { compactText, formatTime, sceneDisplayLabel, shellCardClass, worldHomeHref } from '@/components/world-ui';
 import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { getWorldSourceKnowledge } from '@/lib/world/runtime';
 import { loadRuntimeCatalogSources, type RuntimeCatalogSource } from '@/lib/world/source-catalog';
@@ -105,7 +105,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
       <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
         <div className="mx-auto flex max-w-3xl flex-col gap-5">
           <div className="flex flex-wrap items-center gap-3">
-            <Link href={worldHref('/', scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
+            <Link href={worldHomeHref(scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
               返回首页
             </Link>
           </div>
@@ -130,7 +130,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
     <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
       <div className="mx-auto flex max-w-6xl flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link href={worldHref('/', scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
+          <Link href={worldHomeHref(scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
             返回首页
           </Link>
           <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">

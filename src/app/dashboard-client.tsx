@@ -208,9 +208,9 @@ type PageClientProps = {
 type TimelineView = 'geo-politics-daily' | 'tech-ai' | 'livebench';
 
 const DAILY_PAGE_HREFS: Record<TimelineView, string> = {
-  'geo-politics-daily': '/daily/geo',
-  'tech-ai': '/daily/ai',
-  livebench: '/daily/livebench',
+  'geo-politics-daily': './daily/geo',
+  'tech-ai': './daily/ai',
+  livebench: './daily/livebench',
 };
 
 function timelineViewLabel(view: TimelineView) {
@@ -238,6 +238,11 @@ function techAiTimeLabel(iso: string) {
 
 function dashboardCacheKey(scene: WorldScene) {
   return `${DASHBOARD_CACHE_PREFIX}:${scene}`;
+}
+
+function mountedHomeHref(href: string, scene: WorldScene = 'global') {
+  const normalized = worldHref(href, scene);
+  return normalized.startsWith('/') ? `.${normalized}` : normalized;
 }
 
 function normalizePrimaryScene(scene: WorldScene): WorldScene {
@@ -1609,9 +1614,9 @@ export default function DashboardClient({
       },
     ];
   }, [currentQuestions, geoDigestSignals, resolvedQuestions, techCurationSignals]);
-  const sourceKnowledgeHref = worldHref('/source-knowledge', scene);
-  const mainSkillHref = '/api/v1/openclaw/skill.md';
-  const aihotSkillHref = '/api/v1/openclaw/aihot.skill.md';
+  const sourceKnowledgeHref = mountedHomeHref('/source-knowledge', scene);
+  const mainSkillHref = './api/v1/openclaw/skill.md';
+  const aihotSkillHref = './api/v1/openclaw/aihot.skill.md';
   const skillEntry = useMemo(() => {
     const base = state?.skill_entry || {
       mode: 'bound' as const,
@@ -1627,8 +1632,11 @@ export default function DashboardClient({
       copy_hint: '日常回答优先用当前精选线索；需要深挖时再进入全部信源。',
     };
   }, [state?.skill_entry]);
-  const skillEntryHref = skillEntry?.url || mainSkillHref;
-  const skillEntryDisplayUrl = skillEntryHref;
+  const skillEntryHref = mainSkillHref;
+  const [skillEntryDisplayUrl, setSkillEntryDisplayUrl] = useState(mainSkillHref);
+  useEffect(() => {
+    setSkillEntryDisplayUrl(new URL(mainSkillHref, window.location.href).toString());
+  }, [mainSkillHref]);
   const handleCopySkillEntry = async () => {
     if (!skillEntry?.url) return;
     const copied = await copyTextWithFallback(skillEntryDisplayUrl);
@@ -2066,7 +2074,7 @@ export default function DashboardClient({
                             return (
                               <a
                                 key={`livebench-timeline-${preview.question_id}`}
-                                href={worldHref(preview.href, scene)}
+                                href={mountedHomeHref(preview.href, scene)}
                                 className={`group relative block rounded-[28px] border bg-white/92 p-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)] ${questionCardAccentClass(preview)}`}
                               >
                                 <span className="absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full bg-[#28d7ff] shadow-[0_0_12px_rgba(40,215,255,0.6)]" />
@@ -2108,7 +2116,7 @@ export default function DashboardClient({
                         {group.items.map((signal) => (
                           <a
                             key={signal.id}
-                            href={worldHref(signalDetailHref(signal.id), timelineScene)}
+                            href={mountedHomeHref(signalDetailHref(signal.id), timelineScene)}
                             className="group relative block rounded-[28px] border border-[#d4ded8] bg-white/92 p-4 transition duration-300 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)]"
                           >
                             <span className={`absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full ${markerDotClass(signalDisplayLevel(signal))}`} />
@@ -2215,7 +2223,7 @@ export default function DashboardClient({
                   </div>
                 ) : questionList.length > 0 ? (
                   questionList.map((preview) => {
-                    const href = worldHref(preview.href, scene);
+                    const href = mountedHomeHref(preview.href, scene);
                     const aggregate = preview.aggregate_vote;
                     return (
                       <a

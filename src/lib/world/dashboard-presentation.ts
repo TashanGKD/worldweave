@@ -355,13 +355,22 @@ export function techAiRelevanceScore(signal: DashboardSignalLike) {
   if (/(war|conflict|missile|ceasefire|sanction|shipping|oil|gas|drug|device|medical|health|quantum computing|冲突|军事|制裁|航运|原油|天然气|药品|医疗|公共卫生|量子计算)/i.test(haystack)) {
     score -= 1.5;
   }
+  if (isLowValueTechAiProductUpdate(signal)) {
+    score -= 5;
+  }
 
   return score;
+}
+
+export function isLowValueTechAiProductUpdate(signal: DashboardSignalLike) {
+  const content = [signal.title, signal.summary || '', signal.display_title, signal.display_summary].join(' ');
+  return /处理大家的反馈|请继续反馈|反馈.*快捷键|快捷键.*(自定义|设置|配置)|keyboard shortcuts?.*(custom|setting|config)|custom.*keyboard shortcuts?|feedback.*keyboard/i.test(content);
 }
 
 export function isTrustedTechAiDashboardSignal(signal: DashboardSignalLike) {
   const content = [signal.title, signal.summary || '', signal.display_title, signal.display_summary].join(' ');
   if (/发送失败|违反相关法律法规|查看对应规则|内容无法显示|已被删除|不可见/u.test(content)) return false;
+  if (isLowValueTechAiProductUpdate(signal)) return false;
   return techAiRelevanceScore(signal) >= 3;
 }
 
@@ -387,6 +396,7 @@ export function dashboardSignalMatchesScene(signal: DashboardSignalLike, scene: 
     return !/(kim kardashian|celebrity|defamation|entertainment|local-news|quiz|reality show|mbappe|real madrid|football|soccer|sports|news brief|no specific event|location mention only|children driving incident|low significance administrative ban|名人|娱乐|诽谤|问答|测验|真人秀|足球|体育)/iu.test(haystack);
   }
   if (scene === 'tech-ai') {
+    if (isLowValueTechAiProductUpdate(signal)) return false;
     const haystack = [
       signal.scene,
       signal.title,
@@ -405,6 +415,7 @@ export function dashboardSignalMatchesScene(signal: DashboardSignalLike, scene: 
 
 export function dashboardNodeMatchesScene(node: WorldStateNode, scene: WorldScene) {
   if (scene === 'tech-ai') {
+    if (isLowValueTechAiProductUpdate(node as unknown as DashboardSignalLike)) return false;
     const haystack = `${node.scene} ${node.title} ${node.summary} ${node.display_title} ${node.display_summary} ${node.source_name} ${node.tags.join(' ')}`;
     return /\bai\b|llm|model|agent|openai|anthropic|claude|gemini|nvidia|人工智能|大模型|模型|智能体|英伟达/iu.test(haystack);
   }
@@ -450,6 +461,7 @@ function readableTagLabel(tag: string) {
   };
   if (labels[normalized]) return labels[normalized];
   if (/^feed:|^type:|^source:/.test(normalized)) return '';
+  if (/^(aihot-tier|intake|model-tag|source-skill):/.test(normalized)) return '';
   if (/^daily:|^category:|^aihot:category:/.test(normalized)) return '';
   if (/use conventional military force|physically assault|security personnel|suicide bomber/i.test(tag)) return '';
   if (/^[A-Z\s-]{4,}$/.test(tag)) return '';

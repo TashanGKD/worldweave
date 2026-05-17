@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { resolveRequestOrigin } from '@/lib/request-origin';
 import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
+import { sanitizePublicSignal, sanitizePublicTags } from '@/lib/world/signal-quality';
 import type { WorldEvidenceSignal, WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -33,20 +34,21 @@ async function readDashboard(scene: WorldScene, request: Request) {
 }
 
 function toSignalCard(signal: WorldEvidenceSignal) {
+  const publicSignal = sanitizePublicSignal(signal);
   return {
-    id: signal.id,
-    title: signal.display_title || signal.title,
-    summary: signal.summary || signal.display_summary || signal.urgency_reason || '',
-    scene: signal.scene,
-    display_level: signal.display_level,
-    severity: signal.severity,
-    region_label: signal.location_name || signal.region || signal.country || signal.scene,
-    published_at: signal.published_at,
-    updated_at: signal.published_at,
-    tags: signal.tags || [],
-    source_name: signal.source_name || null,
-    url: signal.source_url || null,
-    source_url: signal.source_url || null,
+    id: publicSignal.id,
+    title: publicSignal.display_title || publicSignal.title,
+    summary: publicSignal.summary || publicSignal.display_summary || publicSignal.urgency_reason || '',
+    scene: publicSignal.scene,
+    display_level: publicSignal.display_level,
+    severity: publicSignal.severity,
+    region_label: publicSignal.location_name || publicSignal.region || publicSignal.country || publicSignal.scene,
+    published_at: publicSignal.published_at,
+    updated_at: publicSignal.published_at,
+    tags: sanitizePublicTags(publicSignal.tags),
+    source_name: publicSignal.source_name || null,
+    url: publicSignal.source_url || null,
+    source_url: publicSignal.source_url || null,
   };
 }
 

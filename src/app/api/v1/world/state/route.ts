@@ -10,7 +10,7 @@ import {
   isWorldRuntimeHeavyRefreshEnabled,
 } from '@/lib/world/runtime';
 import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
-import { isPublicEventSignal, isSourceSnapshotLikeSignal } from '@/lib/world/signal-quality';
+import { isPublicEventSignal, isSourceSnapshotLikeSignal, sanitizePublicSignal } from '@/lib/world/signal-quality';
 import type { WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -48,12 +48,13 @@ function hasSourceSnapshotPollution(state: CachedDashboardState): boolean {
 }
 
 function sanitizeCachedDashboardState(state: NonNullable<CachedDashboardState>) {
-  const graphSignals = (Array.isArray(state.graph_signals) ? state.graph_signals : []).filter(isPublicEventSignal).slice(0, 32);
-  const topSignals = (Array.isArray(state.top_signals) ? state.top_signals : []).filter(isPublicEventSignal).slice(0, 120);
-  const knowledgeSignals = (Array.isArray(state.knowledge_signals) ? state.knowledge_signals : []).filter(isPublicEventSignal).slice(0, 12);
+  const graphSignals = (Array.isArray(state.graph_signals) ? state.graph_signals : []).filter(isPublicEventSignal).map(sanitizePublicSignal).slice(0, 32);
+  const topSignals = (Array.isArray(state.top_signals) ? state.top_signals : []).filter(isPublicEventSignal).map(sanitizePublicSignal).slice(0, 120);
+  const knowledgeSignals = (Array.isArray(state.knowledge_signals) ? state.knowledge_signals : []).filter(isPublicEventSignal).map(sanitizePublicSignal).slice(0, 12);
   const eventIds = new Set([...graphSignals, ...topSignals, ...knowledgeSignals].map((signal) => signal.id));
   const nodes = (Array.isArray(state.nodes) ? state.nodes : [])
     .filter((node) => isPublicEventSignal(node) && (eventIds.size === 0 || eventIds.has(String(node.node_id || '').replace(/:explore$/, ''))))
+    .map(sanitizePublicSignal)
     .slice(0, 240);
   return {
     ...state,
@@ -79,22 +80,22 @@ function isAiHotLikeNode(node: unknown) {
 }
 
 function filterCachedDashboardStateForScene(state: NonNullable<CachedDashboardState>, scene: WorldScene) {
-  if (scene === 'global') return state;
+  if (scene === 'global') return sanitizeCachedDashboardState(state);
   const graphSignals = (Array.isArray(state.graph_signals) ? state.graph_signals : []).filter((signal) =>
     dashboardSignalMatchesScene(signal, scene),
-  );
+  ).map(sanitizePublicSignal);
   const topSignals = (Array.isArray(state.top_signals) ? state.top_signals : []).filter((signal) =>
     dashboardSignalMatchesScene(signal, scene),
-  );
+  ).map(sanitizePublicSignal);
   const knowledgeSignals = (Array.isArray(state.knowledge_signals) ? state.knowledge_signals : []).filter((signal) =>
     dashboardSignalMatchesScene(signal, scene),
-  );
+  ).map(sanitizePublicSignal);
   const signalIds = new Set([...graphSignals, ...topSignals, ...knowledgeSignals].map((signal) => signal.id));
   const nodes = (Array.isArray(state.nodes) ? state.nodes : []).filter((node) => {
     if (scene === 'geo-politics-daily' && isAiHotLikeNode(node)) return false;
     const nodeId = String((node as { node_id?: unknown }).node_id || '').replace(/:explore$/, '');
     return signalIds.size === 0 || signalIds.has(nodeId);
-  });
+  }).map(sanitizePublicSignal);
   return {
     ...state,
     nodes,
@@ -229,7 +230,7 @@ export async function GET(request: Request) {
         setTimeout(() => resolve(fallbackState), timeoutMs);
       }),
     ]);
-    return NextResponse.json(state, {
+    return NextResponse.json(filterCachedDashboardStateForScene(state as NonNullable<CachedDashboardState>, scene), {
       headers: {
         'Cache-Control': 'no-store, max-age=0',
       },
