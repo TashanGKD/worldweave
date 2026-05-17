@@ -16,6 +16,7 @@ async function main() {
   const failures = [];
 
   const skillRoute = await read('src/app/api/v1/openclaw/skill.md/route.ts');
+  const aihotSkillRoute = await read('src/app/api/v1/openclaw/aihot.skill.md/route.ts');
   const livebenchRedirect = await read('src/app/api/v1/openclaw/livebench.skill.md/route.ts');
   const sourcesRedirect = await read('src/app/api/v1/openclaw/sources.skill.md/route.ts');
   const evaluationRedirect = await read('src/app/api/v1/openclaw/evaluation.skill.md/route.ts');
@@ -27,7 +28,7 @@ async function main() {
   const questionsRoute = await read('src/app/api/v1/world/livebench/questions/route.ts');
   const questionDetailRoute = await read('src/app/api/v1/world/livebench/questions/[questionId]/route.ts');
   const signalsRoute = await read('src/app/api/v1/world/signals/route.ts');
-  const recallRoute = await read('src/app/api/v1/world/source-knowledge/recall/route.ts');
+  const sourceFeedRoute = await read('src/app/api/v1/topiclab/source-feed/articles/route.ts');
   const signalsPage = await read('src/app/signals/page.tsx');
 
   const requiredSections = [
@@ -56,7 +57,8 @@ async function main() {
     'probability_yes',
     '可选字段；如果不确定就不传',
     '/world/signals',
-    '/world/source-knowledge/recall',
+    '/topiclab/source-feed/articles',
+    'AI Hot Skill',
     'question_id=从题池取得的question_id',
     '/world/livebench/vote',
     'probability_yes',
@@ -113,22 +115,25 @@ async function main() {
   );
   ensure(signalsRoute, 'signals:', 'world signals API must expose a signals array', failures);
   ensure(signalsRoute, 'Cache-Control', 'world signals API must be no-store', failures);
-  ensure(recallRoute, 'query', 'source recall API must accept a query', failures);
-  ensure(recallRoute, 'recalled_count', 'source recall API must expose recalled_count', failures);
-  ensure(recallRoute, 'Cache-Control', 'source recall API must be no-store', failures);
+  ensure(sourceFeedRoute, 'q', 'source-feed API must accept a text query', failures);
+  ensure(sourceFeedRoute, 'source', 'source-feed API must accept source filtering', failures);
+  ensure(sourceFeedRoute, 'Cache-Control', 'source-feed API must be no-store', failures);
+  ensure(aihotSkillRoute, 'api/public/items?mode=selected', 'AI Hot skill must document the selected-items API', failures);
+  ensure(aihotSkillRoute, 'User-Agent', 'AI Hot skill must require a browser-like User-Agent for raw API calls', failures);
+  ensure(aihotSkillRoute, 'LiveBench', 'AI Hot skill must keep LiveBench as calibration loop', failures);
   ensure(signalsPage, "redirect('/source-knowledge')", 'legacy /signals page must redirect to source knowledge page', failures);
   ensure(judgmentsRoute, "export { GET, POST } from '../vote/route'", 'judgments alias must proxy to vote route', failures);
   ensure(votesRoute, "export { GET, POST } from '../vote/route'", 'votes alias must proxy to vote route', failures);
   ensure(
     hermesFormalVote,
-    '/api/v1/world/source-knowledge/recall',
-    'Hermes formal vote must call source recall before judging',
+    '/api/v1/topiclab/source-feed/articles',
+    'Hermes formal vote must call source-feed before judging',
     failures,
   );
   ensure(
     hermesFormalVote,
-    'source_recall_prerequisite_failed',
-    'Hermes formal vote must stop when source prerequisites fail',
+    'source_feed_prerequisite_failed',
+    'Hermes formal vote must stop when source-feed prerequisites fail',
     failures,
   );
   ensure(
@@ -140,7 +145,7 @@ async function main() {
   ensure(
     hermesFormalVote,
     'cited_signal_ids',
-    'Hermes formal vote must attach recalled source signal ids to votes',
+    'Hermes formal vote must attach source-feed signal ids to votes',
     failures,
   );
 
@@ -155,6 +160,7 @@ async function main() {
         ok: true,
         checked_files: [
           'src/app/api/v1/openclaw/skill.md/route.ts',
+          'src/app/api/v1/openclaw/aihot.skill.md/route.ts',
           'src/app/api/v1/openclaw/livebench.skill.md/route.ts',
           'src/app/api/v1/openclaw/sources.skill.md/route.ts',
           'src/app/api/v1/openclaw/evaluation.skill.md/route.ts',
@@ -164,7 +170,7 @@ async function main() {
           'src/app/api/v1/world/livebench/questions/route.ts',
           'src/app/api/v1/world/livebench/questions/[questionId]/route.ts',
           'src/app/api/v1/world/signals/route.ts',
-          'src/app/api/v1/world/source-knowledge/recall/route.ts',
+          'src/app/api/v1/topiclab/source-feed/articles/route.ts',
           'src/app/signals/page.tsx',
           'scripts/hermes-world-formal-vote.ps1',
           'src/lib/world/livebench.ts',

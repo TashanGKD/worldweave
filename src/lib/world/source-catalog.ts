@@ -106,6 +106,8 @@ const SOURCE_SKILL_BUNDLES_DIR = path.join(RESEARCH_ROOT, 'source-skill-bundles'
 const SKILLHUB_INDEX_FILE = path.join(RESEARCH_ROOT, 'skill-aggregator-index.md');
 const INKWELL_SNAPSHOT_FILE = path.join(RESEARCH_ROOT, 'inkwell-rss-snapshot.json');
 const CURATED_FEEDS_DIR = path.join(RESEARCH_ROOT, 'curated-feeds');
+const SOURCE_VALIDATION_DIR = path.join(RESEARCH_ROOT, 'source-skill-validation');
+const LATEST_DIRECTORY_CANDIDATES_FILE = path.join(SOURCE_VALIDATION_DIR, 'latest-directory-candidates.json');
 const SOURCE_CATALOG_CACHE_TTL_MS = 10 * 60 * 1000;
 
 const SOURCE_PLATFORM_ALIASES: Record<string, string> = {
@@ -124,6 +126,28 @@ const SOURCE_PLATFORM_ALIASES: Record<string, string> = {
 };
 
 let sourceCatalogCache: { expiresAt: number; value: WorldSourceCatalog | null } | null = null;
+let directAccessProbeCache: { expiresAt: number; value: Map<string, DirectAccessProbeRow> | null } | null = null;
+
+type DirectAccessProbeRow = {
+  url?: string;
+  name?: string;
+  collection?: string;
+  access?: string;
+  sample_kind?: string;
+};
+
+type DirectoryCandidatePayload = {
+  generated_at?: string;
+  candidates?: Array<{
+    collection?: string;
+    section?: string;
+    name?: string;
+    url?: string;
+    description?: string;
+    source_role?: string;
+    admission?: string;
+  }>;
+};
 
 export function clearSourceCatalogCache() {
   sourceCatalogCache = null;
@@ -134,6 +158,18 @@ function normalizeCatalogKey(value: string | null | undefined) {
     .normalize('NFKC')
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+function normalizeSourceUrl(value: string | null | undefined) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    parsed.hash = '';
+    return parsed.toString().toLowerCase();
+  } catch {
+    return raw.toLowerCase();
+  }
 }
 
 function textOrEmpty(value: string | null | undefined) {
@@ -179,6 +215,21 @@ function compareHubs(left: WorldSourceCatalogHub, right: WorldSourceCatalogHub) 
 
 function isStructuredSourceType(sourceType: string) {
   return ['api', 'api-json', 'webpage-json', 'rss', 'atom'].includes(sourceType);
+}
+
+function looksLikeFeedUrl(value: string) {
+  const url = value.toLowerCase();
+  return (
+    url.includes('/rss') ||
+    url.includes('rss.') ||
+    url.includes('feeds.') ||
+    url.includes('/feed') ||
+    url.includes('feed=') ||
+    url.includes('feedx.net') ||
+    url.endsWith('.rss') ||
+    url.endsWith('.xml') ||
+    url.includes('atom')
+  );
 }
 
 function isRuntimeRunnableSource(source: WorldSourceCatalogSource) {
@@ -290,10 +341,13 @@ function resolveRecommendedScene(rawSkill: SourceBundleSkill, sources: WorldSour
   if (/(outbreak|virus|disease|health|who|cdc|clinical|vaccine|biosecurity|medrxiv|biorxiv|hospital)/.test(haystack)) {
     return 'health';
   }
-  if (/(war|military|conflict|security|missile|border|defense|sanction|diplom|battlefield)/.test(haystack)) {
+  if (/(inkwell|programming|ai & ml|deepmind|latent space|last week in ai|software|developer|systems|hardware|cybersecurity|infosec)/.test(haystack)) {
+    return 'technology';
+  }
+  if (/(iran|middle east|middle-east|crisisgroup|jpost|ukraine|war|military|conflict|missile|border|defense|sanction|diplom|battlefield)/.test(haystack)) {
     return 'war';
   }
-  if (/(market|equity|stock|bond|bank|finance|earnings|sec|edgar|treasury|fred|world bank|nse|macro|fiscal|price|quote|trading|crypto)/.test(haystack)) {
+  if (/(market|equity|stock|bond|bank|finance|earnings|\bsec\b|edgar|treasury|fred|world bank|nse|macro|fiscal|price|quote|trading|crypto)/.test(haystack)) {
     return 'finance';
   }
   if (/(supply|shipping|logistics|factory|manufacturing|capacity|commodity|energy|oil|lng|refinery|pipeline)/.test(haystack)) {
@@ -320,6 +374,10 @@ function resolveAdmissionTier(rawSkill: SourceBundleSkill, sources: WorldSourceC
   const officialData = /(sec|edgar|treasury|fred|world bank|companyfacts|submissions|nse|alpha vantage|finnhub|twelvedata|fiscal data|api|openalex|crossref|semantic scholar|unpaywall|fda|uspto)/.test(
     haystack,
   );
+
+  if (textOrEmpty(rawSkill.source_platform) === 'GitHub directory candidates' && runnableSourceCount > 0) {
+    return 'context';
+  }
 
   if (weakSignal) {
     return 'weak_signal';
@@ -448,6 +506,90 @@ async function readOptionalJsonFile<T>(filePath: string): Promise<T | null> {
   }
 }
 
+async function resolveLatestDirectAccessProbeFile() {
+  try {
+    const entries = await fs.readdir(SOURCE_VALIDATION_DIR, { withFileTypes: true });
+    const files = entries
+      .filter((entry) => entry.isFile() && /^direct-access-probe-\d{4}-\d{2}-\d{2}\.json$/.test(entry.name))
+      .map((entry) => entry.name)
+      .sort((left, right) => right.localeCompare(left));
+    return files[0] ? path.join(SOURCE_VALIDATION_DIR, files[0]) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function loadDirectAccessProbeRows() {
+  const now = Date.now();
+  if (directAccessProbeCache && directAccessProbeCache.expiresAt > now) {
+    return directAccessProbeCache.value;
+  }
+  const filePath = await resolveLatestDirectAccessProbeFile();
+  if (!filePath) {
+    directAccessProbeCache = { expiresAt: now + SOURCE_CATALOG_CACHE_TTL_MS, value: null };
+    return null;
+  }
+  try {
+    const payload = await readJsonFile<{ results?: DirectAccessProbeRow[] }>(filePath);
+    const rows = new Map<string, DirectAccessProbeRow>();
+    for (const row of Array.isArray(payload.results) ? payload.results : []) {
+      const key = normalizeSourceUrl(row.url);
+      if (key) rows.set(key, row);
+    }
+    directAccessProbeCache = { expiresAt: now + SOURCE_CATALOG_CACHE_TTL_MS, value: rows };
+    return rows;
+  } catch (error) {
+    console.warn('loadDirectAccessProbeRows failed', error);
+    directAccessProbeCache = { expiresAt: now + SOURCE_CATALOG_CACHE_TTL_MS, value: null };
+    return null;
+  }
+}
+
+function isDirectAccessProbeAccepted(row: RuntimeCatalogSource, probeRows: Map<string, DirectAccessProbeRow> | null) {
+  if (!probeRows) return true;
+  const probe = probeRows.get(normalizeSourceUrl(row.url));
+  if (!probe) return false;
+  return isDirectAccessProbeRowAccepted(probe);
+}
+
+function isDirectAccessProbeRowAccepted(probe: DirectAccessProbeRow) {
+  const access = String(probe.access || '');
+  const sampleKind = String(probe.sample_kind || '');
+  return (
+    (access === 'direct_2xx' || access === 'redirect_3xx') &&
+    (sampleKind === 'rss' || sampleKind === 'atom' || sampleKind === 'json' || sampleKind === 'xml')
+  );
+}
+
+function probeSampleKindToSourceType(sampleKind: string) {
+  if (sampleKind === 'atom') return 'atom';
+  if (sampleKind === 'json') return 'api-json';
+  return 'rss';
+}
+
+function inferProbeRecommendedScene(row: DirectAccessProbeRow): WorldScene {
+  const haystack = [row.collection, row.name, row.url].map((value) => String(value || '').toLowerCase()).join(' ');
+  if (/(war|conflict|iran|middle.?east|ukraine|jpost|guardian|cnn|bbc|npr|aljazeera|nytimes|worldnews|world)/.test(haystack)) {
+    return 'war';
+  }
+  if (/(finance|market|stock|crypto|treasury|sec\b|fiscal|tushare|coingecko|coinbase|twelvedata|yahoo)/.test(haystack)) {
+    return 'finance';
+  }
+  if (/(health|bio|medical|fda|disease|clinical|scientificamerican|sciencedaily)/.test(haystack)) {
+    return 'health';
+  }
+  if (/(shipping|energy|climate|weather|disaster|earthquake|gdacs|noaa|spc)/.test(haystack)) {
+    return 'capacity';
+  }
+  if (/(ai|llm|openai|anthropic|claude|gemini|arxiv|openalex|unpaywall|machine.?learning|deepmind|nvidia|google ai|berkeley|jmlr)/.test(haystack)) {
+    return 'technology';
+  }
+  if (/(reddit|x\.com|twitter|bluesky|hacker news|forum|social)/.test(haystack)) {
+    return 'weak-signal';
+  }
+  return 'global';
+}
+
 function appendInkwellSnapshot(
   rawSkills: SourceBundleSkill[],
   rawSources: SourceBundleSource[],
@@ -531,6 +673,8 @@ async function appendCuratedFeedBundles(rawSkills: SourceBundleSkill[], rawSourc
     readCuratedFeedList('shunyanet-world-core.txt'),
     readCuratedFeedList('shunyanet-iran-watch.txt'),
   ]);
+  const worldCoreMainstream = worldCore.filter((url) => !/reddit\.com|bsky\.app/i.test(url));
+  const worldCoreWeakSignals = worldCore.filter((url) => /reddit\.com|bsky\.app/i.test(url));
 
   const nextSkills = [...rawSkills];
   const nextSources = [...rawSources];
@@ -540,11 +684,21 @@ async function appendCuratedFeedBundles(rawSkills: SourceBundleSkill[], rawSourc
       skillName: 'ShunyaNet Sentinel World Core Bundle',
       url: 'research/curated-feeds/shunyanet-world-core.txt',
       skillType: 'curated rss bundle / world core',
-      visibleSources: 'BBC/AP/NBC/NYT/CNN/GDACS/USGS/FEMA/FAA/Newswise + selected Reddit/Bluesky weak signals',
+      visibleSources: 'BBC/AP/NBC/NYT/CNN/Le Monde/GDACS/USGS/FEMA/FAA/Newswise',
       role: 'hotspot discovery / curated world rss bundle',
       integrationShape: 'direct-source',
       priority: 'p1',
-      sources: worldCore,
+      sources: worldCoreMainstream,
+    },
+    {
+      skillName: 'ShunyaNet Sentinel Weak Signal Bundle',
+      url: 'research/curated-feeds/shunyanet-world-core.txt',
+      skillType: 'curated rss bundle / weak signals',
+      visibleSources: 'selected Reddit/Bluesky feeds',
+      role: 'weak-signal watchlist kept out of the main runtime feed',
+      integrationShape: 'aggregator-layer',
+      priority: 'p2',
+      sources: worldCoreWeakSignals,
     },
     {
       skillName: 'ShunyaNet Sentinel Iran Watch Bundle',
@@ -580,12 +734,80 @@ async function appendCuratedFeedBundles(rawSkills: SourceBundleSkill[], rawSourc
         skill: bundle.skillName,
         source_name: `${bundle.skillName} Feed ${index + 1}`,
         url,
-        source_type: url.includes('/rss') || url.endsWith('.rss') || url.endsWith('.xml') || url.includes('atom')
-          ? 'rss'
-          : 'webpage',
+        source_type: looksLikeFeedUrl(url) ? 'rss' : 'webpage',
         connectivity: 'direct',
         note: `Curated from ${bundle.url} and maintained as a filtered ShunyaNet Sentinel derivative bundle.`,
       });
+    });
+  }
+
+  return {
+    rawSkills: nextSkills,
+    rawSources: nextSources,
+  };
+}
+
+async function appendDirectoryCandidateSources(rawSkills: SourceBundleSkill[], rawSources: SourceBundleSource[]) {
+  const [payload, probeRows] = await Promise.all([
+    readOptionalJsonFile<DirectoryCandidatePayload>(LATEST_DIRECTORY_CANDIDATES_FILE),
+    loadDirectAccessProbeRows(),
+  ]);
+  if (!payload?.candidates?.length || !probeRows) {
+    return { rawSkills, rawSources };
+  }
+
+  const nextSkills = [...rawSkills];
+  const nextSources = [...rawSources];
+  const collectionSkillNames = new Map<string, string>();
+  const seen = new Set<string>();
+
+  for (const candidate of payload.candidates) {
+    const url = textOrEmpty(candidate.url);
+    if (!url) continue;
+    const probe = probeRows.get(normalizeSourceUrl(url));
+    if (!probe) continue;
+    const access = String(probe.access || '');
+    const sampleKind = String(probe.sample_kind || '');
+    if (access !== 'direct_2xx' && access !== 'redirect_3xx') continue;
+    if (sampleKind !== 'rss' && sampleKind !== 'atom' && sampleKind !== 'json' && sampleKind !== 'xml') continue;
+
+    const collection = textOrEmpty(candidate.collection) || 'directory-candidates';
+    const collectionKey = normalizeCatalogKey(collection);
+    const sourceKey = `${collectionKey}::${normalizeSourceUrl(url)}`;
+    if (seen.has(sourceKey)) continue;
+    seen.add(sourceKey);
+
+    let skillName = collectionSkillNames.get(collectionKey);
+    if (!skillName) {
+      skillName = `Directory usable sources: ${collection}`;
+      collectionSkillNames.set(collectionKey, skillName);
+      nextSkills.push({
+        name: skillName,
+        source_platform: 'GitHub directory candidates',
+        url: 'research/source-skill-validation/latest-directory-candidates.json',
+        skill_type: 'verified public RSS/API directory',
+        visible_sources: `${collection} direct-access structured candidates`,
+        validation_status: 'verified',
+        candidate_role_for_xia_report: 'broad usable source pool; core APIs remain primary and these sources supplement recall and long-tail coverage',
+        integration_shape: 'aggregator-layer',
+        priority_for_poc: collection === 'awesome-rss-feeds' ? 'p1' : 'p2',
+      });
+    }
+
+    nextSources.push({
+      skill: skillName,
+      source_name: textOrEmpty(candidate.name) || `${collection} source`,
+      url,
+      source_type: sampleKind === 'atom' ? 'atom' : sampleKind === 'json' ? 'api-json' : 'rss',
+      connectivity: 'direct',
+      note: [
+        textOrEmpty(candidate.section),
+        textOrEmpty(candidate.source_role),
+        textOrEmpty(candidate.description),
+        `direct probe sample_kind=${sampleKind}`,
+      ]
+        .filter(Boolean)
+        .join(' | '),
     });
   }
 
@@ -837,11 +1059,12 @@ export async function loadSourceCatalog(options?: { force?: boolean }) {
     ]);
     const mergedBundle = appendInkwellSnapshot(rawSkills, rawSources, inkwellSnapshot);
     const curatedBundle = await appendCuratedFeedBundles(mergedBundle.rawSkills, mergedBundle.rawSources);
+    const directoryBundle = await appendDirectoryCandidateSources(curatedBundle.rawSkills, curatedBundle.rawSources);
     const catalog = buildCatalog(
       path.basename(bundleDir),
       summary,
-      curatedBundle.rawSkills,
-      curatedBundle.rawSources,
+      directoryBundle.rawSkills,
+      directoryBundle.rawSources,
       parseSkillhubIndex(indexMarkdown),
     );
 
@@ -865,11 +1088,8 @@ export async function loadRuntimeCatalogSources(): Promise<RuntimeCatalogSource[
   if (!catalog) return [];
 
   const dedicatedSkills = new Set([
-    normalizeCatalogKey('inkwell-rss-reader'),
-    normalizeCatalogKey('open-skills-get-crypto-price'),
     normalizeCatalogKey('alpha-vantage'),
     normalizeCatalogKey('knowledgelm-nse'),
-    normalizeCatalogKey('U.S. Treasury Fiscal Data'),
   ]);
 
   const skills = [
@@ -877,14 +1097,19 @@ export async function loadRuntimeCatalogSources(): Promise<RuntimeCatalogSource[
     ...catalog.overflow_pools.flatMap((pool) => pool.source_skills || []),
   ];
   const dedupedSkills = Array.from(new Map(skills.map((skill) => [normalizeCatalogKey(skill.name), skill])).values());
+  const directAccessProbeRows = await loadDirectAccessProbeRows();
 
   const rows = dedupedSkills
     .filter((skill) => skill.admission_tier === 'anchor' || skill.admission_tier === 'context')
     .filter((skill) => !dedicatedSkills.has(normalizeCatalogKey(skill.name)))
-    .flatMap((skill) =>
-      skill.sources
+    .flatMap((skill) => {
+      const sourceLimit = skill.name.startsWith('Directory usable sources:')
+        ? 1000
+        : skill.integration_shape === 'aggregator-layer'
+          ? 32
+          : 48;
+      return skill.sources
         .filter(isRuntimeIngestibleSource)
-        .slice(0, skill.integration_shape === 'aggregator-layer' ? 8 : 12)
         .map<RuntimeCatalogSource>((source) => ({
           skill_name: skill.name,
           source_platform: skill.source_platform,
@@ -896,10 +1121,39 @@ export async function loadRuntimeCatalogSources(): Promise<RuntimeCatalogSource[
           source_type: source.source_type,
           connectivity: source.connectivity,
           note: source.note,
-        })),
-    );
+        }))
+        .filter((source) => isDirectAccessProbeAccepted(source, directAccessProbeRows))
+        .slice(0, sourceLimit);
+    });
 
-  return Array.from(
-    new Map(rows.map((row) => [`${normalizeCatalogKey(row.skill_name)}::${normalizeCatalogKey(row.source_name)}::${row.url}`, row])).values(),
+  const probeBackfillRows: RuntimeCatalogSource[] = directAccessProbeRows
+    ? Array.from(directAccessProbeRows.values())
+        .filter(isDirectAccessProbeRowAccepted)
+        .map((row) => {
+          const collection = textOrEmpty(row.collection) || 'direct-access-probe';
+          return {
+            skill_name: `Direct verified source pool: ${collection}`,
+            source_platform: 'Direct access probe',
+            admission_tier: 'context',
+            recommended_scene: inferProbeRecommendedScene(row),
+            integration_shape: 'aggregator-layer',
+            source_name: textOrEmpty(row.name) || `${collection} source`,
+            url: textOrEmpty(row.url),
+            source_type: probeSampleKindToSourceType(String(row.sample_kind || '')),
+            connectivity: 'direct',
+            note: `Backfilled from latest direct-access probe; sample_kind=${row.sample_kind || 'unknown'}.`,
+          } satisfies RuntimeCatalogSource;
+        })
+        .filter((row) => row.url)
+    : [];
+
+  const dedupedRows = Array.from(
+    new Map(
+      [...rows, ...probeBackfillRows].map((row) => [
+        normalizeSourceUrl(row.url) || `${normalizeCatalogKey(row.skill_name)}::${normalizeCatalogKey(row.source_name)}`,
+        row,
+      ]),
+    ).values(),
   );
+  return dedupedRows;
 }

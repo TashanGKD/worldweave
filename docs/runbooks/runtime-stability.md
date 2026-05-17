@@ -17,8 +17,11 @@ What they cover:
 
 - homepage responds
 - `world/market-snapshot` responds
+- `world/state?scene=tech-ai` responds and has current AI signals
 - MiniMax responds through the Anthropic-compatible endpoint
 - MiniMax base URL is the expected one
+- main OpenClaw Skill and AI Hot Skill routes are present
+- source-monitor database connection is healthy when configured
 - root-level directory layout stays within the agreed boundary
 
 Also check the live runtime health fields after deploy:
@@ -26,6 +29,7 @@ Also check the live runtime health fields after deploy:
 ```bash
 curl --noproxy '*' http://127.0.0.1:5000/api/v1/world/livebench/evaluation?scene=global
 curl --noproxy '*' http://127.0.0.1:5000/api/v1/world/source-knowledge/status?scene=global
+curl --noproxy '*' http://127.0.0.1:5000/api/v1/world/source-knowledge/status?scene=tech-ai
 ```
 
 The LiveBench `source_health` payload should show enough open questions for the current window, and `source_knowledge.source_health.freshness_status` should not stay `stale` after the refresh daemon has completed. If `METACULUS_API_TOKEN` is missing, LiveBench remains usable but should be treated as degraded because Metaculus is not contributing to the question pool.
@@ -87,8 +91,9 @@ Use workload budgets instead of raising heap as the first response to OOM:
 
 ```bash
 WORLD_SOURCE_REFRESH_INTERVAL_MINUTES=60
-WORLD_CATALOG_SOURCE_FETCH_CONCURRENCY=6
-WORLD_CATALOG_SOURCE_REFRESH_BATCH_SIZE=120
+WORLD_CATALOG_SOURCE_FETCH_CONCURRENCY=3
+WORLD_CATALOG_SOURCE_REFRESH_BATCH_SIZE=40
+WORLD_CATALOG_SOURCE_MAX_RESPONSE_BYTES=524288
 WORLD_TRANSLATION_BATCH_SIZE=2
 WORLD_TRANSLATION_PRIME_LIMIT=8
 WORLD_VISIBLE_TRANSLATION_BATCH_SIZE=12
@@ -99,9 +104,9 @@ WORLD_SOURCE_KNOWLEDGE_EMBED_BATCH_SIZE=3
 WORLD_SOURCE_KNOWLEDGE_EMBED_MAX_PENDING=60
 ```
 
-These settings make each refresh cycle bounded. Catalog sources rotate through batches, and source-knowledge embeddings defer excess new signals to later cycles instead of processing every pending signal at once.
+These settings make each refresh cycle bounded. Catalog sources rotate through smaller batches, source-knowledge embeddings defer excess new signals to later cycles instead of processing every pending signal at once, and the refresh warm-up does not call `/api/v1/world/state?batch=1`; state rendering should read snapshots rather than trigger a second heavy parse pass.
 
-When `WORLDWEAVE_DATABASE_URL` is set, WorldWeave also writes source monitoring data to Postgres. `DATABASE_URL` remains a compatibility fallback for standalone WorldWeave deployments, but TopicLab deployments should use `WORLDWEAVE_DATABASE_URL` so the TopicLab backend database is not changed:
+When `WORLDWEAVE_DATABASE_URL` is set, WorldWeave also writes source monitoring data to Postgres. `DATABASE_URL` remains a compatibility fallback for standalone WorldWeave deployments, but TopicLab deployments should use `WORLDWEAVE_DATABASE_URL` so the TopicLab backend database is not changed. The refresh daemon writes both the `global` and `tech-ai` source-knowledge sync snapshots, so AI source health can be checked independently from the main world timeline:
 
 - `world_source_refresh_runs`: one row per daemon iteration, including `ok`, `running`, `finished_at`, `duration_ms`, and latest signal freshness fields when available.
 - `world_source_monitor_snapshots`: one row per successful source-knowledge sync, including signal counts, latest signal time, freshness status, source health counts, and the full JSON payload.
@@ -149,3 +154,24 @@ https://api.scnet.cn/api/llm/v1
 If a different model base URL leaks into the process, requests may silently hit the wrong provider.
 
 The current runtime code protects against this by using fixed MiniMax-compatible defaults and only treating `MINIMAX_*` / `ANTHROPIC_*` as explicit overrides. `pnpm health:world` should still be run after any deploy or environment change.
+
+`pnpm health:world` separates app health from remote model availability. A MiniMax `rate_limited` or upstream transient response is reported as `degraded` so operators can see that translation/label refresh is temporarily delayed, while the public web process can still serve cached signals. Missing keys or persistent non-degraded failures still need operator action before a full refresh window.
+
+For source display regressions, run:
+
+```bash
+pnpm smoke:world-runtime
+WORLD_SMOKE_SCENE=tech-ai pnpm smoke:world-runtime
+WORLD_SMOKE_SCENE=geo-politics-daily pnpm smoke:world-runtime
+pnpm smoke:world-skill
+```
+
+The smoke check fails if low-information source snapshots such as `信源更新`, `结构化更新`, `Bundle Feed`, or model-marked `lowInformation` entries leak into the top signal pool.
+
+Hard-coded sample world signals are disabled by default. If every live source fails and no disk cache exists, the API returns an empty signal set rather than showing synthetic sample events. Local demos can opt in with:
+
+```bash
+WORLD_ALLOW_SAMPLE_SIGNALS=1 pnpm dev
+```
+
+Do not enable `WORLD_ALLOW_SAMPLE_SIGNALS` in production or TopicLab deployments.

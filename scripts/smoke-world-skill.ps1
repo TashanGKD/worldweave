@@ -1,11 +1,23 @@
 param(
-  [string]$BaseUrl = 'http://192.168.3.124:5002',
+  [string]$BaseUrl = '',
   [string]$BindKey = 'world_threads_entry',
-  [string]$Scene = 'global',
-  [string]$XiaId = 'worldline-primary'
+  [string]$Scene = 'global'
 )
 
 $ErrorActionPreference = 'Stop'
+
+if (-not $BaseUrl) {
+  if ($env:WORLD_SKILL_SMOKE_BASE_URL) {
+    $BaseUrl = $env:WORLD_SKILL_SMOKE_BASE_URL
+  } elseif ($env:WORLD_BASE_URL) {
+    $BaseUrl = $env:WORLD_BASE_URL
+  } else {
+    $BaseUrl = 'http://127.0.0.1:5000'
+  }
+}
+
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$apiBase = "$BaseUrl/api/v1"
 
 function Step($message) {
   Write-Host ""
@@ -18,72 +30,67 @@ function Ensure($condition, $message) {
   }
 }
 
-$apiBase = "$BaseUrl/api/v1"
+function Read-Text($path) {
+  $response = Invoke-WebRequest -Uri "$apiBase$path" -UseBasicParsing -TimeoutSec 30
+  Ensure ($response.StatusCode -ge 200 -and $response.StatusCode -lt 300) "$path returned $($response.StatusCode)"
+  return $response.Content
+}
 
-Step "1. Read skill"
-$skill = & curl.exe -fsS "$apiBase/openclaw/skill.md?key=$BindKey"
-Ensure ($LASTEXITCODE -eq 0) "skill.md request failed"
-Ensure ($skill -match 'name: world-threads') "skill.md content did not match expected marker"
-Write-Host "skill.md OK"
+Step "1. Skill markdown"
+$mainSkill = Read-Text "/openclaw/skill.md?key=$BindKey"
+$aiHotSkill = Read-Text '/openclaw/aihot.skill.md'
+$liveBenchSkill = Read-Text '/openclaw/livebench.skill.md'
+Ensure ($mainSkill -match 'name: world-threads') 'main skill marker missing'
+Ensure ($mainSkill -match 'title:') 'main skill title missing'
+Ensure ($aiHotSkill -match 'AI Hot') 'AI Hot skill marker missing'
+Ensure ($liveBenchSkill -match 'LiveBench') 'LiveBench skill marker missing'
+Write-Host "skills OK"
 
-Step "2. Bootstrap"
-$bootstrap = Invoke-RestMethod -Uri "$apiBase/openclaw/bootstrap?key=$BindKey"
-Ensure ($bootstrap.access_token) "bootstrap did not return access_token"
-Write-Host ("bind_key={0}" -f $bootstrap.bind_key)
+Step "2. World state"
+$state = Invoke-RestMethod -Uri "$apiBase/world/state?scene=$Scene&fresh=1" -TimeoutSec 30
+$nodeCount = @($state.nodes).Count
+$topSignalCount = @($state.top_signals).Count
+Ensure (($nodeCount + $topSignalCount) -gt 0) 'world state returned no visible signals'
+Write-Host ("nodes={0} top_signals={1}" -f $nodeCount, $topSignalCount)
 
-Step "3. Manifest / policy"
-$manifest = Invoke-RestMethod -Uri "$apiBase/openclaw/manifest"
-$policy = Invoke-RestMethod -Uri "$apiBase/openclaw/cli-policy-pack"
-Ensure ($manifest.commands.'world.report'.enabled) "world.report is not enabled in manifest"
-Ensure ($policy.world_defaults.role -eq 'world_reporter') "unexpected policy payload"
-Write-Host "manifest + policy OK"
+Step "3. AI source feed"
+$aiSignals = Invoke-RestMethod -Uri "$apiBase/world/signals?scene=tech-ai&limit=12" -TimeoutSec 30
+$aiSignalItems = if ($aiSignals.signals) { @($aiSignals.signals) } elseif ($aiSignals.list) { @($aiSignals.list) } else { @($aiSignals) }
+Ensure ($aiSignalItems.Count -gt 0) 'AI signals endpoint returned no items'
+$aiHotFeed = Invoke-RestMethod -Uri "$apiBase/topiclab/source-feed/articles?scene=tech-ai&source=aihot&limit=5" -TimeoutSec 30
+Ensure (@($aiHotFeed.list).Count -gt 0) 'AI Hot source-feed returned no items'
+Write-Host ("ai_signals={0} aihot_items={1}" -f $aiSignalItems.Count, @($aiHotFeed.list).Count)
 
-Step "4. World state"
-$state = Invoke-RestMethod -Uri "$apiBase/world/state?scene=$Scene"
-Ensure ($state.nodes.Count -gt 0) "world state returned no nodes"
-Write-Host ("nodes={0} reports={1}" -f $state.nodes.Count, $state.projection_reports.Count)
+Step "4. Source governance"
+$sourceStatus = Invoke-RestMethod -Uri "$apiBase/world/source-knowledge/status?scene=global" -TimeoutSec 30
+Ensure ($sourceStatus.signal_count -gt 0) 'source status has no signal_count'
+Ensure ($sourceStatus.source_health.stable_source_count -gt 0) 'source health has no stable sources'
+$dbConfigured = [bool]($env:WORLDWEAVE_DATABASE_URL -or $env:DATABASE_URL)
+if ($dbConfigured) {
+  Ensure ($sourceStatus.source_monitor_db.connected -eq $true) 'source monitor database is configured but not connected'
+}
+Write-Host ("signals={0} stable_sources={1} db_connected={2}" -f $sourceStatus.signal_count, $sourceStatus.source_health.stable_source_count, $sourceStatus.source_monitor_db.connected)
 
-Step "5. Briefing"
-$briefing = Invoke-RestMethod -Uri "$apiBase/world/briefing?scene=$Scene&xia_id=$XiaId"
-Ensure ($briefing.mission_id) "briefing did not return mission_id"
-Ensure ($briefing.evidence_signals.Count -gt 0) "briefing has no evidence_signals"
-Write-Host ("mission_id={0}" -f $briefing.mission_id)
-
-Step "6. Dispatch"
-$dispatchBody = @{
-  scene = $Scene
-  xia_id = $XiaId
-  mission_id = $briefing.mission_id
-  briefing = $briefing
-} | ConvertTo-Json -Depth 20
-$dispatch = Invoke-RestMethod -Uri "$apiBase/world/dispatch" -Method Post -ContentType 'application/json' -Body $dispatchBody
-Ensure ($dispatch.ok -eq $true) "dispatch did not return ok=true"
-Ensure ($dispatch.briefing.mission_id) "dispatch did not return briefing.mission_id"
-Write-Host ("dispatch_mission_id={0}" -f $dispatch.briefing.mission_id)
-
-Step "7. Report"
-$reportBody = @{
-  scene = $Scene
-  xia_id = $XiaId
-  mission_id = $dispatch.briefing.mission_id
-  briefing = $dispatch.briefing
-} | ConvertTo-Json -Depth 20
-$report = Invoke-RestMethod -Uri "$apiBase/world/report" -Method Post -ContentType 'application/json' -Body $reportBody
-Ensure ($report.mission_id) "report did not return mission_id"
-Ensure ($report.signal_id) "report did not return signal_id"
-Ensure ($report.summary) "report did not return summary"
-Write-Host ("report_mission_id={0}" -f $report.mission_id)
-Write-Host ("summary={0}" -f $report.summary)
+Step "5. LiveBench read-only flow"
+$questions = Invoke-RestMethod -Uri "$apiBase/world/livebench/questions?scene=global&limit=8&audience=xia" -TimeoutSec 30
+$questionItems = @($questions)
+Ensure ($questionItems.Count -gt 0) 'LiveBench questions returned no items'
+$questionId = [uri]::EscapeDataString($questionItems[0].question_id)
+$detail = Invoke-RestMethod -Uri "$apiBase/world/livebench/questions/$questionId`?scene=global&audience=xia" -TimeoutSec 30
+Ensure ($detail.preview.question_id) 'LiveBench detail missing preview'
+Write-Host ("questions={0} detail={1}" -f $questionItems.Count, $detail.preview.question_id)
 
 Step "Done"
 [pscustomobject]@{
+  base_url = $BaseUrl
   skill = 'ok'
-  bootstrap = 'ok'
-  manifest = 'ok'
-  policy = 'ok'
-  state_nodes = $state.nodes.Count
-  briefing_mission_id = $briefing.mission_id
-  dispatch_mission_id = $dispatch.briefing.mission_id
-  report_mission_id = $report.mission_id
-  report_signal_id = $report.signal_id
+  state_nodes = $nodeCount
+  state_top_signals = $topSignalCount
+  ai_signals = $aiSignalItems.Count
+  aihot_items = @($aiHotFeed.list).Count
+  source_signals = $sourceStatus.signal_count
+  stable_sources = $sourceStatus.source_health.stable_source_count
+  source_monitor_db_connected = $sourceStatus.source_monitor_db.connected
+  livebench_questions = $questionItems.Count
+  livebench_detail = $detail.preview.question_id
 } | Format-List

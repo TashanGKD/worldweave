@@ -65,6 +65,8 @@ import {
 import { persistWorldSourceMonitorSnapshot } from './source-monitor-db';
 import { getWorldSourceKnowledgeState, syncWorldSourceKnowledgeState } from './source-knowledge';
 import { clearSourceCatalogCache, loadRuntimeCatalogSources, loadSourceCatalog } from './source-catalog';
+import { buildSignalNormalizationPromptPrefix, sanitizeSignalNormalization, type SignalNormalization } from './signal-normalization';
+import { filterLowInformationSourceRows, isSourceSnapshotLikeSignal } from './signal-quality';
 import type { RuntimeCatalogSource } from './source-catalog';
 
 type SignalRow = {
@@ -93,14 +95,15 @@ type SignalRow = {
   content_md?: string | null;
 };
 
+type EventClusterResult = {
+  rows: SignalRow[];
+  clusterCount: number;
+  collapsedCount: number;
+};
+
 type RawWorldMonitorItem = Record<string, unknown>;
 
-type SignalAlignment = {
-  severity?: number;
-  relevanceScore?: number;
-  tags?: string[];
-  reason?: string;
-};
+type SignalAlignment = SignalNormalization;
 
 type ExternalFetchHealth = {
   failCount: number;
@@ -601,58 +604,6 @@ async function requestMiniMaxChatCompletion({
   return null;
 }
 
-type MiniMaxGraphBackfillResponse = {
-  report_id?: string;
-  thread_parent_report_id?: string | null;
-  thread_relation?: WorldThreadRelation | null;
-  validation_target_report_ids?: string[] | null;
-  projection_links?: WorldProjectionLink[] | null;
-};
-
-function sanitizeThreadRelation(value: string | null | undefined): WorldThreadRelation | null {
-  if (value === 'continue' || value === 'upgrade' || value === 'downgrade' || value === 'branch' || value === 'revise' || value === 'echo') {
-    return value;
-  }
-  return null;
-}
-
-function sanitizeProjectionLinks(
-  value: WorldProjectionLink[] | Array<{ projection_index?: number; fact_indices?: number[]; invalidator_indices?: number[] }> | null | undefined,
-  report: WorldReport,
-): WorldProjectionLink[] | null {
-  if (!Array.isArray(value) || value.length === 0) {
-    return null;
-  }
-
-  const links = value
-    .map((item) => {
-      const projectionIndex = typeof item?.projection_index === 'number' ? Math.floor(item.projection_index) : -1;
-      if (projectionIndex < 0 || projectionIndex >= report.projection.length) {
-        return null;
-      }
-
-      const factIndices = Array.isArray(item.fact_indices)
-        ? [...new Set(item.fact_indices.map((index) => Math.floor(index)).filter((index) => index >= 0 && index < report.facts.length))]
-        : [];
-      const invalidatorIndices = Array.isArray(item.invalidator_indices)
-        ? [...new Set(item.invalidator_indices.map((index) => Math.floor(index)).filter((index) => index >= 0 && index < report.invalidators.length))]
-        : [];
-
-      if (factIndices.length === 0 && invalidatorIndices.length === 0) {
-        return null;
-      }
-
-      return {
-        projection_index: projectionIndex,
-        fact_indices: factIndices,
-        invalidator_indices: invalidatorIndices.length > 0 ? invalidatorIndices : undefined,
-      } satisfies WorldProjectionLink;
-    })
-    .filter((item) => item !== null);
-
-  return links.length > 0 ? links : null;
-}
-
 function buildDraftProjection(
   draft: ReportDraftInput,
   fallback: WorldProjection[],
@@ -903,16 +854,16 @@ const MINIMAX_BASE_URL = resolveMiniMaxBaseUrl();
 const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-M2.5';
 const TRANSLATION_BATCH_SIZE = resolveRuntimeInteger('WORLD_TRANSLATION_BATCH_SIZE', 2, 1, 8);
 const VISIBLE_TRANSLATION_BATCH_SIZE = resolveRuntimeInteger('WORLD_VISIBLE_TRANSLATION_BATCH_SIZE', 12, 1, 48);
-const TRANSLATION_PRIME_LIMIT = resolveRuntimeInteger('WORLD_TRANSLATION_PRIME_LIMIT', 8, 0, 48);
-const ALIGNMENT_BATCH_SIZE = resolveRuntimeInteger('WORLD_ALIGNMENT_BATCH_SIZE', 2, 1, 8);
-const ALIGNMENT_PRIME_LIMIT = resolveRuntimeInteger('WORLD_ALIGNMENT_PRIME_LIMIT', 4, 0, 24);
+const TRANSLATION_PRIME_LIMIT = resolveRuntimeInteger('WORLD_TRANSLATION_PRIME_LIMIT', 16, 0, 48);
+const ALIGNMENT_BATCH_SIZE = resolveRuntimeInteger('WORLD_ALIGNMENT_BATCH_SIZE', 4, 1, 8);
+const ALIGNMENT_PRIME_LIMIT = resolveRuntimeInteger('WORLD_ALIGNMENT_PRIME_LIMIT', 24, 0, 48);
 const MINIMAX_RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
 const MINIMAX_DEFAULT_TIMEOUT_MS = 35000;
 const MINIMAX_DEFAULT_RETRY_LIMIT = 3;
-const MINIMAX_BACKFILL_RETRY_LIMIT = 4;
 const MINIMAX_DEFAULT_BACKOFF_MS = 1800;
-const MINIMAX_BACKFILL_BATCH_DELAY_MS = 2200;
-const WORLD_VIEW_LIMIT = 400;
+const WORLD_VIEW_LIMIT = 120;
+const GEO_POLITICS_VIEW_LIMIT = 120;
+const GEO_POLITICS_FEED_LIMIT = 96;
 const SIGNAL_CACHE_VERSION = 9;
 const TRANSLATION_CACHE_VERSION = 2;
 const DASHBOARD_SNAPSHOT_VERSION = 2;
@@ -924,15 +875,19 @@ const PUBLIC_ANCHOR_COOLDOWN_THRESHOLD = 2;
 const SELECTED_SOURCE_COOLDOWN_MS = 20 * 60 * 1000;
 const SELECTED_SOURCE_COOLDOWN_THRESHOLD = 2;
 const SOURCE_FEED_SOURCE_LIMIT = 3;
-const CATALOG_SOURCE_FETCH_CONCURRENCY = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_FETCH_CONCURRENCY', 6, 1, 64);
-const CATALOG_SOURCE_REFRESH_BATCH_SIZE = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_REFRESH_BATCH_SIZE', 120, 1, 1000);
-const CATALOG_SOURCE_MAX_RESPONSE_BYTES = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_MAX_RESPONSE_BYTES', 1024 * 1024, 64 * 1024, 8 * 1024 * 1024);
+const CATALOG_SOURCE_FETCH_CONCURRENCY = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_FETCH_CONCURRENCY', 2, 1, 64);
+const CATALOG_SOURCE_REFRESH_BATCH_SIZE = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_REFRESH_BATCH_SIZE', 48, 1, 1000);
+const CATALOG_SOURCE_MAX_RESPONSE_BYTES = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_MAX_RESPONSE_BYTES', 384 * 1024, 64 * 1024, 8 * 1024 * 1024);
 const SIGNALS_CACHE_TTL_MS = 5 * 60 * 1000;
 const MARKET_SNAPSHOT_CACHE_TTL_MS = 2 * 60 * 1000;
 const WEEKLY_PREDICTION_WINDOW_DAYS = 7;
 const TRANSLATION_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-translation-cache.json');
 const ALIGNMENT_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-alignment-cache.json');
-const SIGNAL_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-signal-cache.json');
+const SIGNAL_CACHE_FILE = path.join(
+  process.cwd(),
+  '.cache',
+  resolveRuntimeCacheFileName(process.env.WORLD_SIGNAL_CACHE_FILE, 'world-signal-cache.json'),
+);
 const CATALOG_SOURCE_CURSOR_FILE = path.join(process.cwd(), '.cache', 'world-catalog-source-cursor.json');
 const DASHBOARD_SNAPSHOT_FILE = path.join(process.cwd(), '.cache', 'world-dashboard-snapshot.json');
 const LATEST_WORLD_STATE_FILE = path.join(process.cwd(), '.cache', 'latest-world-state.json');
@@ -942,14 +897,18 @@ const API_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const SOURCE_KNOWLEDGE_SYNC_DASHBOARD_TIMEOUT_MS = 15000;
 const RUNTIME_HISTORY_FILE = path.join(process.cwd(), '.cache', 'world-runtime-history.json');
 const batchModelRefreshContext = new AsyncLocalStorage<boolean>();
-const GRAPH_METADATA_BACKFILL_LIMIT = 120;
-const GRAPH_METADATA_BATCH_SIZE = 3;
 const RESEARCH_ROOT = path.join(process.cwd(), 'research');
 
 function resolveRuntimeInteger(envKey: string, fallback: number, min: number, max: number): number {
   const raw = Number(process.env[envKey]);
   if (!Number.isFinite(raw)) return fallback;
   return Math.min(Math.max(Math.floor(raw), min), max);
+}
+
+function resolveRuntimeCacheFileName(raw: string | undefined, fallback: string): string {
+  const candidate = raw?.trim();
+  if (!candidate) return fallback;
+  return path.basename(candidate);
 }
 
 async function readRuntimeJson<T>(filePath: string): Promise<T | null> {
@@ -971,6 +930,10 @@ async function writeRuntimeJson(filePath: string, payload: unknown): Promise<voi
 
 export function isWorldRuntimeHeavyRefreshEnabled(): boolean {
   return process.env.WORLD_WEB_ENABLE_HEAVY_REFRESH === '1' || process.env.WORLD_ENABLE_HEAVY_REFRESH === '1';
+}
+
+function isSampleSignalFallbackEnabled(): boolean {
+  return process.env.WORLD_ALLOW_SAMPLE_SIGNALS === '1';
 }
 
 function isBatchModelRefreshAllowed(options?: { allowModelRefresh?: boolean }) {
@@ -1128,6 +1091,23 @@ function normalizeTag(tag: string | null | undefined): string {
     .trim()
     .toLowerCase()
     .replace(/[_\s]+/g, '-');
+}
+
+function extractTaggedString(tags: string[] | null | undefined, prefix: string): string | null {
+  const normalizedPrefix = normalizeTag(prefix);
+  const tag = (tags || []).map(normalizeTag).find((item) => item.startsWith(normalizedPrefix));
+  return tag ? tag.slice(normalizedPrefix.length) || null : null;
+}
+
+function extractTaggedNumber(tags: string[] | null | undefined, prefix: string): number | null {
+  const value = extractTaggedString(tags, prefix);
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function publicAlignmentTags(tags: string[] | null | undefined): string[] {
+  return (tags || []).filter((tag) => !normalizeTag(tag).startsWith('upstream:score:'));
 }
 
 const QUICK_PLACE_TRANSLATIONS: Record<string, string> = {
@@ -1406,10 +1386,11 @@ const SCENE_LABELS: Record<string, string> = {
   finance: '市场',
   health: '公共卫生',
   'weak-signal': '弱信号',
-  'geo-politics-daily': '国际时政',
-  'technology-daily': '科技',
+  'tech-ai': 'AI',
+  'geo-politics-daily': '地缘',
+  'technology-daily': 'AI',
   'ai-daily': 'AI',
-  global: '主世界',
+  global: '地缘',
 };
 
 const TOPIC_LABELS: Array<{ pattern: RegExp; label: string }> = [
@@ -1546,7 +1527,7 @@ function cleanDisplayText(value: string): string {
 }
 
 function sceneLabel(scene: WorldScene): string {
-  return SCENE_LABELS[normalizeTag(scene)] || scene || '主世界';
+  return SCENE_LABELS[normalizeTag(scene)] || scene || '地缘';
 }
 
 function buildTopicLabel(signal: Pick<WorldSignal, 'title' | 'summary' | 'tags' | 'scene'>): string {
@@ -1616,7 +1597,7 @@ function buildDisplayTitle(signal: DisplaySignalInput): string {
 function isGenericGeneratedDisplayText(value?: string | null): boolean {
   const text = cleanDisplayText(value || '');
   if (!text) return false;
-  return /出现新的.+信号|后续重点看|按普通监测处理|值得补充观察|目前热度较高，需继续跟踪/.test(text);
+  return /出现新的.+信号|主世界出现新信号|冲突强度上升|航运风险上升|后续重点看|按普通监测处理|值得补充观察|目前热度较高，需继续跟踪|.+ · .+信号更新|.+信号更新$/.test(text);
 }
 
 function concreteDisplayText(value?: string | null, max = 220): string {
@@ -1843,6 +1824,321 @@ function mergeSignalRows(rows: SignalRow[]): SignalRow[] {
   }
 
   return [...bySignature.values()];
+}
+
+const EVENT_CLUSTER_STOPWORDS = new Set([
+  'about',
+  'after',
+  'again',
+  'against',
+  'amid',
+  'from',
+  'into',
+  'more',
+  'news',
+  'over',
+  'report',
+  'reports',
+  'said',
+  'says',
+  'than',
+  'that',
+  'their',
+  'this',
+  'update',
+  'with',
+  'without',
+  '当前',
+  '更新',
+  '消息',
+  '报道',
+  '相关',
+  '最新',
+]);
+
+function eventClusterTokens(row: SignalRow): Set<string> {
+  const text = normalizeSignatureText([
+    row.title,
+    row.description,
+    row.location,
+    row.country,
+    ...(row.tags || []),
+  ].filter(Boolean).join(' '));
+  const tokens = text
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3 && !EVENT_CLUSTER_STOPWORDS.has(token));
+  return new Set(tokens.slice(0, 80));
+}
+
+function eventTitleTokens(row: SignalRow): Set<string> {
+  const title = normalizeSignatureText(normalizeText(row.title));
+  return new Set(
+    title
+      .split(' ')
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3 && !EVENT_CLUSTER_STOPWORDS.has(token))
+      .slice(0, 40),
+  );
+}
+
+function rowLooksLikeTechAi(row: SignalRow): boolean {
+  const haystack = rowTextHaystack(row);
+  return /(\bai\b|aihot|source:aihot|llm|openai|anthropic|claude|chatgpt|gemini|deepmind|模型|大模型|智能体|agent|github|code|代码|开源|论文|benchmark|sota)/.test(haystack);
+}
+
+function techEntityOverlap(left: Set<string>, right: Set<string>): number {
+  const entities = new Set([
+    'openai',
+    'anthropic',
+    'claude',
+    'chatgpt',
+    'gemini',
+    'deepmind',
+    'google',
+    'meta',
+    'mistral',
+    'nvidia',
+    'github',
+    'bun',
+    'cursor',
+    'windsurf',
+    'deepseek',
+    'qwen',
+    'kimi',
+    'minimax',
+    'huggingface',
+    'openrouter',
+  ]);
+  let count = 0;
+  for (const token of left) {
+    if (entities.has(token) && right.has(token)) count += 1;
+  }
+  return count;
+}
+
+function techActionOverlap(left: Set<string>, right: Set<string>): number {
+  const actions = new Set([
+    'release',
+    'launch',
+    'announce',
+    'available',
+    'open',
+    'source',
+    'benchmark',
+    'funding',
+    'acquisition',
+    'lawsuit',
+    'agent',
+    'code',
+    'codex',
+    'shortcut',
+    'shortcuts',
+    'keyboard',
+    'feedback',
+    'memory',
+    'leak',
+    'rewrite',
+    '发布',
+    '上线',
+    '开源',
+    '融资',
+    '收购',
+    '诉讼',
+    '代码',
+  ]);
+  let count = 0;
+  for (const token of left) {
+    if (actions.has(token) && right.has(token)) count += 1;
+  }
+  return count;
+}
+
+function eventRowDay(row: SignalRow): number | null {
+  const value = Date.parse(row.event_time || row.last_seen_at || row.created_at || '');
+  if (!Number.isFinite(value)) return null;
+  return Math.floor(value / 86_400_000);
+}
+
+function eventRowsCloseInTime(left: SignalRow, right: SignalRow): boolean {
+  const leftDay = eventRowDay(left);
+  const rightDay = eventRowDay(right);
+  if (leftDay === null || rightDay === null) return true;
+  return Math.abs(leftDay - rightDay) <= 3;
+}
+
+function eventRowsSharePlace(left: SignalRow, right: SignalRow): boolean {
+  const leftCountry = normalizeSignatureText(normalizeText(left.country));
+  const rightCountry = normalizeSignatureText(normalizeText(right.country));
+  const leftLocation = normalizeSignatureText(normalizeText(left.location));
+  const rightLocation = normalizeSignatureText(normalizeText(right.location));
+
+  if (leftLocation && rightLocation && leftLocation === rightLocation) return true;
+  if (leftCountry && rightCountry && leftCountry === rightCountry) return true;
+
+  const latA = typeof left.latitude === 'number' ? left.latitude : null;
+  const lngA = typeof left.longitude === 'number' ? left.longitude : null;
+  const latB = typeof right.latitude === 'number' ? right.latitude : null;
+  const lngB = typeof right.longitude === 'number' ? right.longitude : null;
+  if (latA === null || lngA === null || latB === null || lngB === null) return false;
+  return Math.abs(latA - latB) <= 1.2 && Math.abs(lngA - lngB) <= 1.2;
+}
+
+function eventRowsShareSourceUrl(left: SignalRow, right: SignalRow): boolean {
+  const leftUrl = normalizeSourceUrl(normalizeText(left.source_url));
+  const rightUrl = normalizeSourceUrl(normalizeText(right.source_url));
+  return Boolean(leftUrl && rightUrl && leftUrl === rightUrl);
+}
+
+function tokenOverlapScore(left: Set<string>, right: Set<string>): { overlap: number; jaccard: number } {
+  if (!left.size || !right.size) return { overlap: 0, jaccard: 0 };
+  let overlap = 0;
+  for (const token of left) {
+    if (right.has(token)) overlap += 1;
+  }
+  return {
+    overlap,
+    jaccard: overlap / Math.max(1, left.size + right.size - overlap),
+  };
+}
+
+function signalRowsLookLikeSameEvent(left: SignalRow, right: SignalRow): boolean {
+  if (eventRowsShareSourceUrl(left, right)) return true;
+  if (!eventRowsCloseInTime(left, right)) return false;
+
+  const leftTokens = eventClusterTokens(left);
+  const rightTokens = eventClusterTokens(right);
+  const leftTitleTokens = eventTitleTokens(left);
+  const rightTitleTokens = eventTitleTokens(right);
+  const titleOverlap = tokenOverlapScore(leftTitleTokens, rightTitleTokens);
+
+  if (rowLooksLikeTechAi(left) || rowLooksLikeTechAi(right)) {
+    const entityOverlap = techEntityOverlap(leftTokens, rightTokens);
+    const actionOverlap = techActionOverlap(leftTokens, rightTokens);
+    return (
+      (titleOverlap.jaccard >= 0.55 && titleOverlap.overlap >= 4) ||
+      (entityOverlap >= 1 && actionOverlap >= 1 && titleOverlap.jaccard >= 0.32 && titleOverlap.overlap >= 3)
+    );
+  }
+
+  const overlap = tokenOverlapScore(leftTokens, rightTokens);
+  if (overlap.jaccard >= 0.42 && overlap.overlap >= 3) return true;
+
+  const samePlace = eventRowsSharePlace(left, right);
+  if (samePlace && overlap.overlap >= 3 && overlap.jaccard >= 0.22) return true;
+  if (samePlace && overlap.overlap >= 2 && (leftTokens.has('outbreak') || rightTokens.has('outbreak'))) return true;
+  if (samePlace && overlap.overlap >= 2 && (leftTokens.has('strike') || rightTokens.has('strike') || leftTokens.has('strikes') || rightTokens.has('strikes'))) return true;
+
+  return false;
+}
+
+function sourceAuthorityScore(row: SignalRow): number {
+  const category = classifySignalRowSourceCategory(row);
+  const tier = classifyUnifiedSourceTier(row, category);
+  const haystack = rowTextHaystack(row);
+  const intake = (extractTaggedNumber(row.alignment_tags, 'intake:score:') || Math.round(Number(row.relevance_score || 0) * 100)) / 100;
+  const tierScore = tier === 't1' ? 0.18 : tier === 't1.5' ? 0.13 : tier === 't2' ? 0.08 : 0.03;
+  const sourceScore =
+    category === 'world-monitor'
+      ? 0.24
+      : haystack.includes('source:aihot')
+        ? 0.23
+        : category === 'public-anchor'
+          ? 0.18
+          : category === 'source-feed'
+            ? 0.1
+            : 0.08;
+  const officialBoost = /(official|官网|官方|newsroom|engineering-blog|developers-blog|github-releases|source:world-monitor|source:aihot)/.test(haystack)
+    ? 0.06
+    : 0;
+  const contentScore = clamp(normalizeText(row.description).length / 800, 0, 0.08);
+  return sourceScore + tierScore + officialBoost + intake * 0.36 + Number(row.severity || 0) * 0.015 + contentScore;
+}
+
+function mergeEventClusterRows(rows: SignalRow[]): SignalRow {
+  const primary = [...rows].sort(
+    (left, right) =>
+      sourceAuthorityScore(right) - sourceAuthorityScore(left) ||
+      Number(right.relevance_score || 0) - Number(left.relevance_score || 0) ||
+      new Date(right.event_time || right.created_at || 0).getTime() - new Date(left.event_time || left.created_at || 0).getTime(),
+  )[0];
+  const related = rows.filter((row) => row !== primary);
+  const sourceNames = [...new Set(rows.map((row) => normalizeText(row.source_name)).filter(Boolean))].slice(0, 8);
+  const relatedReports = related
+    .map((row) => {
+      const source = normalizeText(row.source_name) || 'unknown source';
+      const title = normalizeText(row.title) || normalizeText(row.description);
+      return title ? `${source}: ${title}` : source;
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+  const mergedTags = [...new Set(rows.flatMap((row) => row.tags || []).filter(Boolean))];
+  const mergedAlignmentTags = uniqueAlignmentTags([
+    rows.length > 1 ? 'event:clustered' : null,
+    rows.length > 1 ? `event:related-count:${rows.length - 1}` : null,
+    rows.length > 1 ? `event:source-count:${sourceNames.length}` : null,
+    rows.length > 1 ? `event:primary-source:${normalizeTag(primary.source_name || 'unknown')}` : null,
+    ...(primary.alignment_tags || []),
+    ...related.flatMap((row) => row.alignment_tags || []),
+  ]);
+  return {
+    ...primary,
+    title: primary.title,
+    description:
+      normalizeText(primary.description).length >= 24
+        ? primary.description
+        : rows
+            .map((row) => row.description)
+            .filter(Boolean)
+            .sort((left, right) => normalizeText(right).length - normalizeText(left).length)[0] || primary.description,
+    event_time: rows.map((row) => row.event_time).filter(Boolean).sort()[0] || primary.event_time,
+    created_at: rows.map((row) => row.created_at).filter(Boolean).sort().reverse()[0] || primary.created_at,
+    severity: Math.max(...rows.map((row) => Number(row.severity || 0))) || primary.severity,
+    relevance_score: Math.max(...rows.map((row) => Number(row.relevance_score || 0))) || primary.relevance_score,
+    tags: mergedTags,
+    alignment_tags: mergedAlignmentTags,
+    intensity: Math.max(...rows.map((row) => Number(row.intensity || 0))) || primary.intensity,
+    mention_count: Math.max(...rows.map((row) => Number(row.mention_count || 0))) || primary.mention_count,
+    urgency_reason:
+      rows.length > 1
+        ? `${normalizeText(primary.urgency_reason) || '同一事件多来源聚合'}；合并 ${rows.length} 条报道，主条来自 ${normalizeText(primary.source_name) || '当前最高权威来源'}。`
+        : primary.urgency_reason,
+    content_md:
+      rows.length > 1
+        ? [
+            normalizeText(primary.content_md),
+            `相关来源：${sourceNames.join('、')}`,
+            relatedReports.length ? `补充报道：${relatedReports.join('；')}` : '',
+          ].filter(Boolean).join('\n\n')
+        : primary.content_md,
+    last_seen_at: rows.map((row) => row.last_seen_at).filter(Boolean).sort().reverse()[0] || primary.last_seen_at,
+  };
+}
+
+function clusterRelatedSignalRows(rows: SignalRow[]): EventClusterResult {
+  const clusters: SignalRow[][] = [];
+  for (const row of rows) {
+    let matchedCluster: SignalRow[] | null = null;
+    for (const cluster of clusters) {
+      if (cluster.some((candidate) => signalRowsLookLikeSameEvent(row, candidate))) {
+        matchedCluster = cluster;
+        break;
+      }
+    }
+    if (matchedCluster) {
+      matchedCluster.push(row);
+    } else {
+      clusters.push([row]);
+    }
+  }
+
+  const mergedRows = clusters.map(mergeEventClusterRows);
+  const collapsedCount = rows.length - mergedRows.length;
+  return {
+    rows: mergedRows,
+    clusterCount: clusters.filter((cluster) => cluster.length > 1).length,
+    collapsedCount,
+  };
 }
 
 async function fetchIcArticleDetailRow(articleId: string): Promise<Partial<SignalRow> | null> {
@@ -2125,22 +2421,35 @@ function applySignalAlignment(row: SignalRow, alignment?: SignalAlignment): Sign
     return row;
   }
 
-  const nextTags = [...new Set([...(row.tags || []), ...(alignment.tags || [])].filter(Boolean))];
+  const aiBinaryTag =
+    typeof alignment.isAiRelated === 'boolean'
+      ? alignment.isAiRelated
+        ? 'model:ai-related'
+        : 'model:not-ai-related'
+      : null;
+  const lowInformationTag = alignment.lowInformation ? 'model:low-information' : null;
+  const reviewTag = alignment.needsReview ? 'model:needs-review' : null;
+  const eventTypeTag = alignment.eventType ? `event:${alignment.eventType}` : null;
+  const bucketTag = alignment.dailyBucket ? `daily:${alignment.dailyBucket}` : null;
+  const sceneTag = alignment.scene && alignment.scene !== 'ignore' ? `scene:${alignment.scene}` : null;
+  const modelTags = (alignment.tagsZh || []).map((tag) => `model-tag:${tag}`);
   const nextAlignmentTags = uniqueAlignmentTags([
     ...(row.alignment_tags || []),
-    ...(alignment.tags || []),
-    alignment.reason ? 'model:aligned' : null,
+    aiBinaryTag,
+    lowInformationTag,
+    reviewTag,
+    eventTypeTag,
+    bucketTag,
+    sceneTag,
+    ...modelTags,
   ]);
+  const displayTitle = cleanDisplayText(alignment.displayTitleZh || '');
+  const displaySummary = cleanDisplayText(alignment.displaySummaryZh || '');
   return {
     ...row,
-    severity: alignment.severity ? clamp(Math.round(alignment.severity), 1, 5) : row.severity,
-    relevance_score:
-      typeof alignment.relevanceScore === 'number'
-        ? clamp(alignment.relevanceScore, 0, 1)
-        : row.relevance_score,
-    tags: nextTags,
+    title: displayTitle && !alignment.lowInformation ? displayTitle : row.title,
+    description: displaySummary && !alignment.lowInformation ? displaySummary : row.description,
     alignment_tags: nextAlignmentTags,
-    urgency_reason: cleanDisplayText(alignment.reason || row.urgency_reason || ''),
   };
 }
 
@@ -2155,11 +2464,10 @@ async function ensureSignalAlignmentsLoaded(): Promise<void> {
     const raw = await fs.readFile(ALIGNMENT_CACHE_FILE, 'utf-8');
     const parsed = JSON.parse(raw) as Record<string, SignalAlignment>;
     for (const [cacheKey, entry] of Object.entries(parsed)) {
-      const severity = typeof entry.severity === 'number' ? clamp(Math.round(entry.severity), 1, 5) : undefined;
-      const relevanceScore = typeof entry.relevanceScore === 'number' ? clamp(entry.relevanceScore, 0, 1) : undefined;
-      const tags = Array.isArray(entry.tags) ? uniqueAlignmentTags(entry.tags) : [];
-      const reason = cleanDisplayText(entry.reason || '');
-      runtime.signalAlignments.set(cacheKey, { severity, relevanceScore, tags, reason });
+      const normalized = sanitizeSignalNormalization(entry as Record<string, unknown>);
+      if (normalized) {
+        runtime.signalAlignments.set(cacheKey, normalized);
+      }
     }
   } catch {
     // ignore cold-start cache miss
@@ -2196,14 +2504,7 @@ async function classifySignalRowsWithMiniMax(
       feedName: normalizeText(row.source_feed_name),
       tags: row.tags || [],
     }));
-    const promptPrefix = [
-      '给下面的新信源做统一对齐。请判断它们在世界标点系统中的紧急性、相关度和标签。',
-      '评分规则：severity 为 1-5；1=背景材料，2=普通，3=高关注，4=严重，5=极端紧急。relevanceScore 为 0-1。',
-      '标签使用短小 lowercase 英文或已有中文源名，优先从这些体系里选：war, technology, capacity, finance, health, ai, llm, research, source-feed, literature, policy, market, supply-chain, security。',
-      '如果只是科技资料、教程、论文或产品消息，除非明显影响安全/市场/基础设施，不要给 4 或 5。',
-      '返回 JSON 数组，每项包含 id、severity、relevanceScore、tags、reason。reason 用一句中文说明判断依据。',
-      '不要输出思考过程、不要输出 <think>，也不要输出 JSON 之外的任何内容。',
-    ].join('\n');
+    const promptPrefix = buildSignalNormalizationPromptPrefix();
     const promptData = JSON.stringify(batch);
 
     try {
@@ -2213,21 +2514,21 @@ async function classifySignalRowsWithMiniMax(
           promptPrefix,
           promptData,
           temperature: 0.1,
-          requestLabel: 'alignment request',
+          requestLabel: 'ai binary label request',
         })) || '';
       if (!content) {
         continue;
       }
       let parsed:
-        | Array<{ id?: string; severity?: number; relevanceScore?: number; tags?: string[]; reason?: string }>
-        | { items?: Array<{ id?: string; severity?: number; relevanceScore?: number; tags?: string[]; reason?: string }> };
+        | Array<Record<string, unknown> & { id?: string }>
+        | { items?: Array<Record<string, unknown> & { id?: string }> };
       try {
         parsed = parseMiniMaxJsonPayload<
-          | Array<{ id?: string; severity?: number; relevanceScore?: number; tags?: string[]; reason?: string }>
-          | { items?: Array<{ id?: string; severity?: number; relevanceScore?: number; tags?: string[]; reason?: string }> }
+          | Array<Record<string, unknown> & { id?: string }>
+          | { items?: Array<Record<string, unknown> & { id?: string }> }
         >(content);
       } catch {
-        parsed = parseMiniMaxJsonLines<{ id?: string; severity?: number; relevanceScore?: number; tags?: string[]; reason?: string }>(
+        parsed = parseMiniMaxJsonLines<Record<string, unknown> & { id?: string }>(
           content,
         );
       }
@@ -2235,15 +2536,12 @@ async function classifySignalRowsWithMiniMax(
 
       for (const item of list) {
         if (!item?.id) continue;
-        result.set(item.id, {
-          severity: typeof item.severity === 'number' ? clamp(Math.round(item.severity), 1, 5) : undefined,
-          relevanceScore: typeof item.relevanceScore === 'number' ? clamp(item.relevanceScore, 0, 1) : undefined,
-          tags: Array.isArray(item.tags) ? uniqueAlignmentTags(item.tags) : [],
-          reason: cleanDisplayText(item.reason || ''),
-        });
+        const normalized = sanitizeSignalNormalization(item);
+        if (!normalized) continue;
+        result.set(item.id, normalized);
       }
     } catch (error) {
-      console.warn('[MiniMax] Alignment parse failed:', error instanceof Error ? error.message : String(error));
+      console.warn('[MiniMax] AI binary label parse failed:', error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -2273,7 +2571,7 @@ async function ensureSignalRowAlignments(
   const limitedCandidates = candidates.slice(0, ALIGNMENT_PRIME_LIMIT);
   if (limitedCandidates.length > 0 && allowModelRefresh && !runtime.alignmentsInFlight) {
     runtime.alignmentsInFlight = true;
-    console.log(`[alignment] priming ${limitedCandidates.length} new-source signals with ${MINIMAX_MODEL}`);
+    console.log(`[alignment] priming ${limitedCandidates.length} new-source signals with ${MINIMAX_MODEL} for display normalization`);
     try {
       const aligned = await classifySignalRowsWithMiniMax(limitedCandidates);
       for (const [cacheKey, alignment] of aligned.entries()) {
@@ -2294,7 +2592,9 @@ async function ensureSignalRowAlignments(
 function normalizeCachedSignal(signal: WorldSignal): WorldSignal {
   return {
     ...signal,
-    alignmentTags: Array.isArray(signal.alignmentTags) ? signal.alignmentTags : [],
+    alignmentTags: Array.isArray(signal.alignmentTags)
+      ? signal.alignmentTags.filter((tag) => normalizeTag(tag) !== 'model:aligned')
+      : [],
     intensity: typeof signal.intensity === 'number' ? signal.intensity : null,
     mentionCount: typeof signal.mentionCount === 'number' ? signal.mentionCount : null,
     urgencyReason: normalizeText(signal.urgencyReason),
@@ -2317,6 +2617,35 @@ function isDangerouslyShrunkenSignalSet(nextSignals: WorldSignal[], previousSign
   if (previousSignals.length < 160) return false;
   const shrinkFloor = Math.max(160, Math.floor(previousSignals.length * 0.45));
   return nextSignals.length < shrinkFloor;
+}
+
+function buildWorldSignalCacheKey(signal: WorldSignal): string {
+  const sourceUrl = normalizeSourceUrl(normalizeText(signal.sourceUrl));
+  if (sourceUrl) {
+    return `url:${sourceUrl}`;
+  }
+
+  const title = normalizeSignatureText(normalizeText(signal.title || signal.displayTitle));
+  const sourceName = normalizeSignatureText(normalizeText(signal.sourceName));
+  const day = (signal.publishedAt || signal.observedAt || '').slice(0, 10);
+  return `title:${title}|source:${sourceName}|day:${day}|id:${signal.id}`;
+}
+
+function mergeRefreshedSignalsWithPrevious(nextSignals: WorldSignal[], previousSignals: WorldSignal[]): WorldSignal[] {
+  const byKey = new Map<string, WorldSignal>();
+  for (const signal of previousSignals) {
+    byKey.set(buildWorldSignalCacheKey(signal), signal);
+  }
+  for (const signal of nextSignals) {
+    byKey.set(buildWorldSignalCacheKey(signal), signal);
+  }
+  return [...byKey.values()].sort(
+    (left, right) =>
+      new Date(right.publishedAt || right.observedAt).getTime() -
+        new Date(left.publishedAt || left.observedAt).getTime() ||
+      right.relevanceScore - left.relevanceScore ||
+      right.severity - left.severity,
+  );
 }
 
 async function readSignalDiskCachePayload(allowExpired = false): Promise<SignalCachePayload | null> {
@@ -2457,9 +2786,12 @@ async function persistRuntimeHistory(runtime: RuntimeStore): Promise<void> {
 function getDefaultDisplaySignal(
   signal: DisplaySignalInput & Pick<WorldSignal, 'coverageGap' | 'hotspotScore'>,
 ) {
+  const lowInformationTitle = isLowInformationSignalTitle(signal.title, signal.summary);
   return {
     displayTitle:
-      !shouldRewriteDisplayText(signal.title) && cleanDisplayText(signal.title).length <= 34
+      lowInformationTitle
+        ? signalSummaryHeadline(signal.summary)
+        : !shouldRewriteDisplayText(signal.title) && cleanDisplayText(signal.title).length <= 34
         ? cleanDisplayText(signal.title)
         : buildDisplayTitle(signal),
     displaySummary: !shouldRewriteDisplayText(signal.summary) ? cleanDisplayText(signal.summary) : buildDisplaySummary(signal),
@@ -2577,12 +2909,27 @@ function getLocalizedSignal(signal: WorldSignal) {
   const runtime = getRuntimeStore();
   const localized = runtime.localizedSignals.get(signal.id);
   if (localized) {
+    if (isLowInformationSignalTitle(signal.title, signal.summary)) {
+      return {
+        ...localized,
+        displayTitle: signalSummaryHeadline(signal.summary),
+      };
+    }
     return localized;
   }
 
   const translated = runtime.translatedSignals.get(signal.id);
   if (translated) {
     const fallback = getDefaultDisplaySignal(signal);
+    if (isLowInformationSignalTitle(signal.title, signal.summary)) {
+      return {
+        displayTitle: fallback.displayTitle,
+        displaySummary: shouldRewriteDisplayText(translated.displaySummary)
+          ? fallback.displaySummary
+          : cleanDisplayText(translated.displaySummary),
+        topicLabel: buildTopicLabel(signal),
+      };
+    }
     return {
       displayTitle: shouldRewriteDisplayText(translated.displayTitle) ? fallback.displayTitle : cleanDisplayText(translated.displayTitle),
       displaySummary: shouldRewriteDisplayText(translated.displaySummary)
@@ -2736,6 +3083,108 @@ function isWeakSignalSignal(signal: Pick<WorldSignal, 'title' | 'summary' | 'tag
   );
 }
 
+function techAiSceneScore(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' | 'sourceName' | 'sourceUrl' | 'title' | 'summary' | 'tags'>): number {
+  const haystack = normalizeTag([
+    signal.title,
+    signal.summary,
+    signal.tags.join(' '),
+    signal.sourceName,
+    signal.sourceUrl,
+    signal.scene,
+    signal.alignmentTags.join(' '),
+  ].join(' '));
+  const sourceHaystack = normalizeTag([signal.sourceName, signal.sourceUrl, signal.alignmentTags.join(' ')].join(' '));
+  const contentHaystack = normalizeTag([signal.title, signal.summary].join(' '));
+  const rawContentHaystack = [signal.title, signal.summary].join(' ');
+  let score = 0;
+
+  if (/(source:aihot|aihot|ai-hot)/.test(sourceHaystack)) {
+    score += 4.5;
+  } else if (/model:ai-related/.test(sourceHaystack)) {
+    score += 3;
+  } else if (/model:not-ai-related/.test(sourceHaystack)) {
+    score -= 4;
+  } else if (/(ai\s*&\s*ml|ai-news|机器之心|量子位|新智元|智猩猩|ai科技评论|深度学习与nlp|ai工程化|aigc|ai信息gap|玄姐聊agi|袋鼠帝ai)/.test(sourceHaystack)) {
+    score += 1.5;
+  }
+  if (/(openai|anthropic|claude|hugging\s*face|berkeley\s*rdi|deepmind|google\s*ai|meta\s*ai|mistral|xai|qwen|deepseek)/.test(haystack)) {
+    score += 3;
+  }
+  if (/(\bllm\b|chatgpt|gemini|codex|aigc|transformer|diffusion|multimodal|neural\s*network|人工智能|大模型|智能体|多模态|生成式|推理模型|基础模型|模型训练|模型推理)/.test(contentHaystack)) {
+    score += 3;
+  }
+  if (/(^|[^A-Za-z])AI([^A-Za-z]|$)/.test(rawContentHaystack)) {
+    score += 2.5;
+  }
+  if (/(machine\s*learning|deep\s*learning|ai\s*agent|agentic|ai-agent|aiagent|inference|fine-tuning|embedding|prompt|eval|benchmark|机器学习|深度学习|模型|推理|训练|提示词|评测|基准)/.test(contentHaystack)) {
+    score += 2;
+  }
+  if (/(gpu|nvidia|chip|semiconductor|datacenter|data\s*center|算力|芯片|数据中心|开源|arxiv|github|mcp|workflow|tool|skill)/.test(contentHaystack)) {
+    score += 1;
+  }
+  if (
+    !/(source:aihot|aihot|ai-hot)/.test(sourceHaystack) &&
+    /(we-mp-rss|source:wechat|feed:)/.test(sourceHaystack) &&
+    !/(\bai\b|\bllm\b|openai|anthropic|claude|chatgpt|gemini|codex|agent|agentic|model|inference|benchmark|aigc|人工智能|大模型|智能体|模型|推理|训练|评测|算力|芯片|开源)/.test(contentHaystack)
+  ) {
+    score -= 3;
+  }
+  if (/(world-monitor|world monitor|rssallnews|shunyanet|guardian world|npr news|signal arena|livebench)/.test(haystack)) {
+    score -= 2;
+  }
+  if (/(war|conflict|incident|military|missile|ceasefire|sanction|arrest|court|crime|shipping|oil|gas|fda|drug|device|medical|health|quantum computing|冲突|军事|逮捕|法院|制裁|航运|原油|天然气|药品|医疗|公共卫生|量子计算)/.test(haystack)) {
+    score -= 1.5;
+  }
+
+  return score;
+}
+
+function isLowInformationSignalTitle(title: string, summary: string): boolean {
+  const normalized = normalizeText(title);
+  if (!normalized || normalized.length < 8) return Boolean(normalizeText(summary));
+  if (!summary) return false;
+  const normalizedSummary = normalizeText(summary);
+  const titleWords = normalized.split(/\s+/).filter(Boolean);
+  const hasConcreteSummaryEvent = /\b(kill|killed|seize|seized|launch|launched|strike|strikes|attack|attacks|warn|warns|approve|approves|report|reports|say|says|face|faces|rise|falls?|arrest|arrests|abduct|abduction|convict|convictions|lawsuit|case|announces?|eliminated|crisis|fire|injur|death|deaths|outbreak)\b/iu.test(normalizedSummary);
+  const locationParts = normalized.split(/[，,]/).map((part) => part.trim()).filter(Boolean);
+  if (
+    locationParts.length >= 2 &&
+    locationParts.length <= 4 &&
+    normalized.length <= 96 &&
+    !/\b(kill|killed|seize|seized|launch|launched|strike|strikes|attack|attacks|warn|warns|approve|approves|report|reports|say|says|face|faces|rise|falls?)\b/iu.test(normalized)
+  ) {
+    return true;
+  }
+  if (
+    titleWords.length <= 3 &&
+    normalized.length <= 36 &&
+    hasConcreteSummaryEvent &&
+    !/\b(virus|disease|cholera|measles|ebola|hantavirus|nipah|marburg|model|agent|codex|openai|anthropic|claude|gemini|deepseek|kimi)\b/iu.test(normalized)
+  ) {
+    return true;
+  }
+  return /^(san francisco|new york|washington|london|beijing|shanghai|tokyo|paris|berlin|singapore|hong kong|美国|中国|英国|日本|德国|法国|新加坡)$/i.test(
+    normalized,
+  );
+}
+
+function signalSummaryHeadline(summary: string): string {
+  const sentence = normalizeText(summary)
+    .split(/(?<=[。！？!?])\s+|[。！？!?]\s*/)
+    .find((part) => part.trim().length >= 16);
+  return concreteDisplayText(sentence ? sentence.trim() : normalizeText(summary), 96);
+}
+
+function isAiHotSourceSignal(signal: Pick<WorldSignal, 'alignmentTags' | 'sourceName' | 'sourceUrl' | 'tags'>): boolean {
+  const haystack = normalizeTag([
+    signal.sourceName,
+    signal.sourceUrl,
+    signal.tags.join(' '),
+    signal.alignmentTags.join(' '),
+  ].join(' '));
+  return haystack.includes('aihot') || haystack.includes('aihotskill');
+}
+
 function signalMatchesScene(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' | 'sourceName' | 'sourceUrl' | 'title' | 'summary' | 'tags'>, scene: WorldScene): boolean {
   if (scene === 'global') {
     return true;
@@ -2759,8 +3208,13 @@ function signalMatchesScene(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' 
   }
 
   if (normalizedScene === 'geo-politics-daily' || normalizedScene === 'geopoliticsdaily' || normalizedScene === 'international-politics-daily' || normalizedScene === 'internationalpoliticsdaily') {
+    if (isAiHotSourceSignal(signal)) return false;
     if (['war', 'finance', 'health', 'capacity'].includes(signalScene)) return true;
     return /(conflict|war|military|diplomacy|sanction|election|policy|minister|parliament|tariff|macro|market|publichealth|health|outbreak|shipping|energy|geopolitic|地缘|外交|冲突|制裁|选举|政策|公共卫生|航运|能源)/.test(haystack);
+  }
+
+  if (normalizedScene === 'tech-ai' || normalizedScene === 'techai' || normalizedScene === 'technology-ai' || normalizedScene === 'technologyai') {
+    return techAiSceneScore(signal) >= 3;
   }
 
   if (normalizedScene === 'technology-daily' || normalizedScene === 'technologydaily') {
@@ -2936,7 +3390,7 @@ function selectGraphBackfillCandidates(report: WorldReport, priorReports: WorldR
   return preferred.slice(0, 6);
 }
 
-function reportNeedsMiniMaxGraphBackfill(report: WorldReport, priorReports: WorldReport[] = []): boolean {
+function reportNeedsGraphMetadataInference(report: WorldReport, priorReports: WorldReport[] = []): boolean {
   const hasParentCandidate =
     Boolean(report.thread_parent_report_id) || selectGraphBackfillCandidates(report, priorReports).length > 0;
   return Boolean(
@@ -2948,136 +3402,6 @@ function reportNeedsMiniMaxGraphBackfill(report: WorldReport, priorReports: Worl
   );
 }
 
-async function backfillReportsGraphMetadataWithMiniMax(
-  items: Array<{ report: WorldReport; priorReports: WorldReport[] }>,
-): Promise<Map<string, MiniMaxGraphBackfillResponse>> {
-  const results = new Map<string, MiniMaxGraphBackfillResponse>();
-
-  if (items.length === 0) {
-    return results;
-  }
-
-  for (let start = 0; start < items.length; start += GRAPH_METADATA_BATCH_SIZE) {
-    const batch = items.slice(start, start + GRAPH_METADATA_BATCH_SIZE).map(({ report, priorReports }) => ({
-      report: {
-        report_id: report.report_id,
-        signal_id: report.signal_id,
-        scene: report.scene,
-        region: report.region,
-        topic: report.topic,
-        topic_label: report.topic_label,
-        created_at: report.created_at,
-        current_analysis: report.current_analysis,
-        facts: report.facts.slice(0, 4),
-        invalidators: report.invalidators.slice(0, 4),
-        projections: report.projection.slice(0, 3).map((item, index) => ({
-          projection_index: index,
-          title: item.title,
-          summary: item.summary,
-          confidence: item.confidence,
-          invalidators: item.invalidators.slice(0, 3),
-        })),
-        validation_status: report.validation_status,
-        validation_note: report.validation_note || null,
-        validation_signal_id: report.validation_signal_id || null,
-        existing: {
-          thread_parent_report_id: report.thread_parent_report_id || null,
-          thread_relation: report.thread_relation || null,
-          validation_target_report_ids: report.validation_target_report_ids || null,
-          projection_links: report.projection_links || null,
-        },
-      },
-      candidates: selectGraphBackfillCandidates(report, priorReports).map((candidate) => ({
-        report_id: candidate.report_id,
-        signal_id: candidate.signal_id,
-        scene: candidate.scene,
-        region: candidate.region,
-        topic: candidate.topic,
-        topic_label: candidate.topic_label,
-        created_at: candidate.created_at,
-        summary: candidate.summary,
-        current_analysis: candidate.current_analysis,
-        validation_status: candidate.validation_status,
-      })),
-    }));
-
-    const promptPrefix = [
-      '你是世界演绎图谱回填助手。请只补关系字段，不要改写正文。',
-      '对每条 report，请根据其内容和候选旧 report，返回 JSON 数组。',
-      '要求：',
-      '1. thread_parent_report_id 只能从候选 candidates.report_id 中选择，或者填 null。',
-      '2. thread_relation 只允许 continue / upgrade / downgrade / branch / revise / echo / null。',
-      '3. validation_target_report_ids 只能引用候选 report_id；如果当前 report 是 confirmed/falsified，优先找它在验证哪条旧演绎。',
-      '4. projection_links 按 projection_index -> fact_indices -> invalidator_indices 返回，索引必须合法。',
-      '5. 如果信息不够，宁可返回 null 或空数组，也不要猜太多。',
-      '6. 只输出 JSON，不要输出解释。',
-    ].join('\n');
-    const promptData = JSON.stringify(batch);
-
-    try {
-      const content =
-        (await requestMiniMaxChatCompletion({
-          system: '你是结构化关系回填助手，只返回可解析 JSON。',
-          promptPrefix,
-          promptData,
-          temperature: 0.1,
-          retryLimit: MINIMAX_BACKFILL_RETRY_LIMIT,
-          requestLabel: 'graph backfill request',
-        })) || '';
-      if (!content) {
-        continue;
-      }
-      const parsed = parseMiniMaxJsonPayload<MiniMaxGraphBackfillResponse[] | { items?: MiniMaxGraphBackfillResponse[] }>(content);
-      const list = Array.isArray(parsed) ? parsed : parsed.items || [];
-      for (const item of list) {
-        if (!item?.report_id) continue;
-        results.set(item.report_id, item);
-      }
-    } catch (error) {
-      console.warn('[MiniMax] Graph backfill parse failed:', error instanceof Error ? error.message : String(error));
-    }
-
-    if (start + GRAPH_METADATA_BATCH_SIZE < items.length) {
-      await sleep(MINIMAX_BACKFILL_BATCH_DELAY_MS);
-    }
-  }
-
-  return results;
-}
-
-function applyMiniMaxGraphBackfill(
-  report: WorldReport,
-  patch: MiniMaxGraphBackfillResponse | undefined,
-  priorReports: WorldReport[],
-): WorldReport {
-  const candidateIds = new Set(selectGraphBackfillCandidates(report, priorReports).map((item) => item.report_id));
-  const threadParent =
-    report.thread_parent_report_id ||
-    (patch?.thread_parent_report_id && candidateIds.has(patch.thread_parent_report_id) ? patch.thread_parent_report_id : null);
-  const threadRelation = report.thread_relation || sanitizeThreadRelation(patch?.thread_relation);
-  const validationTargetIds =
-    Array.isArray(report.validation_target_report_ids) && report.validation_target_report_ids.length > 0
-      ? report.validation_target_report_ids
-      : Array.isArray(patch?.validation_target_report_ids)
-        ? [...new Set(patch.validation_target_report_ids.filter((item) => candidateIds.has(item)))]
-        : [];
-  const projectionLinks =
-    Array.isArray(report.projection_links) && report.projection_links.length > 0
-      ? report.projection_links
-      : sanitizeProjectionLinks(patch?.projection_links, report);
-
-  return withInferredGraphMetadata(
-    {
-      ...report,
-      thread_parent_report_id: threadParent,
-      thread_relation: threadRelation,
-      validation_target_report_ids: validationTargetIds.length > 0 ? validationTargetIds : null,
-      projection_links: projectionLinks,
-    },
-    priorReports,
-  );
-}
-
 async function ensureReportsGraphMetadataBackfilled(runtime: RuntimeStore): Promise<void> {
   if (runtime.graphMetadataBackfillLoaded || runtime.graphMetadataBackfillInFlight) {
     return;
@@ -3086,24 +3410,14 @@ async function ensureReportsGraphMetadataBackfilled(runtime: RuntimeStore): Prom
   runtime.graphMetadataBackfillInFlight = true;
   try {
     const sorted = [...runtime.reports].sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime());
-    const queue = sorted
-      .map((report, index) => ({
-        report,
-        priorReports: sorted.slice(0, index),
-      }))
-      .filter(({ report, priorReports }) => priorReports.length > 0 && reportNeedsMiniMaxGraphBackfill(report, priorReports))
-      .slice(0, GRAPH_METADATA_BACKFILL_LIMIT);
-
-    const patches = await backfillReportsGraphMetadataWithMiniMax(queue);
-    if (patches.size > 0) {
-      const enriched: WorldReport[] = [];
-      for (const report of sorted) {
-        const nextReport = applyMiniMaxGraphBackfill(report, patches.get(report.report_id), enriched);
-        enriched.push(nextReport);
-      }
+    const missingBefore = sorted
+      .filter((report, index) => index > 0 && reportNeedsGraphMetadataInference(report, sorted.slice(0, index)))
+      .length;
+    if (missingBefore > 0) {
+      const enriched = enrichReportsWithGraphMetadata(sorted);
       runtime.reports = enriched.sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
       await persistRuntimeHistory(runtime);
-      console.log(`[graph-backfill] backfilled ${patches.size} reports with ${MINIMAX_MODEL}`);
+      console.log(`[graph-backfill] inferred graph metadata for ${missingBefore} reports with deterministic rules`);
     }
   } catch (error) {
     console.warn('[graph-backfill] failed:', error instanceof Error ? error.message : String(error));
@@ -3520,7 +3834,7 @@ function scoreSignals(rows: SignalRow[]): WorldSignal[] {
     const relevanceScore = clamp(Number(raw.relevance_score || severity / 5), 0, 1);
     const intensity = typeof raw.intensity === 'number' ? clamp(raw.intensity, 0, 5) : null;
     const mentionCount = typeof raw.mention_count === 'number' ? Math.max(0, raw.mention_count) : null;
-    const publishedAt = raw.event_time || raw.last_seen_at || raw.created_at || new Date().toISOString();
+    const publishedAt = clampFutureIso(raw.event_time || raw.last_seen_at || raw.created_at || new Date(now).toISOString(), now);
     const ageHours = Math.max(1, (now - new Date(publishedAt).getTime()) / 36e5);
     const freshness = clamp(1 - ageHours / 72, 0.1, 1);
     const intensityHeat = intensity !== null ? clamp(intensity / 5, 0, 1) : severity / 5;
@@ -3567,11 +3881,13 @@ function scoreSignals(rows: SignalRow[]): WorldSignal[] {
       alignmentTags,
     });
 
+    const displayTitleText = isLowInformationSignalTitle(title, summary) ? signalSummaryHeadline(summary) : title;
+
     return {
       id: raw.id,
       title,
       summary,
-      displayTitle: containsCjk(title) ? cleanDisplayText(title) : title,
+      displayTitle: containsCjk(displayTitleText) ? cleanDisplayText(displayTitleText) : displayTitleText,
       displaySummary: containsCjk(summary) ? cleanDisplayText(summary) : summary,
       sourceName,
       sourceUrl: normalizeText(raw.source_url),
@@ -3594,17 +3910,26 @@ function scoreSignals(rows: SignalRow[]): WorldSignal[] {
       hotspotScore,
       explorationScore,
       coverageGap,
+      clusterNotes: normalizeText(raw.content_md).slice(0, 1200) || undefined,
     };
   });
 }
 
 function toEvidenceSignal(signal: WorldSignal): WorldEvidenceSignal {
   const localized = getLocalizedSignal(signal);
+  const alignmentTags = signal.alignmentTags || [];
+  const exposedAlignmentTags = publicAlignmentTags(alignmentTags);
   const concreteTitle = concreteDisplayText(applyQuickTextTranslations(signal.title), 120);
   const concreteSummary = concreteDisplayText(applyQuickTextTranslations(signal.summary), 240);
+  const titleNeedsFallback =
+    isGenericGeneratedDisplayText(concreteTitle) ||
+    isLowInformationSignalTitle(concreteTitle, concreteSummary);
+  const fallbackTitle = !titleNeedsFallback
+    ? concreteTitle
+    : signalSummaryHeadline(concreteSummary || signal.summary);
   const displayTitle =
-    isGenericGeneratedDisplayText(localized.displayTitle) && concreteTitle
-      ? concreteTitle
+    (isGenericGeneratedDisplayText(localized.displayTitle) || isLowInformationSignalTitle(localized.displayTitle, concreteSummary)) && fallbackTitle
+      ? fallbackTitle
       : localized.displayTitle;
   const displaySummary =
     isGenericGeneratedDisplayText(localized.displaySummary) && concreteSummary
@@ -3624,7 +3949,7 @@ function toEvidenceSignal(signal: WorldSignal): WorldEvidenceSignal {
     latitude: signal.latitude,
     longitude: signal.longitude,
     tags: signal.tags,
-    alignment_tags: signal.alignmentTags,
+    alignment_tags: exposedAlignmentTags,
     intensity: signal.intensity,
     mention_count: signal.mentionCount,
     urgency_reason: signal.urgencyReason,
@@ -3636,6 +3961,9 @@ function toEvidenceSignal(signal: WorldSignal): WorldEvidenceSignal {
     hotspot_score: signal.hotspotScore,
     exploration_score: signal.explorationScore,
     coverage_gap: signal.coverageGap,
+    intake_score: extractTaggedNumber(alignmentTags, 'intake:score:') ?? null,
+    intake_decision: extractTaggedString(alignmentTags, 'intake:decision:'),
+    intake_tier: extractTaggedString(alignmentTags, 'intake:tier:'),
   };
 }
 
@@ -3865,15 +4193,97 @@ function isKnowledgeSignal(signal: WorldSignal): boolean {
   });
 }
 
+function isCatalogSourceSnapshotSignal(signal: Pick<WorldSignal, 'id' | 'title' | 'summary' | 'sourceName' | 'tags' | 'alignmentTags' | 'urgencyReason'>): boolean {
+  return isSourceSnapshotLikeSignal({
+    id: signal.id,
+    title: signal.title,
+    summary: signal.summary,
+    source_name: signal.sourceName,
+    urgency_reason: signal.urgencyReason,
+    tags: signal.tags,
+    alignment_tags: signal.alignmentTags,
+  });
+}
+
+function isMachineOnlySignalText(value: string): boolean {
+  const text = normalizeText(value);
+  if (!text) return true;
+  return (
+    text.length < 18 ||
+    /^Assault and arrest$/iu.test(text) ||
+    /Location in headline|Source country match|Local news source|High Goldstein intensity|Goldstein|^\d+\s+events? at location$/iu.test(text) ||
+    /^(elevated|high|medium|low|severe|monitoring)\s+[\w\s/-]+(?:incident|event|risk|signal)\.?$/iu.test(text) ||
+    /^(conflict|crime|security|market|public health|technology|ai|capacity|supply-chain)\s*(?:risk|incident|event|signal|update)?\.?$/iu.test(text) ||
+    /^(冲突|治安|安全|市场|公共卫生|科技|AI|产能|供应链)\s*(风险|事件|信号|更新)?$/u.test(text)
+  );
+}
+
+function hasConcreteHumanReadableSignalContent(signal: Pick<WorldSignal, 'title' | 'summary' | 'displayTitle' | 'displaySummary' | 'sourceUrl'>): boolean {
+  const title = cleanDisplayText(signal.displayTitle || signal.title);
+  const summary = cleanDisplayText(signal.displaySummary || signal.summary);
+  const rawTitle = cleanDisplayText(signal.title);
+  const rawSummary = cleanDisplayText(signal.summary);
+  const hasSourceUrl = /^https?:\/\//iu.test(normalizeText(signal.sourceUrl));
+  const hasArticleLikeTitle =
+    !isGenericGeneratedDisplayText(title) &&
+    !isLowInformationSignalTitle(title, summary) &&
+    !isMachineOnlySignalText(title) &&
+    title.length >= 12;
+  const hasArticleLikeSummary =
+    !isGenericGeneratedDisplayText(summary) &&
+    !isMachineOnlySignalText(summary) &&
+    summary.length >= 24;
+  const hasRawEventText =
+    (!isGenericGeneratedDisplayText(rawTitle) && !isLowInformationSignalTitle(rawTitle, rawSummary) && !isMachineOnlySignalText(rawTitle) && rawTitle.length >= 16) ||
+    (!isMachineOnlySignalText(rawSummary) && rawSummary.length >= 24);
+
+  return hasSourceUrl && (hasArticleLikeTitle || hasArticleLikeSummary || hasRawEventText);
+}
+
+function isTimelineEventSignal(signal: WorldSignal): boolean {
+  if (isCatalogSourceSnapshotSignal(signal)) {
+    return false;
+  }
+  return hasConcreteHumanReadableSignalContent(signal);
+}
+
+function selectTimelineEventSignals(signals: WorldSignal[]): WorldSignal[] {
+  const events = signals.filter(isTimelineEventSignal);
+  return events.length > 0 ? events : signals.filter((signal) => !isCatalogSourceSnapshotSignal(signal));
+}
+
 function isPublicAnchorSignal(signal: WorldSignal): boolean {
   return signal.alignmentTags.some((tag) => normalizeTag(tag) === 'source:public-anchor');
 }
 
+function timelineEventPriority(signal: WorldSignal): number {
+  const tags = normalizeTag([signal.scene, signal.tags.join(' '), signal.alignmentTags.join(' ')].join(' '));
+  const topicBoost =
+    /(war|conflict|diplomacy|sanction|military|health|outbreak|ai|technology|chip|semiconductor|market|macro|shipping|energy|冲突|外交|制裁|军事|公共卫生|科技|芯片|市场|航运|能源)/u.test(tags)
+      ? 0.2
+      : 0;
+  const localCrimePenalty = /(gangster|rape|assault|prison|local-news|crime)/iu.test(
+    `${signal.title} ${signal.summary} ${signal.tags.join(' ')}`,
+  )
+    ? 0.28
+    : 0;
+  return (
+    signal.severity * 0.18 +
+    signal.relevanceScore * 0.34 +
+    signal.hotspotScore * 0.24 +
+    signal.explorationScore * 0.12 +
+    topicBoost -
+    localCrimePenalty
+  );
+}
+
 function buildTopSignalFeed(signals: WorldSignal[]): WorldSignal[] {
-  const sorted = [...signals].sort(
+  const eventSignals = selectTimelineEventSignals(signals);
+  const sorted = [...eventSignals].sort(
     (left, right) =>
-      new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime() ||
-      right.relevanceScore - left.relevanceScore,
+      timelineEventPriority(right) - timelineEventPriority(left) ||
+      right.severity - left.severity ||
+      new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime(),
   );
   const knowledge = sorted
     .filter(isKnowledgeSignal)
@@ -3916,7 +4326,7 @@ function buildKnowledgeSignalFeed(signals: WorldSignal[]): WorldKnowledgeSignal[
   const sourceCounts = new Map<string, number>();
 
   const candidates = [...signals]
-    .filter(isKnowledgeSignal)
+    .filter((signal) => isKnowledgeSignal(signal) && isTimelineEventSignal(signal))
     .sort(
       (left, right) =>
         Number(isPublicAnchorSignal(right)) - Number(isPublicAnchorSignal(left)) ||
@@ -4735,6 +5145,12 @@ function parseIsoDay(value: string): string {
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : new Date().toISOString();
 }
 
+function clampFutureIso(value: string, now = Date.now()): string {
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return new Date(now).toISOString();
+  return parsed > now + 5 * 60 * 1000 ? new Date(now).toISOString() : new Date(parsed).toISOString();
+}
+
 function formatTrillionAmount(value: number | null): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return '--';
@@ -5033,16 +5449,18 @@ function normalizeNewsFeedSnapshot(
     return [];
   }
 
-  const latest = items[0];
-  const headlineList = items.map((item) => `《${item.title}》`).join('、');
-  return [
-    {
-      id: generateStableId('selected-source', `${normalizeTag(config.sourceName)}-${latest.publishedAt}`),
-      title: `${config.sourceName} 世界新闻更新`,
-      description: `本轮前几条标题包括 ${headlineList}。`,
+  return items.map((item, index) => {
+    const sourceUrl = item.link || config.sourceUrl;
+    const description = normalizeText(item.summary)
+      ? item.summary
+      : `${config.sourceName} 报道：${item.title}`;
+    return {
+      id: generateStableId('selected-source', `${normalizeTag(config.sourceName)}-${sourceUrl || item.title}-${item.publishedAt}-${index}`),
+      title: item.title,
+      description,
       source_name: config.sourceName,
-      source_url: config.sourceUrl,
-      event_time: latest.publishedAt || new Date().toISOString(),
+      source_url: sourceUrl,
+      event_time: item.publishedAt || new Date().toISOString(),
       created_at: new Date().toISOString(),
       location: config.location,
       country: config.country,
@@ -5050,75 +5468,218 @@ function normalizeNewsFeedSnapshot(
       longitude: config.longitude,
       severity: 2,
       relevance_score: 0.7,
-      tags: ['global', 'news', 'rss', normalizeTag(config.sourceName)],
-      alignment_tags: ['source:selected-source', 'source:news-feed'],
-      urgency_reason: `${config.sourceName} world rss snapshot`,
+      tags: ['global', 'news', 'rss', normalizeTag(config.sourceName), 'rss-item'],
+      alignment_tags: ['source:selected-source', 'source:news-feed', 'type:rss-item'],
+      urgency_reason: `${config.sourceName} rss article`,
       last_seen_at: new Date().toISOString(),
       source_type: 'rss',
-    },
-  ];
+    };
+  });
+}
+
+function collectAiHotItems(data: unknown): RawWorldMonitorItem[] {
+  const directItems = getPayloadArray(data, ['items']) || [];
+  if (!data || typeof data !== 'object') {
+    return directItems;
+  }
+
+  const record = data as Record<string, unknown>;
+  const sections = Array.isArray(record.sections)
+    ? record.sections.filter((section): section is RawWorldMonitorItem => section !== null && typeof section === 'object')
+    : [];
+  const sectionItems = sections.flatMap((section) => {
+    const label = asText(section.label);
+    const items = Array.isArray(section.items)
+      ? section.items.filter((item): item is RawWorldMonitorItem => item !== null && typeof item === 'object')
+      : [];
+    return items.map((item) => ({
+      ...item,
+      category: asText(item.category) || label,
+      publishedAt: asText(item.publishedAt) || asText(item.published_at) || asText(record.windowEnd) || asText(record.generatedAt) || asText(record.date),
+    }));
+  });
+
+  return [...directItems, ...sectionItems];
+}
+
+type AiHotSourceTier = 't1' | 't1.5' | 't2';
+
+function classifyAiHotSourceTier(sourceName: string, url: string): AiHotSourceTier {
+  const sourceText = `${sourceName} ${url}`;
+  const normalized = normalizeTag(sourceText);
+  if (
+    /官网|官方|blog|newsroom|github-releases|developers-blog|hugging-face-blog|openai|anthropic|claude|google-developers|deepmind|meta-ai|mistral|perplexity|runway|notion|krea|minimax|moonshot|kimi|baidu|sensetime|openrouter/.test(
+      normalized,
+    ) &&
+    !/^x[:：-]/i.test(sourceName.trim())
+  ) {
+    return 't1';
+  }
+  if (
+    /^x[:：-]/i.test(sourceName.trim()) &&
+    /openai|anthropic|claude|google|deepmind|meta|xai|grok|mistral|perplexity|runway|notion|krea|minimax|moonshot|kimi|baidu|sensetime|kling|openrouter|nvidia|huggingface|hugging-face/.test(
+      normalized,
+    )
+  ) {
+    return 't1.5';
+  }
+  return 't2';
+}
+
+function aiHotCategoryWeight(category: string) {
+  switch (category) {
+    case 'ai-models':
+      return 0.11;
+    case 'ai-products':
+      return 0.09;
+    case 'industry':
+      return 0.07;
+    case 'paper':
+      return 0.06;
+    case 'tip':
+      return 0.02;
+    default:
+      return 0.04;
+  }
+}
+
+function aiHotSourceTierWeight(tier: AiHotSourceTier) {
+  if (tier === 't1') return 0.18;
+  if (tier === 't1.5') return 0.12;
+  return 0.06;
+}
+
+function aiHotEntityWeight(haystack: string) {
+  if (/(openai|anthropic|claude|google|deepmind|meta|xai|grok|nvidia|英伟达|奥特曼|sam-altman|sama)/.test(haystack)) {
+    return 0.08;
+  }
+  if (/(huggingface|hugging-face|mistral|perplexity|moonshot|kimi|minimax|runway|krea|notion|baidu|sensetime|kling|openrouter|langchain|cursor|windsurf|github)/.test(haystack)) {
+    return 0.05;
+  }
+  return 0;
+}
+
+function aiHotHardSignalWeight(haystack: string, category: string) {
+  let score = 0;
+  if (/(发布|上线|推出|release|launch|ships?|announces?|available|open-source|开源|github|api|sdk|cli|benchmark|sota|leaderboard|agent|智能体|模型|大模型|融资|收购|合作|监管|lawsuit|诉讼)/.test(haystack)) {
+    score += 0.06;
+  }
+  if (category === 'paper' && /(数据集|dataset|benchmark|sota|code|github|开源|机器人|推理|reasoning|agent|智能体)/.test(haystack)) {
+    score += 0.04;
+  }
+  if (category === 'tip' && !/(官方|openai|anthropic|claude|google|github|agent|智能体|workflow|工作流|code|代码|实践)/.test(haystack)) {
+    score -= 0.04;
+  }
+  if (/(podcast|播客|观点|opinion|鸡汤|感想|转发)/.test(haystack)) {
+    score -= 0.03;
+  }
+  return score;
+}
+
+function scoreAiHotSelectedItem(input: {
+  title: string;
+  titleEn: string;
+  summary: string;
+  sourceName: string;
+  sourceUrl: string;
+  category: string;
+  index: number;
+  total: number;
+}) {
+  const sourceTier = classifyAiHotSourceTier(input.sourceName, input.sourceUrl);
+  const haystack = normalizeTag([input.title, input.titleEn, input.summary, input.sourceName, input.sourceUrl].join(' '));
+  const orderBoost = input.total > 1 ? 0.06 * (1 - input.index / Math.max(1, input.total - 1)) : 0.06;
+  const relevanceScore = clamp(
+    0.58 +
+      aiHotSourceTierWeight(sourceTier) +
+      aiHotCategoryWeight(input.category) +
+      aiHotEntityWeight(haystack) +
+      aiHotHardSignalWeight(haystack, input.category) +
+      orderBoost,
+    0.58,
+    0.94,
+  );
+  return {
+    sourceTier,
+    relevanceScore: Number(relevanceScore.toFixed(3)),
+    severity: relevanceScore >= 0.86 ? 4 : relevanceScore >= 0.75 ? 3 : 2,
+  };
 }
 
 function normalizeAiHotSnapshot(data: unknown): SignalRow[] {
-  const items = (getPayloadArray(data, ['items']) || [])
+  const seen = new Set<string>();
+  const items = collectAiHotItems(data)
     .map((item) => ({
       id: asText(item.id),
       title: asText(item.title) || asText(item.title_en),
       titleEn: asText(item.title_en),
-      url: asText(item.url),
-      source: asText(item.source),
+      url: asText(item.url) || asText(item.sourceUrl),
+      source: asText(item.source) || asText(item.sourceName),
       publishedAt: asText(item.publishedAt) || asText(item.published_at) || asText(item.created_at),
       summary: asText(item.summary),
       category: asText(item.category),
     }))
     .filter((item) => item.title || item.summary)
-    .slice(0, 8);
+    .filter((item) => {
+      const key = normalizeTag(item.url || item.title || item.summary);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 18);
 
   if (items.length === 0) {
     return [];
   }
 
-  const latest = items[0];
-  const eventTime = parseIsoDay(latest.publishedAt || new Date().toISOString());
-  const headlineList = items
-    .slice(0, 4)
-    .map((item) => {
-      const source = item.source ? `（${item.source}）` : '';
-      return `《${cleanDisplayText(item.title)}》${source}`;
-    })
-    .join('、');
-  const categoryList = [...new Set(items.map((item) => normalizeTag(item.category)).filter(Boolean))].slice(0, 5);
   const anchor = getKnowledgeAnchor('', 'AI HOT', 'AI HOT', ['ai', 'technology']);
-  const leadingSummary = concreteDisplayText(latest.summary || latest.titleEn || latest.title, 180);
 
-  return [
-    {
-      id: generateStableId('selected-source', `aihot-${eventTime.slice(0, 13)}-${latest.id || latest.title}`),
-      title: `AI HOT 精选：${cleanDisplayText(latest.title)}`,
-      description: `${leadingSummary ? `${leadingSummary}。` : ''}本轮 AI HOT 精选还包括 ${headlineList}。`,
-      source_name: 'AI HOT',
-      source_url: 'https://aihot.virxact.com/',
+  return items.map((item, index) => {
+    const category = normalizeTag(item.category);
+    const eventTime = parseIsoDay(item.publishedAt || new Date().toISOString());
+    const sourceName = cleanDisplayText(item.source || 'AI HOT');
+    const score = scoreAiHotSelectedItem({
+      title: item.title,
+      titleEn: item.titleEn,
+      summary: item.summary,
+      sourceName,
+      sourceUrl: item.url,
+      category,
+      index,
+      total: items.length,
+    });
+    return {
+      id: generateStableId('selected-source', `aihot-item-${item.id || item.url || item.title}`),
+      title: cleanDisplayText(item.title),
+      description: concreteDisplayText(item.summary || item.titleEn || item.title, 260),
+      source_name: sourceName,
+      source_url: item.url || 'https://aihot.virxact.com/',
       event_time: eventTime,
       created_at: new Date().toISOString(),
       location: 'AI HOT',
       country: '',
       latitude: anchor?.latitude ?? null,
       longitude: anchor?.longitude ?? null,
-      severity: 2,
-      relevance_score: 0.78,
-      tags: ['technology', 'ai', 'aihot', 'ai-news', 'source-feed', 'daily:ai', ...categoryList],
-      alignment_tags: ['source:selected-source', 'source:aihot', 'source:news-feed', 'category:ai-daily'],
-      urgency_reason: 'AI HOT selected public API snapshot',
+      severity: score.severity,
+      relevance_score: score.relevanceScore,
+      tags: ['technology', 'ai', 'aihot', 'ai-news', 'source-feed', 'daily:ai', category, `aihot-tier:${score.sourceTier}`].filter(Boolean),
+      alignment_tags: [
+        'source:selected-source',
+        'source:aihot',
+        'source:news-feed',
+        'category:ai-daily',
+        'aihot:selected',
+        `aihot:tier:${score.sourceTier}`,
+        'aihot:scoring:code-formula',
+        category ? `aihot:category:${category}` : '',
+      ],
+      urgency_reason: `AI HOT selected item; tier=${score.sourceTier}; category=${category || 'unknown'}; relevance=${score.relevanceScore}`,
       last_seen_at: new Date().toISOString(),
       source_type: 'api-json',
       source_feed_name: 'AI HOT',
-      content_md: items
-        .map((item) =>
-          [cleanDisplayText(item.title), item.source, concreteDisplayText(item.summary, 140), item.url].filter(Boolean).join(' — '),
-        )
-        .join('\n'),
-    },
-  ];
+      content_md: [cleanDisplayText(item.title), sourceName, concreteDisplayText(item.summary, 220), item.url].filter(Boolean).join(' — '),
+    };
+  });
 }
 
 function catalogSourceSceneTags(scene: string) {
@@ -5235,8 +5796,11 @@ function normalizeCatalogStructuredSnapshot(
       longitude: location.longitude as number,
     }).map((row) => ({
       ...row,
-      id: generateStableId('catalog-source', `${normalizeTag(source.skill_name)}-${normalizeTag(source.source_name)}-${row.event_time}`),
-      title: `${source.source_name} 信源更新`,
+      id: generateStableId(
+        'catalog-source',
+        `${normalizeTag(source.skill_name)}-${normalizeTag(source.source_name)}-${normalizeTag(row.title || '')}-${row.event_time}`,
+      ),
+      title: row.title || `${source.source_name} 信源更新`,
       tags: [...new Set([...(row.tags || []), ...catalogSourceSceneTags(source.recommended_scene), normalizeTag(source.skill_name)])],
       alignment_tags: [...new Set([...(row.alignment_tags || []), 'source:catalog-source'])],
       urgency_reason: `catalog-source ${source.skill_name} rss snapshot`,
@@ -6079,10 +6643,16 @@ async function loadSelectedHighQualityRows(): Promise<SignalRow[]> {
     {
       key: 'aihot',
       run: () =>
-        fetch('https://aihot.virxact.com/api/public/items?mode=selected&take=12', {
-          headers: aiHotHeaders,
-          signal: AbortSignal.timeout(PUBLIC_ANCHOR_TIMEOUT_MS),
-        }).then((response) => (response.ok ? response.json() : null)).then((data) => normalizeAiHotSnapshot(data)),
+        Promise.all([
+          fetch('https://aihot.virxact.com/api/public/items?mode=selected&take=24', {
+            headers: aiHotHeaders,
+            signal: AbortSignal.timeout(PUBLIC_ANCHOR_TIMEOUT_MS),
+          }).then((response) => (response.ok ? response.json() : null)),
+          fetch('https://aihot.virxact.com/api/public/daily', {
+            headers: aiHotHeaders,
+            signal: AbortSignal.timeout(PUBLIC_ANCHOR_TIMEOUT_MS),
+          }).then((response) => (response.ok ? response.json() : null)),
+        ]).then(([selected, daily]) => normalizeAiHotSnapshot({ items: [...collectAiHotItems(selected), ...collectAiHotItems(daily)] })),
     },
     {
       key: 'signal-arena',
@@ -6506,6 +7076,7 @@ function normalizeEvents(data: unknown): SignalRow[] {
   return markers.map((item) => {
     const relevanceScore = asNumber(item.relevanceScore);
     const uniqueKey = `${asText(item.sourceUrl) || asText(item.id) || asText(item.headline)}-${asText(item.timestamp)}`;
+    const alignmentTags = uniqueAlignmentTags(['source:world-monitor', 'wm:events']);
     return {
       id: generateStableId('event', uniqueKey),
       title: asText(item.title) || asText(item.headline) || 'Unknown Event',
@@ -6525,7 +7096,9 @@ function normalizeEvents(data: unknown): SignalRow[] {
         asText(item.subEventType),
         asText(item.actor1),
         asText(item.actor2),
+        ...alignmentTags,
       ].filter(Boolean),
+      alignment_tags: alignmentTags,
       last_seen_at: new Date().toISOString(),
     };
   });
@@ -6541,6 +7114,7 @@ function normalizeOutbreaks(data: unknown): SignalRow[] {
 
   return outbreaks.map((item) => {
     const uniqueKey = `${asText(item.don_id) || asText(item.id) || asText(item.disease)}-${asText(item.publication_date)}`;
+    const alignmentTags = uniqueAlignmentTags(['source:world-monitor', 'wm:outbreaks']);
     return {
       id: generateStableId('outbreak', uniqueKey),
       title: asText(item.disease) || asText(item.name) || 'Unknown Outbreak',
@@ -6555,7 +7129,8 @@ function normalizeOutbreaks(data: unknown): SignalRow[] {
       longitude: asNumber(item.longitude) ?? asNumber(item.lng),
       severity: asNumber(item.severity) ?? 3,
       relevance_score: 0.8,
-      tags: ['outbreak', asText(item.disease)].filter(Boolean),
+      tags: ['outbreak', asText(item.disease), ...alignmentTags].filter(Boolean),
+      alignment_tags: alignmentTags,
       last_seen_at: new Date().toISOString(),
     };
   });
@@ -6879,6 +7454,150 @@ function applyIngestionStabilityPolicy(rows: SignalRow[]): { rows: SignalRow[]; 
   };
 }
 
+type UnifiedSourceTier = 't1' | 't1.5' | 't2' | 't3';
+type UnifiedIntakeDecision = 'main' | 'candidate' | 'archive';
+
+function rowTextHaystack(row: SignalRow) {
+  return normalizeTag(
+    [
+      row.title,
+      row.description,
+      row.source_name,
+      row.source_url,
+      row.source_type,
+      row.source_feed_name,
+      ...(row.tags || []),
+      ...(row.alignment_tags || []),
+    ].join(' '),
+  );
+}
+
+function classifyUnifiedSourceTier(row: SignalRow, category: SignalRowSourceCategory): UnifiedSourceTier {
+  const haystack = rowTextHaystack(row);
+  const sourceName = normalizeText(row.source_name);
+  if (category === 'world-monitor' || haystack.includes('source:world-monitor') || /world-monitor/.test(haystack)) return 't1';
+  if (haystack.includes('source:aihot') || /aihot|ai-hot|ai-hot/.test(haystack)) return 't1';
+  if (
+    /(官网|官方|official|newsroom|engineering-blog|developers-blog|github-releases|openai|anthropic|claude|deepmind|google|meta-ai|mistral|nvidia|huggingface|hugging-face|who|treasury|fda|arxiv|openalex|semantic-scholar|pubmed)/.test(
+      haystack,
+    ) &&
+    !/^x[:：-]/i.test(sourceName)
+  ) {
+    return 't1';
+  }
+  if (/^x[:：-]/i.test(sourceName) && /(openai|anthropic|claude|google|deepmind|meta|xai|mistral|nvidia|runway|krea|notion|kimi|minimax|baidu|sensetime|kling)/.test(haystack)) {
+    return 't1.5';
+  }
+  if (category === 'public-anchor' || category === 'other') return 't2';
+  return /weak-signal|reddit|bsky|forum|podcast|newsletter/.test(haystack) ? 't3' : 't2';
+}
+
+function unifiedTierWeight(tier: UnifiedSourceTier) {
+  if (tier === 't1') return 0.24;
+  if (tier === 't1.5') return 0.18;
+  if (tier === 't2') return 0.12;
+  return 0.06;
+}
+
+function unifiedContentRelevance(row: SignalRow, category: SignalRowSourceCategory) {
+  const haystack = rowTextHaystack(row);
+  if (category === 'world-monitor') return 0.12;
+  if (haystack.includes('source:aihot')) return 0.22;
+  const aiMatch = /(\bai\b|llm|openai|anthropic|claude|chatgpt|gemini|deepmind|模型|大模型|智能体|agent|benchmark|sota|huggingface|github|paper|论文|开源)/.test(haystack);
+  const worldMatch = /(war|conflict|strike|missile|drone|ceasefire|sanction|diplomacy|outbreak|epidemic|energy|supply-chain|shipping|election|regulation|战争|冲突|导弹|停火|制裁|外交|疫情|能源|供应链|监管)/.test(haystack);
+  const financeInfraMatch = /(treasury|yield|cpi|gdp|fda|market|shipping|crypto|oil|gas|capacity|logistics)/.test(haystack);
+  let score = 0;
+  if (aiMatch) score += 0.16;
+  if (worldMatch) score += 0.16;
+  if (financeInfraMatch) score += 0.08;
+  return clamp(score, 0, 0.22);
+}
+
+function unifiedEventValue(row: SignalRow, category: SignalRowSourceCategory) {
+  const haystack = rowTextHaystack(row);
+  const visibleText = normalizeTag([row.title, row.description].join(' '));
+  let score = 0;
+  if ((row.severity || 0) >= 4) score += 0.09;
+  if ((row.relevance_score || 0) >= 0.75) score += 0.05;
+  if ((row.intensity || 0) >= 3) score += 0.05;
+  if ((row.mention_count || 0) >= 5) score += 0.04;
+  if (/(发布|上线|推出|release|launch|announce|available|开源|open-source|api|sdk|cli|benchmark|sota|融资|收购|合作|监管|lawsuit|attack|strike|kills|dead|fatal|outbreak|ceasefire|sanction)/.test(haystack)) {
+    score += 0.08;
+  }
+  if (category === 'source-feed' && /(信源更新|结构化更新|当前样本|标题清单|source-feed|bundle-feed)/.test(haystack)) {
+    score -= 0.1;
+  }
+  if (/(opinion|podcast|播客|观点|鸡汤|转发|retweet|soft|marketing|sponsored)/.test(haystack)) {
+    score -= 0.08;
+  }
+  if (/(反馈|好玩|有趣|感谢|thanks|feedback|fun|community-win|community-victory|day0|day-0)/.test(visibleText)) {
+    score -= 0.07;
+  }
+  return clamp(score, 0, 0.24);
+}
+
+function unifiedFreshnessScore(row: SignalRow, now = Date.now()) {
+  const timestamp = Date.parse(row.event_time || row.last_seen_at || row.created_at || '');
+  if (!Number.isFinite(timestamp)) return 0.04;
+  const ageHours = Math.max(0, (now - timestamp) / 36e5);
+  if (ageHours <= 6) return 0.1;
+  if (ageHours <= 24) return 0.08;
+  if (ageHours <= 72) return 0.05;
+  return 0.02;
+}
+
+function unifiedIntakeThreshold(tier: UnifiedSourceTier, category: SignalRowSourceCategory) {
+  if (category === 'world-monitor') return 0.44;
+  if (tier === 't1') return 0.5;
+  if (tier === 't1.5') return 0.56;
+  if (tier === 't2') return 0.62;
+  return 0.7;
+}
+
+function applyUnifiedIntakeScoring(rows: SignalRow[]): SignalRow[] {
+  const now = Date.now();
+  const scoredRows = rows.map((row) => {
+    const category = classifySignalRowSourceCategory(row);
+    const tier = classifyUnifiedSourceTier(row, category);
+    const upstream = clamp(Number(row.relevance_score || 0), 0, 1);
+    const tierScore = category === 'world-monitor' ? Math.min(unifiedTierWeight(tier), 0.18) : unifiedTierWeight(tier);
+    const upstreamWeight = category === 'world-monitor' ? 0.34 : 0.22;
+    const score = clamp(
+      tierScore +
+        unifiedContentRelevance(row, category) +
+        unifiedEventValue(row, category) +
+        unifiedFreshnessScore(row, now) +
+        upstream * upstreamWeight,
+      0,
+      1,
+    );
+    const threshold = unifiedIntakeThreshold(tier, category);
+    const decision: UnifiedIntakeDecision =
+      score >= threshold ? 'main' : score >= Math.max(0.42, threshold - 0.12) ? 'candidate' : 'archive';
+    const nextRelevance = decision === 'main' ? Math.max(upstream, score) : Math.max(upstream * 0.85, score * 0.82);
+    const nextSeverity =
+      decision === 'main' && score >= 0.78
+        ? Math.max(Number(row.severity || 1), 4)
+        : decision === 'candidate'
+          ? Math.min(Number(row.severity || 1), 3)
+          : Math.min(Number(row.severity || 1), 2);
+    return {
+      ...row,
+      severity: nextSeverity,
+      relevance_score: Number(clamp(nextRelevance, 0, 0.96).toFixed(3)),
+      alignment_tags: uniqueAlignmentTags([
+        `upstream:score:${Math.round(upstream * 100)}`,
+        `intake:tier:${tier}`,
+        `intake:decision:${decision}`,
+        `intake:score:${Math.round(score * 100)}`,
+        'intake:scoring:code-formula',
+        ...(row.alignment_tags || []),
+      ]),
+    };
+  });
+  return scoredRows.filter((row) => !(row.alignment_tags || []).includes('intake:decision:archive'));
+}
+
 type LoadSignalsOptions = {
   allowExpiredDiskCache?: boolean;
   preferCached?: boolean;
@@ -6886,6 +7605,17 @@ type LoadSignalsOptions = {
   allowModelRefresh?: boolean;
   forceRefresh?: boolean;
 };
+
+async function fetchJsonWithTimeout(url: string, timeoutMs: number): Promise<unknown> {
+  const response = await fetch(url, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} while loading ${url}`);
+  }
+  return response.json();
+}
 
 async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOptions, 'allowModelRefresh'> = {}): Promise<WorldSignal[]> {
   if (runtime.signalsRefreshInFlight) {
@@ -6909,26 +7639,11 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
         monitorRecommendedRowsRes,
         catalogSourceRowsRes,
       ] = await Promise.allSettled([
-        fetch(`${baseUrl}/api/events`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(20000),
-        }),
-        fetch(`${baseUrl}/api/outbreaks`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(20000),
-        }),
-        fetch(`${baseUrl}/api/signal-markers`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(20000),
-        }),
-        fetch(`${informationCollectionBaseUrl}/api/v1/articles?limit=80&offset=0`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(12000),
-        }),
-        fetch(`${informationCollectionBaseUrl}/api/v1/literature/recent?limit=40&offset=0`, {
-          headers: { Accept: 'application/json' },
-          signal: AbortSignal.timeout(12000),
-        }),
+        fetchJsonWithTimeout(`${baseUrl}/api/events`, 20000),
+        fetchJsonWithTimeout(`${baseUrl}/api/outbreaks`, 20000),
+        fetchJsonWithTimeout(`${baseUrl}/api/signal-markers`, 20000),
+        fetchJsonWithTimeout(`${informationCollectionBaseUrl}/api/v1/articles?limit=80&offset=0`, 12000),
+        fetchJsonWithTimeout(`${informationCollectionBaseUrl}/api/v1/literature/recent?limit=40&offset=0`, 12000),
         loadPublicAnchorRows(),
         loadSelectedHighQualityRows(),
         loadMonitorRecommendedRows(),
@@ -6937,50 +7652,35 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
 
       const allSignals: SignalRow[] = [];
 
-      if (eventsRes.status === 'fulfilled' && eventsRes.value.ok) {
-        try {
-          const data = await eventsRes.value.json();
-          allSignals.push(...normalizeEvents(data));
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse events:', e);
-        }
+      if (eventsRes.status === 'fulfilled') {
+        allSignals.push(...normalizeEvents(eventsRes.value));
+      } else {
+        console.warn('[loadSignals] Failed to fetch events:', eventsRes.reason);
       }
 
-      if (outbreaksRes.status === 'fulfilled' && outbreaksRes.value.ok) {
-        try {
-          const data = await outbreaksRes.value.json();
-          allSignals.push(...normalizeOutbreaks(data));
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse outbreaks:', e);
-        }
+      if (outbreaksRes.status === 'fulfilled') {
+        allSignals.push(...normalizeOutbreaks(outbreaksRes.value));
+      } else {
+        console.warn('[loadSignals] Failed to fetch outbreaks:', outbreaksRes.reason);
       }
 
-      if (signalMarkersRes.status === 'fulfilled' && signalMarkersRes.value.ok) {
-        try {
-          const data = await signalMarkersRes.value.json();
-          allSignals.push(...normalizeSignalMarkers(data));
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse signal markers:', e);
-        }
+      if (signalMarkersRes.status === 'fulfilled') {
+        allSignals.push(...normalizeSignalMarkers(signalMarkersRes.value));
+      } else {
+        console.warn('[loadSignals] Failed to fetch signal markers:', signalMarkersRes.reason);
       }
 
-      if (icArticlesRes.status === 'fulfilled' && icArticlesRes.value.ok) {
-        try {
-          const data = await icArticlesRes.value.json();
-          const icArticleRows = await enrichIcArticleRows(normalizeIcArticles(data));
-          allSignals.push(...icArticleRows);
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse IC articles:', e);
-        }
+      if (icArticlesRes.status === 'fulfilled') {
+        const icArticleRows = await enrichIcArticleRows(normalizeIcArticles(icArticlesRes.value));
+        allSignals.push(...icArticleRows);
+      } else {
+        console.warn('[loadSignals] Failed to fetch IC articles:', icArticlesRes.reason);
       }
 
-      if (icLiteratureRes.status === 'fulfilled' && icLiteratureRes.value.ok) {
-        try {
-          const data = await icLiteratureRes.value.json();
-          allSignals.push(...normalizeIcLiterature(data));
-        } catch (e) {
-          console.warn('[loadSignals] Failed to parse IC literature:', e);
-        }
+      if (icLiteratureRes.status === 'fulfilled') {
+        allSignals.push(...normalizeIcLiterature(icLiteratureRes.value));
+      } else {
+        console.warn('[loadSignals] Failed to fetch IC literature:', icLiteratureRes.reason);
       }
 
       if (publicAnchorRowsRes.status === 'fulfilled') {
@@ -7000,7 +7700,7 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
       }
 
       if (allSignals.length === 0) {
-        console.warn('[loadSignals] No signals fetched, using fallback');
+        console.warn('[loadSignals] No signals fetched');
         runtime.sourceIntakeStats = null;
         const staleCachedSignals = await readSignalDiskCache(true);
         if (staleCachedSignals) {
@@ -7011,6 +7711,15 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
           return staleCachedSignals;
         }
 
+        if (!isSampleSignalFallbackEnabled()) {
+          runtime.signalsCache = {
+            expiresAt: now + SIGNALS_CACHE_TTL_MS,
+            signals: [],
+          };
+          return [];
+        }
+
+        console.warn('[loadSignals] WORLD_ALLOW_SAMPLE_SIGNALS=1, using sample signals');
         const fallbackSignals = scoreSignals(FALLBACK_SIGNAL_ROWS);
         runtime.signalsCache = {
           expiresAt: now + SIGNALS_CACHE_TTL_MS,
@@ -7024,23 +7733,31 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
       const alignedRows = await ensureSignalRowAlignments(stabilizedRows.rows, {
         allowModelRefresh: isBatchModelRefreshAllowed(options),
       });
-      const mergedSignals = mergeSignalRows(alignedRows);
+      const publishableRows = filterLowInformationSourceRows(alignedRows, {
+        onDrop: (dropped) => {
+          console.warn(`[loadSignals] Dropped ${dropped} low-information source-feed rows before scoring`);
+        },
+      });
+      const intakeScoredRows = applyUnifiedIntakeScoring(publishableRows);
+      const exactMergedRows = mergeSignalRows(intakeScoredRows);
+      const eventClusteredRows = clusterRelatedSignalRows(exactMergedRows);
+      const mergedSignals = eventClusteredRows.rows;
       console.log(
-        `[loadSignals] Loaded ${mergedSignals.length} merged signals from world-monitor.com with knowledge supplements (emitted ${stabilizedRows.stats.total_emitted_count}, kept ${stabilizedRows.stats.total_kept_count}, collapsed ${stabilizedRows.stats.total_collapsed_count})`,
+        `[loadSignals] Loaded ${mergedSignals.length} merged signals from world-monitor.com with knowledge supplements (emitted ${stabilizedRows.stats.total_emitted_count}, kept ${intakeScoredRows.length}/${publishableRows.length}, exact_collapsed ${intakeScoredRows.length - exactMergedRows.length}, event_clusters ${eventClusteredRows.clusterCount}, event_collapsed ${eventClusteredRows.collapsedCount}, source_collapsed ${stabilizedRows.stats.total_collapsed_count})`,
       );
       const scoredSignals = scoreSignals(mergedSignals);
       const staleCachedPayload = await readSignalDiskCachePayload(true);
+      const isShrunkenRefresh = Boolean(
+        staleCachedPayload && isDangerouslyShrunkenSignalSet(scoredSignals, staleCachedPayload.signals),
+      );
       const safeSignals =
-        staleCachedPayload && isDangerouslyShrunkenSignalSet(scoredSignals, staleCachedPayload.signals)
-          ? staleCachedPayload.signals
+        staleCachedPayload && isShrunkenRefresh
+          ? mergeRefreshedSignalsWithPrevious(scoredSignals, staleCachedPayload.signals)
           : scoredSignals;
-      const safeStats =
-        staleCachedPayload && isDangerouslyShrunkenSignalSet(scoredSignals, staleCachedPayload.signals)
-          ? staleCachedPayload.sourceIntakeStats
-          : runtime.sourceIntakeStats;
-      if (safeSignals !== scoredSignals) {
+      const safeStats = runtime.sourceIntakeStats;
+      if (isShrunkenRefresh) {
         console.warn(
-          `[loadSignals] Refusing to replace a fuller cached signal set (${staleCachedPayload?.signals.length || 0}) with a shrunken refresh (${scoredSignals.length}).`,
+          `[loadSignals] Merging shrunken refresh (${scoredSignals.length}) into fuller cached signal set (${staleCachedPayload?.signals.length || 0}).`,
         );
       }
       runtime.signalsCache = {
@@ -7052,7 +7769,7 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
       return safeSignals;
     } catch (error) {
       console.warn(
-        '[世界脉络] Falling back to sample signals:',
+        '[世界脉络] Live signal refresh failed:',
         error instanceof Error ? error.message : String(error),
       );
       runtime.sourceIntakeStats = null;
@@ -7065,6 +7782,15 @@ async function refreshSignals(runtime: RuntimeStore, options: Pick<LoadSignalsOp
         return staleCachedSignals;
       }
 
+      if (!isSampleSignalFallbackEnabled()) {
+        runtime.signalsCache = {
+          expiresAt: now + SIGNALS_CACHE_TTL_MS,
+          signals: [],
+        };
+        return [];
+      }
+
+      console.warn('[世界脉络] WORLD_ALLOW_SAMPLE_SIGNALS=1, using sample signals');
       const fallbackSignals = scoreSignals(FALLBACK_SIGNAL_ROWS);
       runtime.signalsCache = {
         expiresAt: now + SIGNALS_CACHE_TTL_MS,
@@ -7269,7 +7995,7 @@ function _getNodeDisplayLevel(signal: WorldSignal, reports: WorldReport[]): Worl
 
 function buildStateMetrics(
   scopedSignals: WorldSignal[],
-  arena: Pick<LiveBenchArenaState, 'active_questions' | 'resolved_questions' | 'watchlist_questions'>,
+  arena: Pick<LiveBenchArenaState, 'active_questions' | 'resolved_questions' | 'watchlist_questions'> | null,
 ): WorldStateMetrics {
   const mappedSignals = scopedSignals.filter((signal) => signal.latitude !== null && signal.longitude !== null);
   const regionByHotspot = [...scopedSignals]
@@ -7289,9 +8015,9 @@ function buildStateMetrics(
   return {
     active_signal_count: scopedSignals.length,
     mapped_signal_count: mappedSignals.length,
-    active_question_count: arena.active_questions.length,
-    resolved_question_count: arena.resolved_questions.length,
-    watchlist_question_count: arena.watchlist_questions.length,
+    active_question_count: arena?.active_questions.length || 0,
+    resolved_question_count: arena?.resolved_questions.length || 0,
+    watchlist_question_count: arena?.watchlist_questions.length || 0,
     avg_hotspot_score: Number(avgHotspot.toFixed(2)),
     avg_coverage_gap: Number(avgCoverageGap.toFixed(2)),
     hottest_region: regionByHotspot,
@@ -7488,6 +8214,9 @@ function buildCuratedBundleHints(sourceCatalog: WorldSourceCatalog | null | unde
 
 function buildRecommendedBundlesForScene(scene: WorldScene, sourceCatalog: WorldSourceCatalog | null | undefined) {
   const curatedBundleHints = buildCuratedBundleHints(sourceCatalog);
+  if (scene === 'tech-ai') {
+    return [...(curatedBundleHints['technology-daily'] || []), ...(curatedBundleHints['ai-daily'] || [])];
+  }
   return curatedBundleHints[scene] || [];
 }
 
@@ -7499,35 +8228,26 @@ function buildWorldSubworldSummaries(
 
   const fixedWorlds: Array<{ key: WorldScene; title: string; summary: string; matched_tags: string[] }> = [
     {
-      key: 'global',
-      title: '全部信号',
-      summary: '观察全部信号与世界标点。',
-      matched_tags: [],
-    },
-    {
       key: 'geo-politics-daily',
-      title: '国际时政',
-      summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。',
-      matched_tags: ['geopolitics', 'war', 'policy', 'macro', 'health'],
+      title: '地缘',
+      summary: '冲突、外交、制裁、选举、公共安全和区域风险。',
+      matched_tags: ['geopolitics', 'war', 'conflict', 'diplomacy'],
     },
     {
-      key: 'technology-daily',
-      title: '科技',
-      summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。',
-      matched_tags: ['technology', 'research', 'chip', 'opensource'],
-    },
-    {
-      key: 'ai-daily',
+      key: 'tech-ai',
       title: 'AI',
-      summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。',
-      matched_tags: ['ai', 'llm', 'agent', 'aihot'],
+      summary: '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。',
+      matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot'],
     },
   ];
 
   return fixedWorlds.map((world) => ({
     ...world,
-    signal_count: world.key === 'global' ? signals.length : signals.filter((signal) => signalMatchesScene(signal, world.key)).length,
-    recommended_bundles: curatedBundleHints[world.key] || [],
+    signal_count: signals.filter((signal) => signalMatchesScene(signal, world.key)).length,
+    recommended_bundles:
+      world.key === 'tech-ai'
+        ? [...(curatedBundleHints['technology-daily'] || []), ...(curatedBundleHints['ai-daily'] || [])]
+        : curatedBundleHints[world.key] || [],
   }));
 }
 
@@ -7586,18 +8306,14 @@ function buildSubworldSummariesFromCachedDashboardState(
 
   const sourceCatalog = (state as { source_catalog?: WorldSourceCatalog | null }).source_catalog || null;
   const fixedWorlds: Array<{ key: WorldScene; title: string; summary: string; matched_tags: string[] }> = [
-    { key: 'global', title: '全部信号', summary: '观察全部信号与世界标点。', matched_tags: [] },
-    { key: 'geo-politics-daily', title: '国际时政', summary: '地缘政治、外交、安全、宏观、能源和公共卫生变化。', matched_tags: ['geopolitics', 'war', 'policy', 'macro', 'health'] },
-    { key: 'technology-daily', title: '科技', summary: '科技公司、论文、芯片、开源、工程和供应链技术线索。', matched_tags: ['technology', 'research', 'chip', 'opensource'] },
-    { key: 'ai-daily', title: 'AI', summary: '模型、Agent、AI 产品、论文和 AI HOT 精选动态。', matched_tags: ['ai', 'llm', 'agent', 'aihot'] },
+    { key: 'geo-politics-daily', title: '地缘', summary: '冲突、外交、制裁、选举、公共安全和区域风险。', matched_tags: ['geopolitics', 'war', 'conflict', 'diplomacy'] },
+    { key: 'tech-ai', title: 'AI', summary: '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。', matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot'] },
   ];
 
   return fixedWorlds.map((world) => ({
     ...world,
     signal_count:
-      world.key === 'global'
-        ? state.metrics?.active_signal_count || 0
-        : pooledSignals.filter((signal) =>
+      pooledSignals.filter((signal) =>
             signalMatchesScene(
               {
                 scene: (signal?.scene as WorldScene | undefined) || 'global',
@@ -7611,7 +8327,7 @@ function buildSubworldSummariesFromCachedDashboardState(
               world.key,
             ),
           ).length || sceneCounts.get(world.key)?.size || 0,
-    recommended_bundles: buildCuratedBundleHints(sourceCatalog)[world.key] || [],
+    recommended_bundles: buildRecommendedBundlesForScene(world.key, sourceCatalog),
   }));
 }
 
@@ -7792,7 +8508,7 @@ async function hydrateCachedSourceRefreshSummary(
     buildSourceGovernanceState().catch(() => null),
     readSkillHubSnapshotSummary(),
     readSourceSkillSnapshotSummary(),
-    readRepoDiscoverySnapshotSummary(),
+    getWorldRepoDiscoverySnapshotSummary(),
   ]);
   return {
     ...normalized,
@@ -7835,6 +8551,26 @@ export async function getCachedWorldDashboardState(scene: WorldScene = 'global')
     ...state,
     source_refresh_summary: await hydrateCachedSourceRefreshSummary(state.source_refresh_summary),
   };
+  if (scene === 'tech-ai' || scene === 'geo-politics-daily') {
+    return {
+      ...normalizedState,
+      scene,
+      nodes:
+        scene === 'geo-politics-daily'
+          ? (normalizedState.nodes || []).slice(0, GEO_POLITICS_VIEW_LIMIT * 2)
+          : normalizedState.nodes,
+      top_signals:
+        scene === 'geo-politics-daily'
+          ? (normalizedState.top_signals || []).slice(0, GEO_POLITICS_FEED_LIMIT)
+          : normalizedState.top_signals,
+      pending_question_previews: [],
+      resolved_question_previews: [],
+      livebench_summary: null,
+      evaluation_summary: null,
+      what_to_do_next: [],
+      quick_links: [],
+    };
+  }
   const [evaluation, sourceStatus] = await Promise.all([
     readWorldApiSnapshot<LiveBenchEvaluation>(
       livebenchScene,
@@ -7917,14 +8653,14 @@ function buildOpenClawSkillEntry(requestOrigin?: string | null) {
     return {
       mode: 'anonymous' as const,
       title: '信源 Skill',
-      description: '把这个地址交给接入方即可。主口径是过去 30 天信源查询，系统会顺手把这轮判断带去校准题池，再把经验带回后续回答。',
-      copy_hint: '每次查完信源，系统都会顺手把这轮判断带去校准题池，再把经验带回后续回答。',
+      description: '把这个地址交给接入方即可。主口径是过去 30 天信源查询，模型可直接查信号、AI Hot 和信源流回答。',
+      copy_hint: 'LiveBench 先作为独立入口保留；常规回答不必先走知识库。',
       url: publicUrl,
     };
 }
 
 export async function getWorldSubworlds(options?: { forceCatalogRefresh?: boolean }) {
-  const signals = await loadSignals({ allowExpiredDiskCache: true, preferCached: true, backgroundRefresh: true });
+  const signals = await loadSignals({ allowExpiredDiskCache: true, preferCached: true, backgroundRefresh: false });
   const sourceCatalog = await loadSourceCatalog({ force: options?.forceCatalogRefresh });
   return buildWorldSubworldSummaries(signals, sourceCatalog);
 }
@@ -7938,13 +8674,13 @@ export async function getWorldState(
   const signals = await loadSignals({
     allowExpiredDiskCache: true,
     preferCached: true,
-    backgroundRefresh: true,
+    backgroundRefresh: false,
     allowModelRefresh,
   });
   const localizedSignals = await materializeLocalizedSignals(signals);
   const sourceCatalog = await loadSourceCatalog({ force: options?.forceCatalogRefresh });
   const filteredSignals = localizedSignals.filter((signal) => signalMatchesScene(signal, scene));
-  const scopedSignals = filteredSignals.length ? filteredSignals : localizedSignals;
+  const scopedSignals = filteredSignals.length || scene !== 'global' ? filteredSignals : localizedSignals;
   const graphSignals = [...scopedSignals]
     .sort(
       (left, right) =>
@@ -8020,7 +8756,16 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
       const localized = getLocalizedSignal(signal);
       const concreteTitle = concreteDisplayText(applyQuickTextTranslations(signal.title), 120);
       const concreteSummary = concreteDisplayText(applyQuickTextTranslations(signal.summary), 240);
-      const displayTitle = isGenericGeneratedDisplayText(localized.displayTitle) && concreteTitle ? concreteTitle : localized.displayTitle;
+      const titleNeedsFallback =
+        isGenericGeneratedDisplayText(concreteTitle) ||
+        isLowInformationSignalTitle(concreteTitle, concreteSummary);
+      const fallbackTitle = !titleNeedsFallback
+        ? concreteTitle
+        : signalSummaryHeadline(concreteSummary || signal.summary);
+      const displayTitle =
+        (isGenericGeneratedDisplayText(localized.displayTitle) || isLowInformationSignalTitle(localized.displayTitle, concreteSummary)) && fallbackTitle
+          ? fallbackTitle
+          : localized.displayTitle;
       const displaySummary = isGenericGeneratedDisplayText(localized.displaySummary) && concreteSummary ? concreteSummary : localized.displaySummary;
       return ({
       node_id: signal.id,
@@ -8033,7 +8778,7 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
         region: signal.region,
       },
       tags: signal.tags,
-      alignment_tags: signal.alignmentTags,
+      alignment_tags: publicAlignmentTags(signal.alignmentTags),
       intensity: signal.intensity,
       mention_count: signal.mentionCount,
       urgency_reason: cleanDisplayText(signal.urgencyReason || ''),
@@ -8061,7 +8806,16 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
       const localized = getLocalizedSignal(signal);
       const concreteTitle = concreteDisplayText(applyQuickTextTranslations(signal.title), 120);
       const concreteSummary = concreteDisplayText(applyQuickTextTranslations(signal.summary), 240);
-      const displayTitle = isGenericGeneratedDisplayText(localized.displayTitle) && concreteTitle ? concreteTitle : localized.displayTitle;
+      const titleNeedsFallback =
+        isGenericGeneratedDisplayText(concreteTitle) ||
+        isLowInformationSignalTitle(concreteTitle, concreteSummary);
+      const fallbackTitle = !titleNeedsFallback
+        ? concreteTitle
+        : signalSummaryHeadline(concreteSummary || signal.summary);
+      const displayTitle =
+        (isGenericGeneratedDisplayText(localized.displayTitle) || isLowInformationSignalTitle(localized.displayTitle, concreteSummary)) && fallbackTitle
+          ? fallbackTitle
+          : localized.displayTitle;
       const displaySummary = isGenericGeneratedDisplayText(localized.displaySummary) && concreteSummary ? concreteSummary : localized.displaySummary;
       return ({
       node_id: `${signal.id}:explore`,
@@ -8074,7 +8828,7 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
         region: signal.region,
       },
       tags: signal.tags,
-      alignment_tags: signal.alignmentTags,
+      alignment_tags: publicAlignmentTags(signal.alignmentTags),
       intensity: signal.intensity,
       mention_count: signal.mentionCount,
       urgency_reason: cleanDisplayText(signal.urgencyReason || ''),
@@ -8134,7 +8888,7 @@ async function buildDashboardSourceRefreshSummaryFromSignals(input: {
   const [skillhubSnapshot, sourceSkillSnapshot, repoDiscoverySnapshot, refreshJob] = await Promise.all([
     readSkillHubSnapshotSummary(),
     readSourceSkillSnapshotSummary(),
-    readRepoDiscoverySnapshotSummary(),
+    getWorldRepoDiscoverySnapshotSummary(),
     readSourceRefreshJobStatus(),
   ]);
   const signalMix = countSignalMix(input.signal_mix_signals);
@@ -8305,21 +9059,29 @@ function buildWhatToDoNext(
 
 export async function getWorldDashboardState(
   scene: WorldScene = 'global',
-  options?: { forceCatalogRefresh?: boolean; requestOrigin?: string | null; allowModelRefresh?: boolean },
+  options?: { forceCatalogRefresh?: boolean; requestOrigin?: string | null; allowModelRefresh?: boolean; forceSignalRefresh?: boolean },
 ) {
   const allowModelRefresh = isBatchModelRefreshAllowed(options);
   const livebenchScene: WorldScene = 'global';
+  const isTechAiScene = scene === 'tech-ai';
+  const isGeoPoliticsScene = scene === 'geo-politics-daily';
+  const skipLiveBenchForScene = isTechAiScene || isGeoPoliticsScene;
+  const skipOperationalSummariesForScene = isTechAiScene;
+  const mapSignalLimit = isGeoPoliticsScene ? GEO_POLITICS_VIEW_LIMIT : WORLD_VIEW_LIMIT;
   const generated_at = new Date().toISOString();
   const signals = await loadSignals({
     allowExpiredDiskCache: true,
     preferCached: true,
-    backgroundRefresh: true,
+    backgroundRefresh: false,
     allowModelRefresh,
+    forceRefresh: options?.forceSignalRefresh,
   });
-  const localizedSignals = await materializeLocalizedSignals(signals);
-  const filteredSignals = localizedSignals.filter((signal) => signalMatchesScene(signal, scene));
-  const scopedSignals = filteredSignals.length ? filteredSignals : localizedSignals;
-  const graphSignals = [...scopedSignals]
+  const candidateSignals = isTechAiScene ? signals.filter((signal) => signalMatchesScene(signal, scene)) : signals;
+  const localizedSignals = await materializeLocalizedSignals(candidateSignals);
+  const filteredSignals = isTechAiScene ? localizedSignals : localizedSignals.filter((signal) => signalMatchesScene(signal, scene));
+  const scopedSignals = filteredSignals.length || scene !== 'global' ? filteredSignals : localizedSignals;
+  const timelineEventSignals = selectTimelineEventSignals(scopedSignals);
+  const graphSignals = [...timelineEventSignals]
     .sort(
       (left, right) =>
         new Date(right.publishedAt).getTime() - new Date(left.publishedAt).getTime() ||
@@ -8327,16 +9089,25 @@ export async function getWorldDashboardState(
         right.hotspotScore - left.hotspotScore,
     )
     .slice(0, 32);
-  const topSignals = buildTopSignalFeed(scopedSignals);
+  const topSignals = buildTopSignalFeed(timelineEventSignals).slice(
+    0,
+    isGeoPoliticsScene ? GEO_POLITICS_FEED_LIMIT : WORLD_VIEW_LIMIT,
+  );
   const knowledgeSignals = buildKnowledgeSignalFeed(scopedSignals);
-  const hotspotSourceSignals = [...scopedSignals]
-    .filter((signal) => signal.latitude !== null && signal.longitude !== null)
-    .sort((a, b) => b.hotspotScore - a.hotspotScore)
-    .slice(0, WORLD_VIEW_LIMIT);
-  const explorationSourceSignals = [...scopedSignals]
-    .filter((signal) => signal.latitude !== null && signal.longitude !== null)
-    .sort((a, b) => b.explorationScore - a.explorationScore)
-    .slice(0, WORLD_VIEW_LIMIT);
+  const mapCandidateSignals = timelineEventSignals.filter((signal) => signal.latitude !== null && signal.longitude !== null);
+  const mapSourceSignals = mapCandidateSignals.length > 0
+    ? mapCandidateSignals
+    : scopedSignals.filter((signal) => signal.latitude !== null && signal.longitude !== null && !isCatalogSourceSnapshotSignal(signal));
+  const hotspotSourceSignals = isTechAiScene
+    ? []
+    : [...mapSourceSignals]
+        .sort((a, b) => b.hotspotScore - a.hotspotScore)
+        .slice(0, mapSignalLimit);
+  const explorationSourceSignals = isTechAiScene
+    ? []
+    : [...mapSourceSignals]
+        .sort((a, b) => b.explorationScore - a.explorationScore)
+        .slice(0, mapSignalLimit);
   const visibleSignalsForTranslation = Array.from(
     new Map(
       [
@@ -8353,23 +9124,41 @@ export async function getWorldDashboardState(
     ]);
   }
 
-  const sourceCatalogPromise: Promise<WorldSourceCatalog | null> = Promise.race([
-    loadSourceCatalog({ force: options?.forceCatalogRefresh }).catch(() => null),
-    sleep(1200).then<WorldSourceCatalog | null>(() => null),
-  ]);
+  const sourceCatalogPromise: Promise<WorldSourceCatalog | null> = isTechAiScene
+    ? Promise.resolve(null)
+    : Promise.race([
+        loadSourceCatalog({ force: options?.forceCatalogRefresh }).catch(() => null),
+        sleep(1200).then<WorldSourceCatalog | null>(() => null),
+      ]);
 
-  const dashboardEvaluationPromise: Promise<LiveBenchEvaluation | null> = Promise.race([
-    getLiveBenchEvaluationFromStore(livebenchScene).catch(() => null),
-    sleep(8000).then<LiveBenchEvaluation | null>(() => null),
-  ]);
+  const dashboardEvaluationPromise: Promise<LiveBenchEvaluation | null> = skipLiveBenchForScene
+    ? Promise.resolve(null)
+    : Promise.race([
+        getLiveBenchEvaluationFromStore(livebenchScene).catch(() => null),
+        sleep(8000).then<LiveBenchEvaluation | null>(() => null),
+      ]);
+
+  const arenaPromise: Promise<ReturnType<typeof toPublicLiveBenchArenaState> | null> = skipLiveBenchForScene
+    ? Promise.resolve(null)
+    : Promise.race([
+        (allowModelRefresh
+          ? withLiveBenchRemoteModelRefresh(() => buildLiveBenchArenaState(livebenchScene, localizedSignals))
+          : buildLiveBenchArenaState(livebenchScene, localizedSignals)
+        )
+          .then((value) => toPublicLiveBenchArenaState(value))
+          .catch(() => null),
+        sleep(allowModelRefresh ? 20000 : 5000).then<null>(() => null),
+      ]);
 
   const [arena, sourceCatalog, monitorRuntime, dashboardEvaluation] = await Promise.all([
-    (allowModelRefresh
-      ? withLiveBenchRemoteModelRefresh(() => buildLiveBenchArenaState(livebenchScene, localizedSignals))
-      : buildLiveBenchArenaState(livebenchScene, localizedSignals)
-    ).then((value) => toPublicLiveBenchArenaState(value)),
+    arenaPromise,
     sourceCatalogPromise,
-    buildSourceGovernanceState().catch(() => null),
+    skipOperationalSummariesForScene
+      ? Promise.resolve(null)
+      : Promise.race([
+          buildSourceGovernanceState().catch(() => null),
+          sleep(1500).then<null>(() => null),
+        ]),
     dashboardEvaluationPromise,
   ]);
   const subworlds = buildWorldSubworldSummaries(localizedSignals, sourceCatalog);
@@ -8387,31 +9176,42 @@ export async function getWorldDashboardState(
   const topSignalFeed = topSignals.map((signal) =>
     sourceCatalog ? toEvidenceSignalWithReliability(signal, sourceCatalog) : toEvidenceSignal(signal),
   );
-  const pending_question_previews = arena
-    ? [...arena.active_questions, ...arena.watchlist_questions]
+  const pending_question_previews = skipLiveBenchForScene
+    ? []
+    : arena
+      ? [...arena.active_questions, ...arena.watchlist_questions]
         .map((snapshot) => buildLiveBenchQuestionPreviewFromSnapshot(snapshot))
         .slice(0, 48)
-    : [];
-  const resolved_question_previews = arena
-    ? arena.resolved_questions.map((snapshot) => buildLiveBenchQuestionPreviewFromSnapshot(snapshot)).slice(0, 12)
-    : [];
+      : [];
+  const resolved_question_previews = skipLiveBenchForScene
+    ? []
+    : arena
+      ? arena.resolved_questions.map((snapshot) => buildLiveBenchQuestionPreviewFromSnapshot(snapshot)).slice(0, 12)
+      : [];
   const skill_entry = buildOpenClawSkillEntry(options?.requestOrigin);
   const skillUrl = skill_entry?.url || null;
-  const source_refresh_summary = await buildDashboardSourceRefreshSummaryFromSignals({
-    signal_mix_signals: scopedSignals.map((signal) => ({
-      alignmentTags: signal.alignmentTags,
-      sourceName: signal.sourceName,
-      sourceUrl: resolveSignalSourceUrlForUi(signal),
-      latitude: signal.latitude,
-      longitude: signal.longitude,
-    })),
-    monitor_runtime: monitorRuntime,
-    next_batch_count: sourceCatalog?.intake_summary?.next_batch?.length || 0,
-  });
-  const livebench_summary = alignDashboardLiveBenchSummary(
-    buildDashboardLiveBenchSummary(arena),
-    evaluation?.platform_model,
-  );
+  const source_refresh_summary = skipOperationalSummariesForScene
+    ? null
+    : await Promise.race([
+        buildDashboardSourceRefreshSummaryFromSignals({
+          signal_mix_signals: scopedSignals.map((signal) => ({
+            alignmentTags: signal.alignmentTags,
+            sourceName: signal.sourceName,
+            sourceUrl: resolveSignalSourceUrlForUi(signal),
+            latitude: signal.latitude,
+            longitude: signal.longitude,
+          })),
+          monitor_runtime: monitorRuntime,
+          next_batch_count: sourceCatalog?.intake_summary?.next_batch?.length || 0,
+        }),
+        sleep(3000).then<null>(() => null),
+      ]);
+  const livebench_summary = skipLiveBenchForScene
+    ? null
+    : alignDashboardLiveBenchSummary(
+        buildDashboardLiveBenchSummary(arena),
+        evaluation?.platform_model,
+      );
   const state: WorldDashboardStatePayload = {
     generated_at,
     scene,
@@ -8433,8 +9233,8 @@ export async function getWorldDashboardState(
     evaluation_summary: evaluation?.platform_model || null,
     source_refresh_summary,
     livebench_summary,
-    what_to_do_next: buildWhatToDoNext(pending_question_previews, evaluation),
-    quick_links: buildDashboardActions(skillUrl, pending_question_previews),
+    what_to_do_next: skipLiveBenchForScene ? [] : buildWhatToDoNext(pending_question_previews, evaluation),
+    quick_links: skipLiveBenchForScene ? [] : buildDashboardActions(skillUrl, pending_question_previews),
   };
   void persistWorldDashboardSnapshot(scene, state, subworlds);
   return state;
@@ -8585,7 +9385,12 @@ async function readFileLastModifiedIso(filePath: string): Promise<string | null>
 async function readSourceRefreshJobStatus(): Promise<WorldDashboardSourceRefreshSummary['refresh_job'] | undefined> {
   try {
     const raw = await fs.readFile(SOURCE_REFRESH_STATUS_FILE, 'utf-8');
-    const parsed = JSON.parse(raw) as Partial<NonNullable<WorldDashboardSourceRefreshSummary['refresh_job']>>;
+    const parsed = JSON.parse(raw) as Partial<NonNullable<WorldDashboardSourceRefreshSummary['refresh_job']>> & {
+      directory_candidate_refresh?: { ok?: boolean };
+      world_cache_refresh?: { ok?: boolean; degraded?: boolean; base_url?: string };
+      self_healing?: { ok?: boolean; notes?: unknown[] };
+      world_base_url?: string;
+    };
     return {
       started_at: typeof parsed.started_at === 'string' ? parsed.started_at : null,
       finished_at: typeof parsed.finished_at === 'string' ? parsed.finished_at : null,
@@ -8593,6 +9398,12 @@ async function readSourceRefreshJobStatus(): Promise<WorldDashboardSourceRefresh
       ok: Boolean(parsed.ok),
       timed_out: Boolean(parsed.timed_out),
       duration_ms: typeof parsed.duration_ms === 'number' ? parsed.duration_ms : null,
+      directory_ok: typeof parsed.directory_candidate_refresh?.ok === 'boolean' ? parsed.directory_candidate_refresh.ok : null,
+      world_cache_ok: typeof parsed.world_cache_refresh?.ok === 'boolean' ? parsed.world_cache_refresh.ok : null,
+      world_cache_degraded: Boolean(parsed.world_cache_refresh?.degraded),
+      world_cache_base_url: normalizeText(parsed.world_cache_refresh?.base_url || parsed.world_base_url || ''),
+      self_healing_ok: typeof parsed.self_healing?.ok === 'boolean' ? parsed.self_healing.ok : null,
+      note_count: Array.isArray(parsed.self_healing?.notes) ? parsed.self_healing.notes.length : 0,
     };
   } catch {
     return undefined;
@@ -8713,7 +9524,57 @@ async function readSourceSkillSnapshotSummary() {
   };
 }
 
-async function readRepoDiscoverySnapshotSummary() {
+type DirectoryCandidateEntry = {
+  collection?: string;
+  admission?: string;
+  description?: string;
+  url?: string;
+};
+
+type DirectoryCandidatePayload = {
+  generated_at?: string;
+  total?: number;
+  by_collection?: Record<string, number>;
+  by_role?: Record<string, number>;
+  candidates?: DirectoryCandidateEntry[];
+};
+
+function isRssDirectoryCandidate(candidate: DirectoryCandidateEntry) {
+  return candidate.admission === 'candidate-rss' || candidate.collection === 'awesome-rss-feeds';
+}
+
+function rssCandidateUrlSet(payload: DirectoryCandidatePayload | null) {
+  return new Set(
+    (payload?.candidates || [])
+      .filter(isRssDirectoryCandidate)
+      .map((candidate) => normalizeText(candidate.url).toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+async function readPreviousDirectoryCandidatePayload(currentDate: string | null): Promise<DirectoryCandidatePayload | null> {
+  const entries = await fs.readdir(SOURCE_SKILL_VALIDATION_DIR, { withFileTypes: true }).catch(() => []);
+  const datedFiles = entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => {
+      const match = entry.name.match(/^directory-candidates-(\d{4}-\d{2}-\d{2})\.json$/);
+      return match ? { file: entry.name, date: match[1] } : null;
+    })
+    .filter((entry): entry is { file: string; date: string } => Boolean(entry))
+    .filter((entry) => !currentDate || entry.date < currentDate)
+    .sort((left, right) => right.date.localeCompare(left.date));
+  const previous = datedFiles[0];
+  if (!previous) return null;
+  const raw = await fs.readFile(path.join(SOURCE_SKILL_VALIDATION_DIR, previous.file), 'utf-8').catch(() => '');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as DirectoryCandidatePayload;
+  } catch {
+    return null;
+  }
+}
+
+export async function getWorldRepoDiscoverySnapshotSummary() {
   const directoryCandidatesFile = path.join(SOURCE_SKILL_VALIDATION_DIR, 'latest-directory-candidates.json');
   const [candidateRefreshedAt, repoRefreshedAt, directoryCandidateRefreshedAt, markdown, repoEntries, directoryRaw] = await Promise.all([
     readFileLastModifiedIso(SOURCE_SKILL_CANDIDATES_FILE),
@@ -8723,17 +9584,20 @@ async function readRepoDiscoverySnapshotSummary() {
     fs.readdir(EXTERNAL_REPOS_DIR, { withFileTypes: true }).catch(() => []),
     fs.readFile(directoryCandidatesFile, 'utf-8').catch(() => ''),
   ]);
-  let directoryPayload: { total?: number; by_role?: Record<string, number> } | null = null;
+  let directoryPayload: DirectoryCandidatePayload | null = null;
   try {
     directoryPayload = directoryRaw
-      ? (JSON.parse(directoryRaw) as {
-          total?: number;
-          by_role?: Record<string, number>;
-        })
+      ? (JSON.parse(directoryRaw) as DirectoryCandidatePayload)
       : null;
   } catch {
     directoryPayload = null;
   }
+  const currentDirectoryDate = directoryPayload?.generated_at ? directoryPayload.generated_at.slice(0, 10) : null;
+  const previousDirectoryPayload = await readPreviousDirectoryCandidatePayload(currentDirectoryDate);
+  const rssCandidates = rssCandidateUrlSet(directoryPayload);
+  const previousRssCandidates = rssCandidateUrlSet(previousDirectoryPayload);
+  const rssAddedCount = [...rssCandidates].filter((url) => !previousRssCandidates.has(url)).length;
+  const rssRemovedCount = [...previousRssCandidates].filter((url) => !rssCandidates.has(url)).length;
   const githubCandidateCount = markdown
     ? markdown
         .split(/\r?\n/)
@@ -8760,6 +9624,9 @@ async function readRepoDiscoverySnapshotSummary() {
     local_repo_count: localRepoNames.length,
     github_candidate_count: githubCandidateCount,
     directory_candidate_count: directoryCandidateCount,
+    rss_candidate_count: rssCandidates.size || Number(directoryPayload?.by_collection?.['awesome-rss-feeds'] || 0),
+    rss_added_count: rssAddedCount,
+    rss_removed_count: rssRemovedCount,
     endpoint_candidate_count: endpointCandidateCount,
     method_candidate_count: methodCandidateCount,
     trendradar_ready: trendradarReady,
@@ -8780,7 +9647,8 @@ function countSignalMix(
     (summary, signal) => {
       const hasWorldMonitorTag =
         signal.alignmentTags.includes('source:world-monitor') || /world monitor/i.test(signal.sourceName);
-      const hasMiniMaxTag = signal.alignmentTags.includes('model:aligned');
+      const hasMiniMaxTag =
+        signal.alignmentTags.includes('model:ai-related') || signal.alignmentTags.includes('model:not-ai-related');
       const hasWechatSource =
         signal.alignmentTags.includes('source:wechat') ||
         /mp\.weixin\.qq\.com|weixin|wechat/i.test(signal.sourceUrl) ||
@@ -9032,12 +9900,12 @@ async function _backfillWorldReportGraphMetadata() {
   await ensureRuntimeHistoryLoaded();
   const before = [...runtime.reports]
     .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
-    .filter((report, index, sorted) => reportNeedsMiniMaxGraphBackfill(report, sorted.slice(0, index))).length;
+    .filter((report, index, sorted) => reportNeedsGraphMetadataInference(report, sorted.slice(0, index))).length;
   runtime.graphMetadataBackfillLoaded = false;
   await ensureReportsGraphMetadataBackfilled(runtime);
   const after = [...runtime.reports]
     .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
-    .filter((report, index, sorted) => reportNeedsMiniMaxGraphBackfill(report, sorted.slice(0, index))).length;
+    .filter((report, index, sorted) => reportNeedsGraphMetadataInference(report, sorted.slice(0, index))).length;
   return {
     total_reports: runtime.reports.length,
     missing_before: before,

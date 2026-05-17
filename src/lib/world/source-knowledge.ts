@@ -1,6 +1,6 @@
 import type { WorldScene, WorldSourceKnowledgeState, WorldSignal } from './types';
 import { getSourceKnowledgeSnapshot, syncSourceKnowledgeSnapshot } from './livebench';
-import { loadSourceCatalog } from './source-catalog';
+import { loadRuntimeCatalogSources, loadSourceCatalog } from './source-catalog';
 
 const SOURCE_LATEST_SIGNAL_STALE_HOURS = 48;
 
@@ -32,8 +32,12 @@ function sourceFreshness(latestSignalPublishedAt: string | null) {
 }
 
 async function enrichSourceKnowledgeState(state: WorldSourceKnowledgeState): Promise<WorldSourceKnowledgeState> {
-  const catalog = await loadSourceCatalog().catch(() => null);
+  const [catalog, runtimeSources] = await Promise.all([
+    loadSourceCatalog().catch(() => null),
+    loadRuntimeCatalogSources().catch(() => []),
+  ]);
   const freshness = sourceFreshness(state.latest_signal_published_at);
+  const runtimeSourceCount = runtimeSources.length;
   if (!catalog) {
     return {
       ...state,
@@ -49,8 +53,8 @@ async function enrichSourceKnowledgeState(state: WorldSourceKnowledgeState): Pro
         next_batch: [],
         note:
           freshness.freshness_status === 'stale'
-            ? 'source catalog 当前不可用，且信源快照已经偏旧；需要确认后台刷新是否仍在推进。'
-            : 'source catalog 当前不可用；稳定信源上架与降级策略暂时只能按运行时观测执行。',
+            ? '当前信号快照已经偏旧；优先恢复现有运行源的更新。'
+            : '当前按核心 API 与已验证可直连的 RSS/API 可用池组织日报；失败源保留归档等待复检。',
       },
     };
   }
@@ -58,7 +62,7 @@ async function enrichSourceKnowledgeState(state: WorldSourceKnowledgeState): Pro
   return {
     ...state,
     source_health: {
-      stable_source_count: catalog.intake_summary?.stable_source_count || 0,
+      stable_source_count: runtimeSourceCount || catalog.intake_summary?.stable_source_count || 0,
       watchlist_source_count: catalog.intake_summary?.watchlist_source_count || 0,
       blocked_or_unknown_source_count: catalog.connectivity_counts?.blocked_or_unknown || 0,
       runtime_ready_skill_count: catalog.intake_summary?.runtime_ready_skill_count || 0,
@@ -66,11 +70,11 @@ async function enrichSourceKnowledgeState(state: WorldSourceKnowledgeState): Pro
       weak_signal_skill_count: catalog.intake_summary?.weak_signal_skill_count || 0,
       blocked_skill_count: catalog.intake_summary?.blocked_skill_count || 0,
       ...freshness,
-      next_batch: catalog.intake_summary?.next_batch || [],
+      next_batch: [],
       note:
         freshness.freshness_status === 'stale'
-          ? '信源 catalog 可用，但最新 signal 已偏旧；应优先检查后台 source refresh 是否卡住。'
-          : 'anchor/context 信源会优先进入稳定池；运行失败的信源会在冷却期内自动降权，下一批可接入 skill 会从 source catalog 的 next_batch 中持续补位。',
+          ? '当前信号快照已经偏旧；优先恢复现有运行源的更新。'
+          : '当前服务核心 API 与已验证可直连的 RSS/API 可用池；失败源保留归档等待复检。',
     },
   };
 }

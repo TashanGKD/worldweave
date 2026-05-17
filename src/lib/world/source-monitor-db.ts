@@ -1,6 +1,12 @@
 import { Pool } from 'pg';
 
-import type { WorldDashboardSourceRefreshSummary, WorldScene, WorldSignal, WorldSourceKnowledgeState } from './types';
+import type {
+  WorldDashboardSourceRefreshSummary,
+  WorldScene,
+  WorldSignal,
+  WorldSourceKnowledgeState,
+  WorldSourceMonitorDbStatus,
+} from './types';
 
 type SourceKnowledgeWithGovernance = WorldSourceKnowledgeState & {
   governance?: {
@@ -110,6 +116,78 @@ async function ensureSourceMonitorSchema(activePool: Pool) {
     });
   }
   await schemaReady;
+}
+
+export async function getWorldSourceMonitorDbStatus(scene: WorldScene): Promise<WorldSourceMonitorDbStatus> {
+  const activePool = getPool();
+  if (!activePool) {
+    return {
+      enabled: false,
+      connected: false,
+      snapshot_table_ready: false,
+      latest_scene: null,
+      latest_snapshot_recorded_at: null,
+      latest_signal_published_at: null,
+      latest_signal_count: null,
+    };
+  }
+
+  try {
+    const table = await activePool.query<{ table_name: string | null }>(
+      `SELECT to_regclass('public.world_source_monitor_snapshots')::text AS table_name`,
+    );
+    const snapshotTableReady = Boolean(table.rows[0]?.table_name);
+    if (!snapshotTableReady) {
+      return {
+        enabled: true,
+        connected: true,
+        snapshot_table_ready: false,
+        latest_scene: null,
+        latest_snapshot_recorded_at: null,
+        latest_signal_published_at: null,
+        latest_signal_count: null,
+      };
+    }
+
+    const latest = await activePool.query<{
+      scene: WorldScene;
+      recorded_at: Date | string | null;
+      latest_signal_published_at: Date | string | null;
+      signal_count: number | null;
+    }>(
+      `
+        SELECT scene, recorded_at, latest_signal_published_at, signal_count
+        FROM world_source_monitor_snapshots
+        WHERE scene = $1
+        ORDER BY recorded_at DESC
+        LIMIT 1
+      `,
+      [scene],
+    );
+    const latestRow = latest.rows[0] || null;
+    return {
+      enabled: true,
+      connected: true,
+      snapshot_table_ready: true,
+      latest_scene: latestRow?.scene || null,
+      latest_snapshot_recorded_at: latestRow?.recorded_at ? new Date(latestRow.recorded_at).toISOString() : null,
+      latest_signal_published_at: latestRow?.latest_signal_published_at
+        ? new Date(latestRow.latest_signal_published_at).toISOString()
+        : null,
+      latest_signal_count: latestRow?.signal_count ?? null,
+    };
+  } catch (error) {
+    return {
+      enabled: true,
+      connected: false,
+      snapshot_table_ready: false,
+      latest_scene: null,
+      latest_snapshot_recorded_at: null,
+      latest_signal_published_at: null,
+      latest_signal_count: null,
+      error: error instanceof Error ? error.message : 'Failed to check source monitor database.',
+    };
+  }
 }
 
 export async function persistWorldSourceMonitorSnapshot(input: {

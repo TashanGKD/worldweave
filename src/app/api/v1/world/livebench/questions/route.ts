@@ -20,6 +20,7 @@ type RecallCard = {
   url?: string | null;
   published_at?: string | null;
   region_label?: string | null;
+  source_name?: string | null;
 };
 
 function timeout<T>(ms: number, value: T): Promise<T> {
@@ -179,24 +180,37 @@ function toXiaFacingQuestionPreview(preview: LiveBenchQuestionPreview) {
   };
 }
 
-async function recallQuestionEvidence(request: Request, scene: WorldScene, preview: LiveBenchQuestionPreview) {
+async function readQuestionSourceFeedEvidence(request: Request, scene: WorldScene, preview: LiveBenchQuestionPreview) {
   const query = [preview.title, preview.background, preview.topic_label, preview.region_label]
     .filter(Boolean)
     .join(' ')
     .slice(0, 500);
-  if (!query.trim()) return [];
+  const isAiQuestion = /ai|llm|model|agent|openai|anthropic|claude|chatgpt|gemini|codex|人工智能|大模型|智能体|模型/i.test(query);
   try {
-    const url = new URL('/api/v1/world/source-knowledge/recall', request.url);
-    url.searchParams.set('scene', scene);
-    url.searchParams.set('query', query);
+    const url = new URL('/api/v1/topiclab/source-feed/articles', request.url);
+    url.searchParams.set('scene', isAiQuestion ? 'tech-ai' : scene);
+    if (isAiQuestion) {
+      url.searchParams.set('source', 'aihot');
+    } else if (query.trim()) {
+      url.searchParams.set('q', query);
+    }
     url.searchParams.set('limit', '6');
     const response = await fetch(url, {
       cache: 'no-store',
       signal: AbortSignal.timeout(3000),
     });
     if (!response.ok) return [];
-    const body = (await response.json()) as { signals?: RecallCard[] };
-    return Array.isArray(body.signals) ? body.signals : [];
+    const body = (await response.json()) as { list?: Array<Record<string, unknown>> };
+    return Array.isArray(body.list)
+      ? body.list.map((item) => ({
+          id: typeof item.id === 'number' || typeof item.id === 'string' ? String(item.id) : undefined,
+          title: typeof item.title === 'string' ? item.title : undefined,
+          summary: typeof item.description === 'string' ? item.description : undefined,
+          url: typeof item.url === 'string' ? item.url : null,
+          published_at: typeof item.publish_time === 'string' ? item.publish_time : null,
+          source_name: typeof item.source_feed_name === 'string' ? item.source_feed_name : 'source-feed',
+        }))
+      : [];
   } catch {
     return [];
   }
@@ -205,17 +219,17 @@ async function recallQuestionEvidence(request: Request, scene: WorldScene, previ
 function buildXiaQuestionDetailFromPreview(
   scene: WorldScene,
   preview: LiveBenchQuestionPreview,
-  recallSignals: RecallCard[],
+  sourceFeedSignals: RecallCard[],
 ) {
   const safePreview = sanitizeQuestionPreview(preview);
   const brief = cleanXiaFacingText(safePreview.moderator_line || safePreview.background);
-  const references = recallSignals.slice(0, 6).map((signal, index) => ({
+  const references = sourceFeedSignals.slice(0, 6).map((signal, index) => ({
     ref_id: `[${index + 1}]`,
     label: signal.title || `信源线索 ${index + 1}`,
     url: signal.url || '',
-    source_name: '统一信源池',
+    source_name: signal.source_name || 'source-feed',
     source_kind: 'signal',
-    recall_role: 'zvec-core',
+    recall_role: 'source-feed',
     published_at: signal.published_at || null,
     signal_id: signal.id || null,
     note: signal.summary || signal.region_label || null,
@@ -275,9 +289,9 @@ function buildXiaQuestionDetailFromPreview(
     evidence: [
       references.length
         ? {
-            role: 'zvec-core',
-            title: '按题召回信源',
-            description: '围绕题面、地区和主题召回的近 30 天信源。先看这些线索，再形成判断。',
+            role: 'source-feed',
+            title: 'source-feed 近期信源',
+            description: '围绕题面、地区和主题读取的近 30 天信源。先看这些线索，再形成判断。',
             total_count: references.length,
             visible_count: references.length,
             references,
@@ -285,7 +299,7 @@ function buildXiaQuestionDetailFromPreview(
         : {
             role: 'question-rule',
             title: '题面与规则',
-            description: '按题召回暂时没有命中时，先以题面、时间窗和结算规则作为最低限度依据。',
+            description: 'source-feed 暂时没有命中时，先以题面、时间窗和结算规则作为最低限度依据。',
             total_count: 1,
             visible_count: 1,
             references: [ruleReference],
@@ -375,12 +389,12 @@ export async function GET(request: Request) {
           preview = cachedPreviews.find((item) => questionIdsMatch(item.question_id, decodedQuestionId));
         }
         if (preview) {
-          const recallSignals = await recallQuestionEvidence(request, scene, preview);
-          return NextResponse.json(buildXiaQuestionDetailFromPreview(scene, preview, recallSignals), {
+          const sourceFeedSignals = await readQuestionSourceFeedEvidence(request, scene, preview);
+          return NextResponse.json(buildXiaQuestionDetailFromPreview(scene, preview, sourceFeedSignals), {
             headers: {
               'Cache-Control': 'no-store, max-age=0',
               'x-world-detail-alias': 'query',
-              'x-world-detail-source': recallSignals.length ? 'preview-recall' : 'preview-fallback',
+              'x-world-detail-source': sourceFeedSignals.length ? 'preview-source-feed' : 'preview-fallback',
             },
           });
         }

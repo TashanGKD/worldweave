@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 import { resolveRequestOrigin } from '@/lib/request-origin';
 import {
@@ -7,6 +9,8 @@ import {
   isRenderableDashboardState,
   isWorldRuntimeHeavyRefreshEnabled,
 } from '@/lib/world/runtime';
+import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
+import { isPublicEventSignal, isSourceSnapshotLikeSignal } from '@/lib/world/signal-quality';
 import type { WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -15,6 +19,7 @@ export const revalidate = 0;
 const STATE_TIMEOUT_MS = 30000;
 const DASHBOARD_STATE_MAX_AGE_MS = 30 * 60 * 1000;
 const CACHED_STATE_TIMEOUT_MS = 1500;
+const SIGNAL_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-signal-cache.json');
 
 type CachedDashboardState = Awaited<ReturnType<typeof getCachedWorldDashboardState>>;
 
@@ -32,13 +37,91 @@ function isDashboardStateFresh(state: CachedDashboardState): state is NonNullabl
   return Number.isFinite(timestamp) && Date.now() - timestamp <= DASHBOARD_STATE_MAX_AGE_MS;
 }
 
+function hasSourceSnapshotPollution(state: CachedDashboardState): boolean {
+  if (!state) return false;
+  const feeds = [
+    ...(Array.isArray(state.graph_signals) ? state.graph_signals : []),
+    ...(Array.isArray(state.top_signals) ? state.top_signals : []),
+    ...(Array.isArray(state.knowledge_signals) ? state.knowledge_signals : []),
+  ];
+  return feeds.some(isSourceSnapshotLikeSignal);
+}
+
+function sanitizeCachedDashboardState(state: NonNullable<CachedDashboardState>) {
+  const graphSignals = (Array.isArray(state.graph_signals) ? state.graph_signals : []).filter(isPublicEventSignal).slice(0, 32);
+  const topSignals = (Array.isArray(state.top_signals) ? state.top_signals : []).filter(isPublicEventSignal).slice(0, 120);
+  const knowledgeSignals = (Array.isArray(state.knowledge_signals) ? state.knowledge_signals : []).filter(isPublicEventSignal).slice(0, 12);
+  const eventIds = new Set([...graphSignals, ...topSignals, ...knowledgeSignals].map((signal) => signal.id));
+  const nodes = (Array.isArray(state.nodes) ? state.nodes : [])
+    .filter((node) => isPublicEventSignal(node) && (eventIds.size === 0 || eventIds.has(String(node.node_id || '').replace(/:explore$/, ''))))
+    .slice(0, 240);
+  return {
+    ...state,
+    nodes,
+    graph_signals: graphSignals,
+    top_signals: topSignals,
+    knowledge_signals: knowledgeSignals,
+  };
+}
+
+function isAiHotLikeNode(node: unknown) {
+  const record = node && typeof node === 'object' ? (node as Record<string, unknown>) : {};
+  const text = [
+    record.source_name,
+    record.source_url,
+    record.title,
+    record.summary,
+    Array.isArray(record.tags) ? record.tags.join(' ') : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return /(aihot|ai hot|daily:ai|source:aihot)/i.test(text);
+}
+
+function filterCachedDashboardStateForScene(state: NonNullable<CachedDashboardState>, scene: WorldScene) {
+  if (scene === 'global') return state;
+  const graphSignals = (Array.isArray(state.graph_signals) ? state.graph_signals : []).filter((signal) =>
+    dashboardSignalMatchesScene(signal, scene),
+  );
+  const topSignals = (Array.isArray(state.top_signals) ? state.top_signals : []).filter((signal) =>
+    dashboardSignalMatchesScene(signal, scene),
+  );
+  const knowledgeSignals = (Array.isArray(state.knowledge_signals) ? state.knowledge_signals : []).filter((signal) =>
+    dashboardSignalMatchesScene(signal, scene),
+  );
+  const signalIds = new Set([...graphSignals, ...topSignals, ...knowledgeSignals].map((signal) => signal.id));
+  const nodes = (Array.isArray(state.nodes) ? state.nodes : []).filter((node) => {
+    if (scene === 'geo-politics-daily' && isAiHotLikeNode(node)) return false;
+    const nodeId = String((node as { node_id?: unknown }).node_id || '').replace(/:explore$/, '');
+    return signalIds.size === 0 || signalIds.has(nodeId);
+  });
+  return {
+    ...state,
+    nodes,
+    graph_signals: graphSignals,
+    top_signals: topSignals,
+    knowledge_signals: knowledgeSignals,
+  };
+}
+
+async function isDashboardStateCurrentWithSignals(state: CachedDashboardState): Promise<boolean> {
+  if (!isDashboardStateFresh(state)) return false;
+  const timestamp = new Date(state.generated_at).getTime();
+  try {
+    const stat = await fs.stat(SIGNAL_CACHE_FILE);
+    return stat.mtimeMs <= timestamp + 5000;
+  } catch {
+    return true;
+  }
+}
+
 function buildSkillEntry(origin: string | null) {
   if (!origin) return null;
   return {
     mode: 'bound' as const,
     title: '信源 Skill',
-    description: '主口径是过去 30 天信源查询，系统会顺手把这轮判断带去校准题池，再把经验带回后续回答。',
-    copy_hint: '先接入主 skill，后面的判断和回看会自己接上。',
+    description: '可查询近 30 天信源、AI Hot 和主世界日报。',
+    copy_hint: '日常回答先读精选线索；需要深挖时再进入全部信源。',
     url: `${origin}/api/v1/openclaw/skill.md`,
   };
 }
@@ -63,7 +146,7 @@ function buildFallbackState(scene: WorldScene, requestOrigin: string | null) {
       stable_source_count: 0,
       watchlist_source_count: 0,
       blocked_or_unknown_source_count: 0,
-      note: '后台正在刷新世界看板，先返回可用入口。',
+      note: '世界看板正在更新，先返回可用入口。',
     },
     nodes: [],
     graph_signals: [],
@@ -72,7 +155,7 @@ function buildFallbackState(scene: WorldScene, requestOrigin: string | null) {
     skill_entry: buildSkillEntry(requestOrigin),
     world_view_summary: {
       title: '世界视图正在刷新',
-      summary: '地图与题池会在后台同步完成后补齐。',
+      summary: '地图与信号更新完成后会自动补齐。',
       updated_at: new Date().toISOString(),
     },
     pending_question_previews: [],
@@ -80,7 +163,7 @@ function buildFallbackState(scene: WorldScene, requestOrigin: string | null) {
     evaluation_summary: null,
     source_refresh_summary: null,
     livebench_summary: null,
-    what_to_do_next: ['主 skill 已可用，世界看板与题池会在后台继续刷新。'],
+    what_to_do_next: ['主 skill 已可用，世界看板与信号会继续更新。'],
     quick_links: buildSkillEntry(requestOrigin)?.url
       ? [
           {
@@ -100,31 +183,49 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const scene = (url.searchParams.get('scene') as WorldScene | null) || 'global';
     const batchRequested = url.searchParams.get('batch') === '1' || request.headers.get('x-world-batch-refresh') === '1';
-    const allowModelRefresh = batchRequested && isWorldRuntimeHeavyRefreshEnabled();
-    const timeoutMs = allowModelRefresh ? 120000 : STATE_TIMEOUT_MS;
+    const freshRequested = url.searchParams.get('fresh') === '1';
+    const heavyRefreshEnabled = isWorldRuntimeHeavyRefreshEnabled();
+    const forceLive = (freshRequested || batchRequested) && heavyRefreshEnabled;
+    const rebuildDashboard = url.searchParams.get('rebuild') === '1';
+    const allowModelRefresh = batchRequested && heavyRefreshEnabled;
+    const timeoutMs = allowModelRefresh || forceLive ? 120000 : STATE_TIMEOUT_MS;
     const requestOrigin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
+    const bypassCachedDashboard = rebuildDashboard;
     const cachedState = await withCachedStateTimeout(getCachedWorldDashboardState(scene), null);
     const cachedStateRenderable = isRenderableDashboardState(cachedState);
-    if (!allowModelRefresh && cachedState && cachedStateRenderable) {
+    const cachedStatePolluted = scene === 'global' && hasSourceSnapshotPollution(cachedState);
+    const cachedStateCurrent =
+      scene === 'tech-ai' ? await isDashboardStateCurrentWithSignals(cachedState) : isDashboardStateFresh(cachedState);
+    if (!bypassCachedDashboard && !forceLive && !allowModelRefresh && cachedState && cachedStateRenderable) {
+      const responseState = filterCachedDashboardStateForScene(
+        cachedStatePolluted ? sanitizeCachedDashboardState(cachedState) : cachedState,
+        scene,
+      );
       return NextResponse.json(
         {
-          ...cachedState,
-          skill_entry: buildSkillEntry(requestOrigin) || cachedState.skill_entry,
+          ...responseState,
+          skill_entry: buildSkillEntry(requestOrigin) || responseState.skill_entry,
         },
         {
           headers: {
             'Cache-Control': 'no-store, max-age=0',
             'x-world-snapshot': '1',
-            ...(isDashboardStateFresh(cachedState) ? {} : { 'x-world-stale-snapshot': '1' }),
+            ...(cachedStateCurrent ? {} : { 'x-world-stale-snapshot': '1' }),
+            ...(cachedStatePolluted ? { 'x-world-sanitized-snapshot': '1' } : {}),
+            ...(freshRequested && !forceLive ? { 'x-world-heavy-sync': 'deferred' } : {}),
           },
         },
       );
     }
     const state = await Promise.race([
-      getWorldDashboardState(scene, { requestOrigin, allowModelRefresh }),
+      getWorldDashboardState(scene, { requestOrigin, allowModelRefresh, forceSignalRefresh: forceLive }),
       new Promise((resolve) => {
         const fallbackState =
-          cachedState && cachedStateRenderable ? cachedState : buildFallbackState(scene, requestOrigin);
+          !bypassCachedDashboard && cachedState && cachedStateRenderable
+            ? cachedStatePolluted
+              ? sanitizeCachedDashboardState(cachedState)
+              : cachedState
+            : buildFallbackState(scene, requestOrigin);
         setTimeout(() => resolve(fallbackState), timeoutMs);
       }),
     ]);

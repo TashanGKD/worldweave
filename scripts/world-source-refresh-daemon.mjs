@@ -36,6 +36,7 @@ const configuredBaseUrl = (process.env.WORLD_BATCH_REFRESH_BASE_URL || '').repla
 const refreshBaseUrl = configuredBaseUrl || (manageWorker ? workerBaseUrl : 'http://127.0.0.1:5000');
 const workerStartupDelayMs = Number(process.env.WORLD_SOURCE_REFRESH_WORKER_STARTUP_DELAY_MS || 12000);
 const restartDelayMs = Number(process.env.WORLD_SOURCE_REFRESH_RESTART_DELAY_MS || 5000);
+const includeHeavyWorldSync = process.env.WORLD_SOURCE_REFRESH_INCLUDE_HEAVY_SYNC !== '0';
 
 const out = openLog(outPath);
 const err = openLog(errPath);
@@ -95,19 +96,20 @@ if (worker && workerStartupDelayMs > 0) {
 
 function startRefreshLoop() {
   if (stopping) return null;
+  const refreshArgs = [
+    path.join(root, 'scripts', 'world-source-refresh.mjs'),
+    '--loop',
+    '--interval-minutes',
+    intervalMinutes,
+    '--timeout-minutes',
+    timeoutMinutes,
+    '--world-base-url',
+    refreshBaseUrl,
+  ];
+  if (includeHeavyWorldSync) refreshArgs.push('--include-heavy-world-sync');
   child = spawn(
     process.execPath,
-    [
-      path.join(root, 'scripts', 'world-source-refresh.mjs'),
-      '--loop',
-      '--interval-minutes',
-      intervalMinutes,
-      '--timeout-minutes',
-      timeoutMinutes,
-      '--include-heavy-world-sync',
-      '--world-base-url',
-      refreshBaseUrl,
-    ],
+    refreshArgs,
     {
       cwd: root,
       env: {
@@ -122,7 +124,7 @@ function startRefreshLoop() {
   fs.writeFileSync(pidPath, `${child.pid}\n`, 'utf8');
   append(
     outPath,
-    `[${new Date().toISOString()}] source refresh loop started pid=${child.pid} interval=${intervalMinutes} timeout=${timeoutMinutes} base=${refreshBaseUrl}\n`,
+    `[${new Date().toISOString()}] source refresh loop started pid=${child.pid} interval=${intervalMinutes} timeout=${timeoutMinutes} base=${refreshBaseUrl} heavySync=${includeHeavyWorldSync ? '1' : '0'}\n`,
   );
   child.on('exit', (code, signal) => {
     append(
@@ -147,6 +149,7 @@ console.log(
       intervalMinutes,
       timeoutMinutes,
       refreshBaseUrl,
+      includeHeavyWorldSync,
       workerManaged: Boolean(worker),
       workerStartupDelayMs,
       restartDelayMs,
