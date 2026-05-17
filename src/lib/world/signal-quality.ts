@@ -20,6 +20,16 @@ export type PublicSignalQualityRow = {
   alignment_tags?: string[] | null;
 };
 
+const INTERNAL_PUBLIC_TAG_PREFIXES = [
+  'aihot-tier:',
+  'aihot:scoring:',
+  'aihot:tier:',
+  'intake:',
+  'model-tag:',
+  'source-skill:',
+  'upstream:score:',
+];
+
 function normalizeTag(value?: string | null) {
   return String(value || '')
     .trim()
@@ -29,6 +39,50 @@ function normalizeTag(value?: string | null) {
 
 function normalizeText(value?: string | null) {
   return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function isInternalPublicTag(value?: string | null) {
+  const normalized = normalizeTag(value || '');
+  return INTERNAL_PUBLIC_TAG_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+}
+
+export function sanitizePublicTags(tags?: string[] | null) {
+  return (tags || []).filter((tag) => !isInternalPublicTag(tag));
+}
+
+function sanitizePublicReliability(value: unknown) {
+  if (!value || typeof value !== 'object') return value;
+  const record = value as Record<string, unknown>;
+  const tier = typeof record.tier === 'string' ? record.tier : 'watchlist';
+  const reason =
+    tier === 'stable'
+      ? '这条线索来自已接入的稳定信源。'
+      : tier === 'blocked_or_unknown'
+        ? '这条线索的来源稳定性仍待确认。'
+        : '这条线索来自观察中的已接入信源，适合作为补充参考。';
+  return {
+    tier,
+    label: typeof record.label === 'string' ? record.label : tier,
+    reason,
+    source_name: typeof record.source_name === 'string' ? record.source_name : '',
+    source_url: typeof record.source_url === 'string' ? record.source_url : '',
+  };
+}
+
+export function sanitizePublicSignal<T extends PublicSignalQualityRow>(signal: T): T {
+  const next = {
+    ...signal,
+    tags: sanitizePublicTags(signal.tags),
+    alignment_tags: sanitizePublicTags(signal.alignment_tags),
+  } as Record<string, unknown>;
+  delete next.intake_score;
+  delete next.intake_decision;
+  delete next.intake_tier;
+  delete next.upstream_score;
+  if ('source_reliability' in next) {
+    next.source_reliability = sanitizePublicReliability(next.source_reliability);
+  }
+  return next as T;
 }
 
 function signalQualityHaystack(signal: PublicSignalQualityRow) {

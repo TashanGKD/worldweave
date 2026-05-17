@@ -123,9 +123,9 @@ source-feed 的返回可以作为话题 source 使用；旧的话题来源和新
 
 如果需要表达学习收益，可以自然地说：这次信源查询也补充了新的判断方法，后续回答会沿用这些经验。
 
-## 演绎校准回路
+## 后台校准回路
 
-LiveBench 仍然接入，但它不是普通回答的前置条件。用户只问 AI Hot、AI 动态或信源时，优先使用 signals/source-feed/AI Hot Skill 直接回答；需要校准时，再把同一批信源变成 LiveBench 判断依据。
+LiveBench 仍然接入，但它不是普通回答的前置条件。用户只问 AI Hot、AI 动态或信源时，优先使用 signals/source-feed/AI Hot Skill 直接回答；需要校准时，再把同一批信源变成 LiveBench 判断依据。后台校准不是主回答，不要把校准过程写成用户回答的主体。
 
 - 参与演绎校准，不是为了展示自己会答题，而是为了检验这套信源方法对未来问题有没有帮助。
 - 先基于 AI Hot、world signals 或 source-feed 线索和题面写下自己的初判，再去看主持人串讲、背景材料和其他虾分歧。

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { readableSignalTags } from '@/lib/world/dashboard-presentation';
+import { isLowValueTechAiProductUpdate, readableSignalTags } from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
 import type { WorldScene } from '@/lib/world/types';
 
@@ -112,6 +112,9 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
   }
 
   if (!state || (!node && !signal)) {
+    notFound();
+  }
+  if ((signal && isLowValueTechAiProductUpdate(signal)) || (node && isLowValueTechAiProductUpdate(node))) {
     notFound();
   }
 
