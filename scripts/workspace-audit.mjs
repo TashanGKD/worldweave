@@ -14,8 +14,21 @@ const expected = new Map([
 const generated = new Map([
   ['.next', 'generated-build'],
   ['.cache', 'runtime-cache'],
+  ['.hermes-venv', 'local-python-runtime'],
+  ['.playwright-cli', 'local-browser-tooling'],
+  ['.tools', 'local-tooling'],
+  ['.venv-zvec', 'local-python-runtime'],
+  ['%SystemDrive%', 'accidental-windows-runtime-artifact'],
+  ['${APPDATA}', 'accidental-windows-runtime-artifact'],
   ['logs', 'runtime-logs'],
   ['node_modules', 'dependencies'],
+  ['output', 'runtime-output'],
+  ['zvec', 'local-vector-runtime'],
+]);
+
+const generatedRootFiles = new Map([
+  ['.codex-5010.log', 'runtime-log'],
+  ['tsconfig.tsbuildinfo', 'typescript-incremental-cache'],
 ]);
 
 const allowedRootFiles = new Set([
@@ -26,6 +39,8 @@ const allowedRootFiles = new Set([
   '.npmrc',
   'README.md',
   'components.json',
+  'CONTRIBUTING.md',
+  '.dockerignore',
   'ecosystem.config.js',
   'eslint.config.mjs',
   'next-env.d.ts',
@@ -53,7 +68,10 @@ async function main() {
     generatedPresent: entries.filter((name) => generated.has(name)).map((name) => ({ name, role: generated.get(name) })),
     unexpectedDirectories: entries.filter((name) => !expected.has(name) && !generated.has(name) && !name.startsWith('.git')),
     allowedRootFiles: files.filter((name) => allowedRootFiles.has(name)),
-    unexpectedRootFiles: files.filter((name) => !allowedRootFiles.has(name)),
+    generatedRootFiles: files
+      .filter((name) => generatedRootFiles.has(name))
+      .map((name) => ({ name, role: generatedRootFiles.get(name) })),
+    unexpectedRootFiles: files.filter((name) => !allowedRootFiles.has(name) && !generatedRootFiles.has(name)),
   };
 
   console.log(JSON.stringify(summary, null, 2));

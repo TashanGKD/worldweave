@@ -1,0 +1,296 @@
+{
+  "generated_at": "2026-05-18T01:47:29.860Z",
+  "day_key": "2026-05-18",
+  "cache_path": ".cache/world-signal-cache-funnel-check.json",
+  "clusters": [
+    {
+      "id": "event-3ac2ae1d2a14bc0f",
+      "title": "Manhattan, New York, United States",
+      "source_name": "thebusinessjournal.com",
+      "scene": "war",
+      "related_count": 5,
+      "source_count": 6,
+      "primary_source": "thebusinessjournal-com",
+      "urgency_reason": "同一事件多来源聚合；合并 6 条报道，主条来自 thebusinessjournal.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:5",
+        "event:source-count:6",
+        "event:primary-source:thebusinessjournal-com"
+      ]
+    },
+    {
+      "id": "event-7167441372052ffd",
+      "title": "Mclennan County, Texas, United States",
+      "source_name": "www.kcentv.com",
+      "scene": "war",
+      "related_count": 5,
+      "source_count": 6,
+      "primary_source": "www-kcentv-com",
+      "urgency_reason": "同一事件多来源聚合；合并 6 条报道，主条来自 www.kcentv.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:5",
+        "event:source-count:6",
+        "event:primary-source:www-kcentv-com"
+      ]
+    },
+    {
+      "id": "event-c2597c079531cdcd",
+      "title": "Douglas County, Colorado, United States",
+      "source_name": "www.9news.com",
+      "scene": "war",
+      "related_count": 4,
+      "source_count": 4,
+      "primary_source": "www-9news-com",
+      "urgency_reason": "同一事件多来源聚合；合并 5 条报道，主条来自 www.9news.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:4",
+        "event:source-count:4",
+        "event:primary-source:www-9news-com"
+      ]
+    },
+    {
+      "id": "event-ef6791ffc08f917e",
+      "title": "Abuja, Abuja Federal Capital Territory, Nigeria",
+      "source_name": "www.eluniversal.com.mx",
+      "scene": "war",
+      "related_count": 2,
+      "source_count": 3,
+      "primary_source": "www-eluniversal-com-mx",
+      "urgency_reason": "同一事件多来源聚合；合并 3 条报道，主条来自 www.eluniversal.com.mx。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:2",
+        "event:source-count:3",
+        "event:primary-source:www-eluniversal-com-mx"
+      ]
+    },
+    {
+      "id": "event-fa61cc8258291a27",
+      "title": "Nevinnomyssk, Stavropol'skiy Kray, Russia",
+      "source_name": "www.dailystar.co.uk",
+      "scene": "war",
+      "related_count": 2,
+      "source_count": 3,
+      "primary_source": "www-dailystar-co-uk",
+      "urgency_reason": "同一事件多来源聚合；合并 3 条报道，主条来自 www.dailystar.co.uk。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:2",
+        "event:source-count:3",
+        "event:primary-source:www-dailystar-co-uk"
+      ]
+    },
+    {
+      "id": "event-5a57b1b0e7daf3f5",
+      "title": "Broward County, Florida, United States",
+      "source_name": "www.wrdw.com",
+      "scene": "war",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-wrdw-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.wrdw.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-wrdw-com"
+      ]
+    },
+    {
+      "id": "event-5d3c1a1a3ffd06f2",
+      "title": "Franklin County, Arkansas, United States",
+      "source_name": "www.4029tv.com",
+      "scene": "global",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-4029tv-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.4029tv.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-4029tv-com"
+      ]
+    },
+    {
+      "id": "event-5b00dff1e2d99d5a",
+      "title": "Las Cruces, New Mexico, United States",
+      "source_name": "cbs4local.com",
+      "scene": "global",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "cbs4local-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 cbs4local.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:cbs4local-com"
+      ]
+    },
+    {
+      "id": "event-7da92b74ffaf0f35",
+      "title": "Lashkar, North-West Frontier, Pakistan",
+      "source_name": "www.orissapost.com",
+      "scene": "war",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-orissapost-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.orissapost.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-orissapost-com"
+      ]
+    },
+    {
+      "id": "event-eb98a778943abf31",
+      "title": "Los Angeles County, California, United States",
+      "source_name": "www.pasadenastarnews.com",
+      "scene": "global",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-pasadenastarnews-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.pasadenastarnews.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-pasadenastarnews-com"
+      ]
+    },
+    {
+      "id": "event-9b61a05a3834f9d6",
+      "title": "Monona County, Iowa, United States",
+      "source_name": "www.ktiv.com",
+      "scene": "global",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-ktiv-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.ktiv.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-ktiv-com"
+      ]
+    },
+    {
+      "id": "event-9b7864f00ffc7078",
+      "title": "Mukhayyam Qalandiya, West Bank (general), West Bank",
+      "source_name": "www.aljazeera.net",
+      "scene": "war",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-aljazeera-net",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.aljazeera.net。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-aljazeera-net"
+      ]
+    },
+    {
+      "id": "event-fffe605e46ff1bad",
+      "title": "Pahalgam, Jammu and Kashmir, India",
+      "source_name": "www.moneycontrol.com",
+      "scene": "war",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-moneycontrol-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.moneycontrol.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-moneycontrol-com"
+      ]
+    },
+    {
+      "id": "event-0ea0262c6dfc2464",
+      "title": "South Carolina, United States",
+      "source_name": "www.cbs58.com",
+      "scene": "war",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-cbs58-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.cbs58.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-cbs58-com"
+      ]
+    },
+    {
+      "id": "event-c20efaf9b4038a3f",
+      "title": "South Dakota, United States",
+      "source_name": "www.yahoo.com",
+      "scene": "global",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-yahoo-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.yahoo.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-yahoo-com"
+      ]
+    },
+    {
+      "id": "event-7b0c69981b5f90b2",
+      "title": "Sydney, New South Wales, Australia",
+      "source_name": "www.aurora-israel.co.il",
+      "scene": "war",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-aurora-israel-co-il",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.aurora-israel.co.il。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-aurora-israel-co-il"
+      ]
+    },
+    {
+      "id": "event-3bfa71cd921fdc53",
+      "title": "Trumbull County, Ohio, United States",
+      "source_name": "www.tribtoday.com",
+      "scene": "global",
+      "related_count": 1,
+      "source_count": 2,
+      "primary_source": "www-tribtoday-com",
+      "urgency_reason": "同一事件多来源聚合；合并 2 条报道，主条来自 www.tribtoday.com。",
+      "cluster_notes": "",
+      "event_tags": [
+        "event:clustered",
+        "event:related-count:1",
+        "event:source-count:2",
+        "event:primary-source:www-tribtoday-com"
+      ]
+    }
+  ]
+}

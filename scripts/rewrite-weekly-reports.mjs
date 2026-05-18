@@ -9,7 +9,7 @@ dotenv.config({ path: '.env.local' });
 const historyPath = path.resolve(process.cwd(), '.cache/world-runtime-history.json');
 const minimaxBaseUrl = process.env.MINIMAX_BASE_URL || process.env.ANTHROPIC_BASE_URL || 'https://api.scnet.cn/api/llm/v1';
 const minimaxApiKey = process.env.MINIMAX_API_KEY || process.env.ANTHROPIC_API_KEY || '';
-const minimaxModel = process.env.MINIMAX_MODEL || 'MiniMax-M2.5';
+const minimaxModel = process.env.MINIMAX_MODEL || 'DeepSeek-V4-Flash';
 const minimaxApiStyle = (process.env.MINIMAX_API_STYLE || process.env.MINIMAX_API || 'openai-completions').trim().toLowerCase();
 const weeklyWindowMs = 7 * 24 * 60 * 60 * 1000;
 const limitArg = Number(process.argv.find((arg) => arg.startsWith('--limit='))?.split('=')[1] || '0');

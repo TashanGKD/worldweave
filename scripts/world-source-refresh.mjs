@@ -23,6 +23,8 @@ function parseArgs(argv) {
     loop: false,
     intervalMinutes: Number(process.env.WORLD_SOURCE_REFRESH_INTERVAL_MINUTES || 30),
     timeoutMinutes: Number(process.env.WORLD_SOURCE_REFRESH_TIMEOUT_MINUTES || 20),
+    dailySlots: process.env.WORLD_SOURCE_REFRESH_DAILY_SLOTS || '',
+    timeZone: process.env.WORLD_SOURCE_REFRESH_TIME_ZONE || 'Asia/Shanghai',
     skipWorldWarm: false,
     includeHeavyWorldSync: process.env.WORLD_SOURCE_REFRESH_INCLUDE_HEAVY_SYNC === '1',
     worldBaseUrl: (process.env.WORLD_BATCH_REFRESH_BASE_URL || '').replace(/\/+$/, ''),
@@ -35,12 +37,54 @@ function parseArgs(argv) {
     if (arg === '--include-heavy-world-sync') args.includeHeavyWorldSync = true;
     if (arg === '--interval-minutes') args.intervalMinutes = Number(argv[++index] || args.intervalMinutes);
     if (arg === '--timeout-minutes') args.timeoutMinutes = Number(argv[++index] || args.timeoutMinutes);
+    if (arg === '--daily-slots') args.dailySlots = String(argv[++index] || args.dailySlots);
+    if (arg === '--time-zone') args.timeZone = String(argv[++index] || args.timeZone);
     if (arg === '--world-base-url') {
       args.worldBaseUrl = String(argv[++index] || args.worldBaseUrl).replace(/\/+$/, '');
       args.worldBaseUrlExplicit = true;
     }
   }
   return args;
+}
+
+function parseDailySlots(value) {
+  return String(value || '')
+    .split(',')
+    .map((slot) => slot.trim())
+    .map((slot) => {
+      const match = slot.match(/^(\d{1,2}):(\d{2})$/);
+      if (!match) return null;
+      const hour = Number(match[1]);
+      const minute = Number(match[2]);
+      if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+      return hour * 60 + minute;
+    })
+    .filter((slot) => slot !== null)
+    .sort((left, right) => left - right);
+}
+
+function zonedClockParts(timeZone) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date());
+  const get = (type) => Number(parts.find((part) => part.type === type)?.value || 0);
+  return {
+    hour: get('hour'),
+    minute: get('minute'),
+    second: get('second'),
+  };
+}
+
+function msUntilNextDailySlot(slots, timeZone) {
+  const now = zonedClockParts(timeZone);
+  const currentMinute = now.hour * 60 + now.minute;
+  const nextSlot = slots.find((slot) => slot > currentMinute) ?? slots[0] + 24 * 60;
+  const minuteDelta = nextSlot - currentMinute;
+  return Math.max(1000, minuteDelta * 60 * 1000 - now.second * 1000);
 }
 
 function nowIso() {
@@ -803,6 +847,7 @@ async function runOnce(args) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const dailySlots = parseDailySlots(args.dailySlots);
 
   do {
     try {
@@ -824,7 +869,16 @@ async function main() {
       if (!args.loop) throw error;
     }
     if (!args.loop) break;
-    await new Promise((resolve) => setTimeout(resolve, Math.max(1, args.intervalMinutes) * 60 * 1000));
+    const waitMs = dailySlots.length > 0
+      ? msUntilNextDailySlot(dailySlots, args.timeZone)
+      : Math.max(1, args.intervalMinutes) * 60 * 1000;
+    append(
+      outPath,
+      `[${nowIso()}] next refresh in ${Math.round(waitMs / 60000)} minutes${
+        dailySlots.length > 0 ? ` slots=${args.dailySlots} tz=${args.timeZone}` : ` interval=${args.intervalMinutes}`
+      }\n`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
   } while (true);
 }
 

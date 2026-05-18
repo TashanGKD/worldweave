@@ -8,7 +8,7 @@ dotenv.config({ path: '.env.local' });
 const appBaseUrl = process.env.WORLD_HEALTH_BASE_URL || 'http://127.0.0.1:5000';
 const minimaxBaseUrl = process.env.MINIMAX_BASE_URL || process.env.ANTHROPIC_BASE_URL || 'https://api.scnet.cn/api/llm/v1';
 const minimaxApiKey = process.env.MINIMAX_API_KEY || process.env.ANTHROPIC_API_KEY || '';
-const minimaxModel = process.env.MINIMAX_MODEL || 'MiniMax-M2.5';
+const minimaxModel = process.env.MINIMAX_MODEL || 'DeepSeek-V4-Flash';
 const embeddingModel = process.env.WORLD_ARENA_EMBEDDING_MODEL || 'Qwen3-Embedding-8B';
 const minimaxApiStyle = (process.env.MINIMAX_API_STYLE || process.env.MINIMAX_API || 'openai-completions').trim().toLowerCase();
 const databaseConfigured = Boolean(process.env.WORLDWEAVE_DATABASE_URL || process.env.DATABASE_URL);
@@ -65,7 +65,7 @@ async function checkApp() {
   const market = await fetchText(`${appBaseUrl}/api/v1/world/market-snapshot`);
   const sourceStatus = await fetchText(`${appBaseUrl}/api/v1/world/source-knowledge/status?scene=global`);
   const mainSkill = await fetchText(`${appBaseUrl}/api/v1/openclaw/skill.md`);
-  const aiHotSkill = await fetchText(`${appBaseUrl}/api/v1/openclaw/aihot.skill.md`);
+  const aiHotSkill = await fetchText(`${appBaseUrl}/api/v1/openclaw/ai.skill.md`);
   const techAiState = await fetchText(`${appBaseUrl}/api/v1/world/state?scene=tech-ai`);
   const marketPayload = parseJsonPayload('market-snapshot', market);
   const sourceStatusPayload = parseJsonPayload('source-knowledge/status', sourceStatus);
@@ -93,7 +93,7 @@ async function checkApp() {
     mainSkillStatus: mainSkill.status,
     mainSkillLooksCurrent: mainSkill.body.includes('name: world-threads'),
     aiHotSkillStatus: aiHotSkill.status,
-    aiHotSkillLooksCurrent: aiHotSkill.body.includes('AI Hot') && aiHotSkill.body.includes('/topiclab/source-feed/articles'),
+    aiHotSkillLooksCurrent: aiHotSkill.body.includes('AI 前沿') && aiHotSkill.body.includes('/topiclab/source-feed/articles'),
     techAiStateStatus: techAiState.status,
     techAiStateJsonOk: techAiStatePayload.ok,
     techAiStateJsonError: techAiStatePayload.error,
@@ -294,7 +294,8 @@ async function main() {
     summary.app.techAiStateStatus !== 200 ||
     !summary.app.techAiStateJsonOk ||
     summary.app.techAiTopSignalCount <= 0 ||
-    (databaseConfigured && summary.app.databaseConnected !== true) ||
+    (databaseConfigured && summary.app.databaseConnected === false) ||
+    (databaseConfigured && summary.app.databaseSnapshotTableReady === false) ||
     (summary.minimax.ok === false && !summary.minimax.degraded)
   ) {
     process.exit(1);

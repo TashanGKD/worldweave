@@ -1,0 +1,39 @@
+{
+  "generated_at": "2026-05-18T01:52:24.516Z",
+  "base_url": "http://127.0.0.1:5000",
+  "fresh": false,
+  "scenes": {
+    "geo-politics-daily": {
+      "count": 0,
+      "pearson": null,
+      "avg_upstream_score": null,
+      "avg_intake_score": null,
+      "avg_delta": null,
+      "aligned_count": 0,
+      "upgraded_count": 0,
+      "downgraded_count": 0,
+      "missing_score_count": 116,
+      "by_source_group": {},
+      "largest_upgrades": [],
+      "largest_downgrades": [],
+      "total_signal_count": 116,
+      "public_scores_hidden": true
+    },
+    "tech-ai": {
+      "count": 0,
+      "pearson": null,
+      "avg_upstream_score": null,
+      "avg_intake_score": null,
+      "avg_delta": null,
+      "aligned_count": 0,
+      "upgraded_count": 0,
+      "downgraded_count": 0,
+      "missing_score_count": 9,
+      "by_source_group": {},
+      "largest_upgrades": [],
+      "largest_downgrades": [],
+      "total_signal_count": 9,
+      "public_scores_hidden": true
+    }
+  }
+}

@@ -59,15 +59,15 @@ function reliabilityTierLabel(value?: string | null) {
 
 function reliabilityReasonLabel(reason?: string | null) {
   if (!reason) return '这条线索来自已接入信源。';
-  if (/AIHOT/i.test(reason) && /T1\.5/i.test(reason)) return '来自 AI Hot 稳定来源，已通过规则筛选。';
-  if (/AIHOT/i.test(reason) && /T1/i.test(reason)) return '来自 AI Hot 核心来源，已通过规则筛选。';
-  if (/AIHOT/i.test(reason) && /T2/i.test(reason)) return '来自 AI Hot 补充来源，已通过规则筛选。';
+  if (/AIHOT/i.test(reason) && /T1\.5/i.test(reason)) return '来自 AI 前沿稳定来源，已通过筛选。';
+  if (/AIHOT/i.test(reason) && /T1/i.test(reason)) return '来自 AI 前沿核心来源，已通过筛选。';
+  if (/AIHOT/i.test(reason) && /T2/i.test(reason)) return '来自 AI 前沿补充来源，已通过筛选。';
   if (/code formula|matched|source via/i.test(reason)) return '这条线索来自已接入信源，并通过规则筛选。';
   return reason
     .replace(/\bT1\.5\b/g, '稳定来源')
     .replace(/\bT1\b/g, '核心来源')
     .replace(/\bT2\b/g, '补充来源')
-    .replace(/\bAIHOT\b/gi, 'AI Hot')
+    .replace(/\bAIHOT\b/gi, 'AI 前沿')
     .replace(/\bcode formula\b/gi, '规则筛选');
 }
 

@@ -9,7 +9,7 @@ import {
   isRenderableDashboardState,
   isWorldRuntimeHeavyRefreshEnabled,
 } from '@/lib/world/runtime';
-import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
+import { dashboardNodeMatchesScene, dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
 import { isPublicEventSignal, isSourceSnapshotLikeSignal, sanitizePublicSignal } from '@/lib/world/signal-quality';
 import type { WorldScene } from '@/lib/world/types';
 
@@ -18,7 +18,7 @@ export const revalidate = 0;
 
 const STATE_TIMEOUT_MS = 30000;
 const DASHBOARD_STATE_MAX_AGE_MS = 30 * 60 * 1000;
-const CACHED_STATE_TIMEOUT_MS = 1500;
+const CACHED_STATE_TIMEOUT_MS = 5000;
 const SIGNAL_CACHE_FILE = path.join(process.cwd(), '.cache', 'world-signal-cache.json');
 
 type CachedDashboardState = Awaited<ReturnType<typeof getCachedWorldDashboardState>>;
@@ -94,7 +94,7 @@ function filterCachedDashboardStateForScene(state: NonNullable<CachedDashboardSt
   const nodes = (Array.isArray(state.nodes) ? state.nodes : []).filter((node) => {
     if (scene === 'geo-politics-daily' && isAiHotLikeNode(node)) return false;
     const nodeId = String((node as { node_id?: unknown }).node_id || '').replace(/:explore$/, '');
-    return signalIds.size === 0 || signalIds.has(nodeId);
+    return dashboardNodeMatchesScene(node, scene) && (signalIds.size === 0 || signalIds.has(nodeId));
   }).map(sanitizePublicSignal);
   return {
     ...state,
@@ -121,7 +121,7 @@ function buildSkillEntry(origin: string | null) {
   return {
     mode: 'bound' as const,
     title: '信源 Skill',
-    description: '可查询近 30 天信源、AI Hot 和主世界日报。',
+    description: '可查询近 30 天信源、AI 日报和主世界日报。',
     copy_hint: '日常回答先读精选线索；需要深挖时再进入全部信源。',
     url: `${origin}/api/v1/openclaw/skill.md`,
   };
@@ -189,10 +189,12 @@ export async function GET(request: Request) {
     const forceLive = (freshRequested || batchRequested) && heavyRefreshEnabled;
     const rebuildDashboard = url.searchParams.get('rebuild') === '1';
     const allowModelRefresh = batchRequested && heavyRefreshEnabled;
-    const timeoutMs = allowModelRefresh || forceLive ? 120000 : STATE_TIMEOUT_MS;
+    const timeoutMs = allowModelRefresh || forceLive ? 300000 : STATE_TIMEOUT_MS;
     const requestOrigin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
     const bypassCachedDashboard = rebuildDashboard;
-    const cachedState = await withCachedStateTimeout(getCachedWorldDashboardState(scene), null);
+    const cachedState = bypassCachedDashboard
+      ? null
+      : await withCachedStateTimeout(getCachedWorldDashboardState(scene), null);
     const cachedStateRenderable = isRenderableDashboardState(cachedState);
     const cachedStatePolluted = scene === 'global' && hasSourceSnapshotPollution(cachedState);
     const cachedStateCurrent =

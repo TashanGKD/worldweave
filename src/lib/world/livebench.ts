@@ -870,7 +870,7 @@ function resolveMiniMaxApiStyle(): 'anthropic' | 'openai-completions' {
 
 const MINIMAX_BASE_URL = resolveMiniMaxBaseUrl();
 const MINIMAX_API_KEY = resolveMiniMaxApiKey();
-const MINIMAX_MODEL = (process.env.MINIMAX_MODEL || 'MiniMax-M2.5').trim();
+const MINIMAX_MODEL = (process.env.MINIMAX_MODEL || 'DeepSeek-V4-Flash').trim();
 const MINIMAX_API_STYLE = resolveMiniMaxApiStyle();
 const LIVEBENCH_REMOTE_FAILURE_COOLDOWN_MS = 10 * 60 * 1000;
 const LIVEBENCH_EMBEDDING_FAILURE_COOLDOWN_MS = 60 * 1000;
@@ -6234,7 +6234,7 @@ async function buildBaselineVote(question: LiveQuestion, chunks: SourceEmbedding
   const fallback: LiveVote = {
     vote_id: `baseline:${question.question_id}`,
     question_id: question.question_id,
-    xia_id: 'MiniMax-M2.5',
+    xia_id: 'DeepSeek-V4-Flash',
     source: 'baseline',
     contributor_kind: 'ai',
     contributor_label: '内部主持人种子',

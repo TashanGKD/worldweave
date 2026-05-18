@@ -16,6 +16,7 @@ async function main() {
   const failures = [];
 
   const skillRoute = await read('src/app/api/v1/openclaw/skill.md/route.ts');
+  const aiSkillAliasRoute = await read('src/app/api/v1/openclaw/ai.skill.md/route.ts');
   const aihotSkillRoute = await read('src/app/api/v1/openclaw/aihot.skill.md/route.ts');
   const livebenchRedirect = await read('src/app/api/v1/openclaw/livebench.skill.md/route.ts');
   const sourcesRedirect = await read('src/app/api/v1/openclaw/sources.skill.md/route.ts');
@@ -52,14 +53,14 @@ async function main() {
     '近 30 天信源查询',
     '先有信源，再有判断',
     '先独立完成',
-    '后台校准不是主回答',
+    '校准过程不要写成用户回答的主体',
     '不要把内部标识、来源标签、其他虾数量这类运行细节写进自然语言理由',
     'probability_yes',
     '可选字段；如果不确定就不传',
     '/world/signals',
     '/topiclab/source-feed/articles',
-    'AI Hot Skill',
-    'question_id=从题池取得的question_id',
+    'AI 日报 Skill',
+    '/world/livebench/questions/QUESTION_ID',
     '/world/livebench/vote',
     'probability_yes',
   ]) {
@@ -118,9 +119,11 @@ async function main() {
   ensure(sourceFeedRoute, 'q', 'source-feed API must accept a text query', failures);
   ensure(sourceFeedRoute, 'source', 'source-feed API must accept source filtering', failures);
   ensure(sourceFeedRoute, 'Cache-Control', 'source-feed API must be no-store', failures);
-  ensure(aihotSkillRoute, 'api/public/items?mode=selected', 'AI Hot skill must document the selected-items API', failures);
-  ensure(aihotSkillRoute, 'User-Agent', 'AI Hot skill must require a browser-like User-Agent for raw API calls', failures);
-  ensure(aihotSkillRoute, 'LiveBench', 'AI Hot skill must keep LiveBench as calibration loop', failures);
+  ensure(skillRoute, '/openclaw/ai.skill.md', 'main skill must point at the public AI daily skill route', failures);
+  ensure(aiSkillAliasRoute, "export { GET } from '../aihot.skill.md/route'", 'AI daily public route must be wired', failures);
+  ensure(aihotSkillRoute, 'ai-daily-world-source', 'AI daily skill must use the public skill name', failures);
+  ensure(aihotSkillRoute, 'world/signals?scene=tech-ai', 'AI daily skill must document the AI signals API', failures);
+  ensure(aihotSkillRoute, 'LiveBench', 'AI daily skill must keep LiveBench as calibration loop', failures);
   ensure(signalsPage, "redirect('/source-knowledge')", 'legacy /signals page must redirect to source knowledge page', failures);
   ensure(judgmentsRoute, "export { GET, POST } from '../vote/route'", 'judgments alias must proxy to vote route', failures);
   ensure(votesRoute, "export { GET, POST } from '../vote/route'", 'votes alias must proxy to vote route', failures);
@@ -160,6 +163,7 @@ async function main() {
         ok: true,
         checked_files: [
           'src/app/api/v1/openclaw/skill.md/route.ts',
+          'src/app/api/v1/openclaw/ai.skill.md/route.ts',
           'src/app/api/v1/openclaw/aihot.skill.md/route.ts',
           'src/app/api/v1/openclaw/livebench.skill.md/route.ts',
           'src/app/api/v1/openclaw/sources.skill.md/route.ts',

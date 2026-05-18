@@ -171,6 +171,7 @@ type WorldDashboardSnapshotPayload = {
 };
 
 const LIVEBENCH_PAGE_TIMEOUT_MS = 20000;
+let dashboardSnapshotWriteQueue: Promise<void> = Promise.resolve();
 
 type RuntimeHistoryPayload = {
   reports: WorldReport[];
@@ -346,6 +347,19 @@ function parseMiniMaxJsonLines<T extends object>(content: string): T[] {
   return parsed;
 }
 
+function firstArrayField<T>(value: unknown, keys: string[]): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (!value || typeof value !== 'object') return [];
+  const record = value as Record<string, unknown>;
+  for (const key of keys) {
+    if (Array.isArray(record[key])) {
+      return record[key] as T[];
+    }
+  }
+  const fallback = Object.values(record).find((item) => Array.isArray(item));
+  return Array.isArray(fallback) ? (fallback as T[]) : [];
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -414,6 +428,8 @@ type OpenAICompatibleChatResponse = {
   choices?: Array<{
     message?: {
       content?: string | Array<{ type?: string; text?: string }>;
+      reasoning?: string;
+      reasoning_content?: string;
     };
   }>;
   usage?: {
@@ -462,15 +478,25 @@ async function requestOpenAICompatibleChatCompletion({
     }
 
     const payload = (await response.json()) as OpenAICompatibleChatResponse;
-    const content = payload.choices?.[0]?.message?.content;
-    if (typeof content === 'string') {
+    const message = payload.choices?.[0]?.message;
+    const content = message?.content;
+    if (typeof content === 'string' && content.trim()) {
       return content;
     }
     if (Array.isArray(content)) {
-      return content
+      const text = content
         .map((block) => (typeof block?.text === 'string' ? block.text : ''))
         .filter(Boolean)
         .join('\n');
+      if (text.trim()) {
+        return text;
+      }
+    }
+    if (typeof message?.reasoning_content === 'string') {
+      return message.reasoning_content;
+    }
+    if (typeof message?.reasoning === 'string') {
+      return message.reasoning;
     }
     return '';
   } finally {
@@ -613,7 +639,7 @@ function buildDraftProjection(
   if (Array.isArray(draft.projection) && draft.projection.length > 0) {
     return draft.projection
       .map((item) => ({
-        title: normalizeText(item.title) || '继续看',
+        title: normalizeText(item.title) || '后面要看什么',
         summary: normalizeText(item.summary) || futureProjection,
         confidence: clamp(typeof item.confidence === 'number' ? item.confidence : 0.45, 0.05, 0.98),
         assumptions: compactStringList(item.assumptions || [], 4),
@@ -625,7 +651,7 @@ function buildDraftProjection(
   if (futureProjection) {
     return [
       {
-        title: fallback[0]?.title || '继续看',
+        title: fallback[0]?.title || '后面要看什么',
         summary: futureProjection,
         confidence: clamp(typeof draft.confidence === 'number' ? draft.confidence : fallback[0]?.confidence || 0.45, 0.05, 0.98),
         assumptions: compactStringList(fallback[0]?.assumptions || [currentAnalysis], 4),
@@ -821,8 +847,8 @@ type RuntimeStore = {
   lastCoverageAt: Map<string, number>;
   missions: Map<string, { briefing: WorldBriefing; createdAt: number }>;
   xiaTrails: Map<string, { signalId: string; region: string; lat: number | null; lng: number | null; updatedAt: number }>;
-  localizedSignals: Map<string, { displayTitle: string; displaySummary: string; topicLabel: string }>;
-  translatedSignals: Map<string, { displayTitle: string; displaySummary: string }>;
+  localizedSignals: Map<string, { displayTitle: string; displaySummary: string; displayLocation: string; topicLabel: string }>;
+  translatedSignals: Map<string, { displayTitle: string; displaySummary: string; displayLocation: string }>;
   signalAlignments: Map<string, SignalAlignment>;
   selectedSourceHealth: Map<string, ExternalFetchHealth>;
   publicAnchorHealth: Map<string, ExternalFetchHealth>;
@@ -851,8 +877,9 @@ const MAX_STORED_REPORTS = 500;
 const DEFAULT_WORLDLINE_ID = 'worldline-primary';
 const DEFAULT_INFORMATION_COLLECTION_BASE_URL = '';
 const MINIMAX_BASE_URL = resolveMiniMaxBaseUrl();
-const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'MiniMax-M2.5';
-const TRANSLATION_BATCH_SIZE = resolveRuntimeInteger('WORLD_TRANSLATION_BATCH_SIZE', 2, 1, 8);
+const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'DeepSeek-V4-Flash';
+const TRANSLATION_BATCH_SIZE = resolveRuntimeInteger('WORLD_TRANSLATION_BATCH_SIZE', 1, 1, 8);
+const DASHBOARD_TRANSLATION_SYNC_LIMIT = resolveRuntimeInteger('WORLD_DASHBOARD_TRANSLATION_SYNC_LIMIT', 6, 1, 12);
 const VISIBLE_TRANSLATION_BATCH_SIZE = resolveRuntimeInteger('WORLD_VISIBLE_TRANSLATION_BATCH_SIZE', 12, 1, 48);
 const TRANSLATION_PRIME_LIMIT = resolveRuntimeInteger('WORLD_TRANSLATION_PRIME_LIMIT', 16, 0, 48);
 const ALIGNMENT_BATCH_SIZE = resolveRuntimeInteger('WORLD_ALIGNMENT_BATCH_SIZE', 4, 1, 8);
@@ -1008,11 +1035,11 @@ function getRuntimeStore(): RuntimeStore {
   }
 
   if (!globalStore.__xiaReportRuntime.localizedSignals) {
-    globalStore.__xiaReportRuntime.localizedSignals = new Map<string, { displayTitle: string; displaySummary: string; topicLabel: string }>();
+    globalStore.__xiaReportRuntime.localizedSignals = new Map<string, { displayTitle: string; displaySummary: string; displayLocation: string; topicLabel: string }>();
   }
 
   if (!globalStore.__xiaReportRuntime.translatedSignals) {
-    globalStore.__xiaReportRuntime.translatedSignals = new Map<string, { displayTitle: string; displaySummary: string }>();
+    globalStore.__xiaReportRuntime.translatedSignals = new Map<string, { displayTitle: string; displaySummary: string; displayLocation: string }>();
   }
 
   if (globalStore.__xiaReportRuntime.marketSnapshotInFlight === undefined) {
@@ -1123,7 +1150,10 @@ const QUICK_PLACE_TRANSLATIONS: Record<string, string> = {
   gaza: '加沙',
   jerusalem: '耶路撒冷',
   moscow: '莫斯科',
+  'moscow sheremetyevo': '莫斯科谢列梅捷沃',
   moskva: '莫斯科',
+  lagos: '拉各斯',
+  'buni yadi': '布尼亚迪',
   'new york': '纽约',
   texas: '得克萨斯',
   canada: '加拿大',
@@ -1177,6 +1207,7 @@ const QUICK_PLACE_TRANSLATIONS: Record<string, string> = {
   'north korea (sea of japan/east sea launch area)': '朝鲜（日本海/东海发射区域）',
   'north korea': '朝鲜',
   'west bank': '约旦河西岸',
+  'jordan valley': '约旦河谷',
   'strait of hormuz (iranian coastline)': '霍尔木兹海峡（伊朗沿岸）',
   'southern lebanon (naqoura, qabrikha, kfar, touline)': '黎巴嫩南部（纳库拉、卡布里哈、克法尔、图林）',
 };
@@ -1409,56 +1440,56 @@ const SIGNAL_THREADS: Array<{ pattern: RegExp } & SignalThread> = [
     pattern: /(shipping|ship|port|route|strait|freight|vessel|insurer|marine)/,
     label: '航运',
     titleBeat: '航运风险上升',
-    summaryBeat: '后续重点看绕航、保险和港口声明。',
+    summaryBeat: '绕航、保险和港口声明会直接影响后面的运价。',
     watchHint: '保险、运价、绕航和港口声明',
   },
   {
     pattern: /(oil|lng|gas|refiner|pipeline|crude|energy|power|grid|electric)/,
     label: '能源',
-    titleBeat: '能源信号更新',
-    summaryBeat: '后续重点看价格、装运和政策回应。',
+    titleBeat: '能源市场有新动向',
+    summaryBeat: '价格、装运和政策回应会决定影响能否继续放大。',
     watchHint: '现货价格、装运节奏和政策反应',
   },
   {
     pattern: /(missile|strike|attack|military|troop|war|conflict|border|drone|sanction)/,
     label: '冲突',
     titleBeat: '冲突强度上升',
-    summaryBeat: '后续重点看外溢范围、二次信源和政策回应。',
+    summaryBeat: '外溢范围、更多报道和政策回应会决定事件分量。',
     watchHint: '二次信源、外溢范围和供应链反应',
   },
   {
     pattern: /(chip|gpu|semiconductor|server|ai|model|robot|cloud|accelerator)/,
     label: '算力与芯片',
-    titleBeat: '算力与芯片信号更新',
-    summaryBeat: '后续重点看上游零部件、报价和出货节奏。',
+    titleBeat: '算力与芯片有新动向',
+    summaryBeat: '上游零部件、报价和出货节奏会影响后续供应。',
     watchHint: '上游零部件、报价和出货节奏',
   },
   {
     pattern: /(factory|manufactur|assembly|capacity|export|electronics|logistics|supply)/,
     label: '产能与供应链',
-    titleBeat: '供应链信号更新',
-    summaryBeat: '后续重点看订单、扩产动作和物流节点。',
+    titleBeat: '供应链有新变化',
+    summaryBeat: '订单、扩产动作和物流节点会影响交付节奏。',
     watchHint: '订单、扩产动作和物流节点',
   },
   {
     pattern: /(bond|yield|equity|stock|market|trader|bank|finance|fx)/,
     label: '市场',
-    titleBeat: '市场信号更新',
-    summaryBeat: '后续重点看价格、收益率和监管口风。',
+    titleBeat: '市场出现新变化',
+    summaryBeat: '价格、收益率和监管口风会影响短期预期。',
     watchHint: '价格、收益率和监管口风',
   },
   {
     pattern: /(virus|outbreak|disease|health|epidemic|hospital)/,
     label: '公共卫生',
-    titleBeat: '公共卫生信号更新',
-    summaryBeat: '后续重点看病例、口岸和卫生通报。',
+    titleBeat: '公共卫生有新情况',
+    summaryBeat: '病例、口岸和卫生通报会影响防控压力。',
     watchHint: '病例、口岸和卫生通报',
   },
   {
     pattern: /(tariff|policy|regulat|election|parliament|minister|customs)/,
     label: '政策',
-    titleBeat: '政策信号更新',
-    summaryBeat: '后续重点看正式文件、执行细则和市场回响。',
+    titleBeat: '政策出现新变化',
+    summaryBeat: '正式文件、执行细则和市场反应会决定实际影响。',
     watchHint: '正式文件、执行细则和市场回响',
   },
 ];
@@ -1515,11 +1546,11 @@ function cleanDisplayText(value: string): string {
     .replace(/\bunspecified locations?\b/gi, '未指明地点')
     .replace(/\bimplied operational area\b/gi, '相关行动区域')
     .replace(/\bmass shooting\b/gi, '大规模枪击')
-    .replace(/这边的([^。]{1,16})线(?:先)?记成一笔(?:续写|更新)。?/gu, '出现新的$1信号。')
-    .replace(/先把地理锚点按住，.{0,2}看它是不是会往([^。]+?)外溢。?/gu, '后续重点看是否影响$1。')
-    .replace(/这一笔声量起得不低，适合先压住。?/gu, '目前热度较高，需继续跟踪。')
-    .replace(/先轻轻记下，不急着加重语气。?/gu, '按普通监测处理。')
-    .replace(/它未必最显眼，但这条线现在值得先补一笔。?/gu, '这条线索值得补充观察。')
+    .replace(/这边的([^。]{1,16})线(?:先)?记成一笔(?:续写|更新)。?/gu, '$1出现新消息。')
+    .replace(/先把地理锚点按住，.{0,2}看它是不是会往([^。]+?)外溢。?/gu, '可能影响$1。')
+    .replace(/这一笔声量起得不低，适合先压住。?/gu, '这条消息热度较高。')
+    .replace(/先轻轻记下，不急着加重语气。?/gu, '先按普通消息记录。')
+    .replace(/它未必最显眼，但这条线现在值得先补一笔。?/gu, '这条消息可以先留意。')
     .replace(/Signal Arena 是量化交易竞赛游戏平台，其行情快照为.{2}游戏数据，排行榜参与者仅一万余人，非专业金融数据源，仅作为背景参考。?/gu, '行情快照仅作背景参考。')
     .replace(/续写/gu, '更新')
     .replace(/\s+/g, ' ')
@@ -1578,9 +1609,9 @@ function getSignalThread(signal: Pick<WorldSignal, 'title' | 'summary' | 'tags' 
   const fallbackLabel = buildTopicLabel(signal);
   return {
     label: fallbackLabel,
-    titleBeat: `${fallbackLabel}出现新信号`,
-    summaryBeat: `后续重点看${fallbackLabel}是否继续扩散。`,
-    watchHint: '第二来源、相邻地点和后续回应',
+    titleBeat: `${fallbackLabel}有新消息`,
+    summaryBeat: `${fallbackLabel}出现新变化，影响还需要结合更多报道判断。`,
+    watchHint: '更多报道、相邻地点和相关回应',
   };
 }
 
@@ -1618,14 +1649,14 @@ function buildDisplaySummary(
   const location = buildDisplayLocation(signal);
   const emphasis =
     signal.hotspotScore >= 0.74
-      ? '目前热度较高，需继续跟踪。'
+      ? '这条消息热度较高。'
       : signal.coverageGap >= 0.72
-        ? '这条线索值得补充观察。'
-        : '按普通监测处理。';
+        ? '同类消息不多，可以先留意。'
+        : '先按普通消息记录。';
   const translatedFact = applyQuickTextTranslations(signal.summary || signal.title).slice(0, 120);
   const fact = hasLongEnglishFragment(translatedFact) ? '' : translatedFact;
 
-  return `${location} 出现新的${thread.label}信号。${fact ? `${fact}。` : ''}后续重点看${thread.watchHint}。${emphasis}`;
+  return `${location} 出现新的${thread.label}消息。${fact ? `${fact}。` : ''}主要看${thread.watchHint}。${emphasis}`;
 }
 
 function describeSignalStage(signal: WorldSignal, relatedCount: number): SignalStageDescriptor {
@@ -1743,6 +1774,70 @@ function normalizeSourceUrl(value: string): string {
   } catch {
     return trimmed;
   }
+}
+
+function isWorldMonitorMachineOnlyText(value: string): boolean {
+  const text = normalizeText(value);
+  if (!text) return true;
+  return /Location in headline|Source country match|Local news source|High Goldstein intensity|Goldstein|^\d+\s+events? at location$/iu.test(text);
+}
+
+function readableTitleFromSourceUrl(sourceUrl: string): string {
+  const normalizedUrl = normalizeSourceUrl(sourceUrl);
+  if (!normalizedUrl) return '';
+
+  try {
+    const url = new URL(normalizedUrl);
+    const segments = url.pathname
+      .split('/')
+      .map((segment) => segment.trim())
+      .filter(Boolean)
+      .reverse();
+    const slug = segments.find((segment) => /[a-z]{3,}/iu.test(segment) && segment.length >= 12);
+    if (!slug) return '';
+    const withoutExtension = slug.replace(/\.(?:html?|php|aspx?)$/iu, '');
+    const withoutIds = withoutExtension
+      .replace(/\b[0-9a-f]{8,}\b/giu, '')
+      .replace(/\b\d{5,}\b/gu, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return cleanDisplayText(decodeURIComponent(withoutIds)).slice(0, 140);
+  } catch {
+    return '';
+  }
+}
+
+function chooseWorldMonitorReadableText(input: {
+  title: string;
+  headline: string;
+  notes: string;
+  sourceUrl: string;
+  fallbackTitle: string;
+}): { title: string; description: string } {
+  const urlTitle = readableTitleFromSourceUrl(input.sourceUrl);
+  const rawDescription = normalizeText(input.notes) || normalizeText(input.headline);
+  const description = isWorldMonitorMachineOnlyText(rawDescription)
+    ? normalizeText(input.headline) || urlTitle || rawDescription
+    : rawDescription;
+  const titleCandidates = [input.headline, input.title, urlTitle, input.fallbackTitle]
+    .map((candidate) => normalizeText(candidate))
+    .filter(Boolean);
+  const title =
+    titleCandidates.find(
+      (candidate) =>
+        !isWorldMonitorMachineOnlyText(candidate) &&
+        !isLowInformationSignalTitle(candidate, description),
+    ) ||
+    urlTitle ||
+    normalizeText(input.title) ||
+    normalizeText(input.fallbackTitle) ||
+    'World Monitor signal';
+
+  return {
+    title,
+    description: description || title,
+  };
 }
 
 function normalizeSignatureText(value: string): string {
@@ -2258,11 +2353,13 @@ type MiniMaxTranslationItem = {
   id: string;
   title: string;
   summary: string;
+  location: string;
 };
 
 type TranslationCacheEntry = {
   displayTitle?: string;
   displaySummary?: string;
+  displayLocation?: string;
 };
 
 type TranslationCachePayload =
@@ -2273,8 +2370,8 @@ type TranslationCachePayload =
       entries?: Record<string, TranslationCacheEntry>;
     };
 
-async function translateSignalsWithMiniMax(items: MiniMaxTranslationItem[]): Promise<Map<string, { displayTitle: string; displaySummary: string }>> {
-  const result = new Map<string, { displayTitle: string; displaySummary: string }>();
+async function translateSignalsWithMiniMax(items: MiniMaxTranslationItem[]): Promise<Map<string, { displayTitle: string; displaySummary: string; displayLocation: string }>> {
+  const result = new Map<string, { displayTitle: string; displaySummary: string; displayLocation: string }>();
 
   if (items.length === 0) {
     return result;
@@ -2282,19 +2379,28 @@ async function translateSignalsWithMiniMax(items: MiniMaxTranslationItem[]): Pro
 
   for (let start = 0; start < items.length; start += TRANSLATION_BATCH_SIZE) {
     const batch = items.slice(start, start + TRANSLATION_BATCH_SIZE);
+    const promptBatch = batch.map((item, index) => ({
+      id: String(index),
+      title: item.title,
+      summary: item.summary,
+      location: item.location,
+    }));
     const promptPrefix = [
-      '把下面这些信号标题和摘要翻成自然、简洁的中文。',
+      '把下面这些信号标题、摘要和地点翻成自然、简洁的中文。',
       '要求：',
       '1. 只做忠实翻译，不要改写成评论口吻。',
       '2. 专有名词优先使用常见中文译名；没有常见译名就保留原文。',
-      '3. 返回 JSON 数组，每项包含 id、title、summary 三个字段。',
+      '3. 返回 JSON 数组，每项包含 id、title、summary、location 四个字段；id 是短序号，必须原样返回。',
       '4. 前台默认是中文阅读，不要保留整段英文短语、英文括号注释、抓取痕迹或模板化线索词。',
       '5. 地名、国家、地区、事件类型要尽量译成中文；不要输出 Dogon Dawa, Kaduna, Nigeria 这种半翻译地名串。',
-      '6. summary 不要复述来源标题清单；压成一句自然中文，说明发生了什么和为什么值得关注。',
-      '7. 如果必须保留英文名，只保留必要专有名词，句子主体仍然必须是自然中文。',
-      '8. 不要输出思考过程、不要输出 <think>，也不要输出 JSON 之外的任何内容。',
+      '6. title 控制在 18 到 32 个中文字符左右，直接说具体事实；不要把多个来源标题串成一长句。',
+      '7. summary 控制在 24 到 46 个中文字符左右，只写一句自然中文；说明发生了什么和影响，不要复述来源清单。',
+      '8. 不要使用“后续重点”“值得继续看”“补充线索”“信号”“线索”“核实”“确认”“升级”等流程化说法。',
+      '9. location 尽量控制在 2 到 12 个中文字符，用常见地名或地区名。',
+      '10. 如果必须保留英文名，只保留必要专有名词，句子主体仍然必须是自然中文。',
+      '11. 不要输出思考过程、不要输出 <think>，也不要输出 JSON 之外的任何内容。',
     ].join('\n');
-    const promptData = JSON.stringify(batch);
+    const promptData = JSON.stringify(promptBatch);
 
     try {
       const content =
@@ -2303,24 +2409,61 @@ async function translateSignalsWithMiniMax(items: MiniMaxTranslationItem[]): Pro
           promptPrefix,
           promptData,
           temperature: 0.2,
-          timeoutMs: 20000,
+          timeoutMs: 60000,
+          retryLimit: 0,
           requestLabel: 'translation request',
         })) || '';
       if (!content) {
+        console.warn('[translate] MiniMax returned empty translation content');
         continue;
       }
       const parsed = parseMiniMaxJsonPayload<
-        { items?: Array<{ id?: string; title?: string; summary?: string }> } | Array<{ id?: string; title?: string; summary?: string }>
+        { items?: Array<{ id?: string; title?: string; summary?: string; location?: string }> } | Array<{ id?: string; title?: string; summary?: string; location?: string }>
       >(content);
-      const list = Array.isArray(parsed) ? parsed : parsed.items || [];
-      for (const item of list) {
-        if (!item?.id) continue;
-        const displayTitle = cleanDisplayText(item.title || '');
-        const displaySummary = cleanDisplayText(item.summary || '');
-        result.set(item.id, {
-          displayTitle: shouldRewriteDisplayText(displayTitle) ? '' : displayTitle,
-          displaySummary: shouldRewriteDisplayText(displaySummary) ? '' : displaySummary,
+      const list = firstArrayField<{
+        id?: string;
+        title?: string;
+        summary?: string;
+        location?: string;
+        displayTitle?: string;
+        displaySummary?: string;
+        displayLocation?: string;
+        displayTitleZh?: string;
+        displaySummaryZh?: string;
+        displayLocationZh?: string;
+      }>(parsed, ['items', 'signals', 'results', 'data', 'translations']);
+      if (list.length === 0) {
+        const parsedKeys = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? Object.keys(parsed as Record<string, unknown>) : [];
+        console.warn(`[translate] MiniMax JSON parsed but no translation array found; keys=${parsedKeys.slice(0, 8).join(',') || 'none'}`);
+      }
+      let acceptedInBatch = 0;
+      for (const [index, item] of list.entries()) {
+        const source = batch[Number(item?.id)] || batch[index];
+        if (!source) continue;
+        const displayTitle = cleanDisplayText(item.displayTitleZh || item.displayTitle || item.title || '');
+        const displaySummary = cleanDisplayText(item.displaySummaryZh || item.displaySummary || item.summary || '');
+        const displayLocation = cleanDisplayText(item.displayLocationZh || item.displayLocation || item.location || '');
+        const translatedSummary = shouldRewriteDisplayText(displaySummary) ? '' : displaySummary;
+        const translatedTitle = shouldRewriteDisplayText(displayTitle)
+          ? translatedSummary
+            ? signalSummaryHeadline(translatedSummary)
+            : ''
+          : displayTitle;
+        const translatedLocation = shouldRewriteDisplayText(displayLocation) ? quickTranslatePlaceLabel(source.location) : displayLocation;
+        if (translatedTitle || translatedSummary || translatedLocation) {
+          acceptedInBatch += 1;
+        }
+        result.set(source.id, {
+          displayTitle: translatedTitle,
+          displaySummary: translatedSummary,
+          displayLocation: translatedLocation,
         });
+      }
+      if (list.length > 0 && acceptedInBatch === 0) {
+        const first = list[0] || {};
+        console.warn(
+          `[translate] MiniMax returned ${list.length} items but none passed readability checks; first=${cleanDisplayText(`${first.title || first.displayTitle || first.displayTitleZh || ''} ${first.summary || first.displaySummary || first.displaySummaryZh || ''}`).slice(0, 180)}`,
+        );
       }
     } catch (error) {
       console.warn('[MiniMax] Translation parse failed:', error instanceof Error ? error.message : String(error));
@@ -2353,18 +2496,27 @@ async function ensureTranslatedSignalsLoaded(): Promise<void> {
     for (const [signalId, entry] of Object.entries(entries)) {
       const displayTitle = cleanDisplayText(entry.displayTitle || '');
       const displaySummary = cleanDisplayText(entry.displaySummary || '');
-      if (!displayTitle && !displaySummary) continue;
-      if (cacheVersion < TRANSLATION_CACHE_VERSION && shouldRewriteDisplayText(`${displayTitle} ${displaySummary}`)) {
+      const displayLocation = cleanDisplayText(entry.displayLocation || '');
+      if (!displayTitle && !displaySummary && !displayLocation) continue;
+      if (cacheVersion < TRANSLATION_CACHE_VERSION && shouldRewriteDisplayText(`${displayTitle} ${displaySummary} ${displayLocation}`)) {
         continue;
       }
       runtime.translatedSignals.set(signalId, {
         displayTitle,
         displaySummary,
+        displayLocation,
       });
     }
   } catch {
     // ignore cold-start cache miss
   }
+}
+
+async function reloadTranslatedSignals(): Promise<void> {
+  const runtime = getRuntimeStore();
+  runtime.translationsLoaded = false;
+  runtime.translatedSignals.clear();
+  await ensureTranslatedSignalsLoaded();
 }
 
 async function persistTranslatedSignals(): Promise<void> {
@@ -2532,7 +2684,13 @@ async function classifySignalRowsWithMiniMax(
           content,
         );
       }
-      const list = Array.isArray(parsed) ? parsed : parsed.items || [];
+      const list = firstArrayField<Record<string, unknown> & { id?: string }>(parsed, [
+        'items',
+        'signals',
+        'results',
+        'data',
+        'translations',
+      ]);
 
       for (const item of list) {
         if (!item?.id) continue;
@@ -2573,7 +2731,7 @@ async function ensureSignalRowAlignments(
     runtime.alignmentsInFlight = true;
     console.log(`[alignment] priming ${limitedCandidates.length} new-source signals with ${MINIMAX_MODEL} for display normalization`);
     try {
-      const aligned = await classifySignalRowsWithMiniMax(limitedCandidates);
+      const aligned = await withWorldBatchModelRefresh(() => classifySignalRowsWithMiniMax(limitedCandidates));
       for (const [cacheKey, alignment] of aligned.entries()) {
         runtime.signalAlignments.set(cacheKey, alignment);
       }
@@ -2799,8 +2957,8 @@ function getDefaultDisplaySignal(
 }
 
 function needsBetterTranslation(
-  signal: Pick<WorldSignal, 'title' | 'summary'>,
-  translated?: { displayTitle: string; displaySummary: string },
+  signal: Pick<WorldSignal, 'title' | 'summary' | 'locationName' | 'country' | 'region' | 'scene'>,
+  translated?: { displayTitle: string; displaySummary: string; displayLocation: string },
 ): boolean {
   if (!translated) {
     return true;
@@ -2808,7 +2966,9 @@ function needsBetterTranslation(
 
   const titleNeedsWork = shouldRewriteDisplayText(translated.displayTitle);
   const summaryNeedsWork = shouldRewriteDisplayText(translated.displaySummary);
-  return titleNeedsWork || summaryNeedsWork;
+  const translatedLocation = cleanDisplayText(translated.displayLocation);
+  const locationNeedsWork = shouldRewriteDisplayText(translatedLocation);
+  return titleNeedsWork || summaryNeedsWork || locationNeedsWork;
 }
 
 function localizeSignalForCoverage(signal: WorldSignal) {
@@ -2816,6 +2976,7 @@ function localizeSignalForCoverage(signal: WorldSignal) {
   const localized = {
     displayTitle: buildDisplayTitle(signal),
     displaySummary: buildDisplaySummary(signal),
+    displayLocation: buildDisplayLocation(signal),
     topicLabel: buildTopicLabel(signal),
   };
 
@@ -2829,12 +2990,13 @@ async function primeSignalTranslations(signals: WorldSignal[]): Promise<void> {
   const candidates = signals
     .filter((signal) => !runtime.localizedSignals.has(signal.id))
     .filter((signal) => needsBetterTranslation(signal, runtime.translatedSignals.get(signal.id)))
-    .filter((signal) => !containsCjk(signal.title) || !containsCjk(signal.summary))
+    .filter((signal) => !containsCjk(signal.title) || !containsCjk(signal.summary) || !containsCjk(signal.locationName || signal.country || signal.region))
     .slice(0, TRANSLATION_PRIME_LIMIT)
     .map((signal) => ({
       id: signal.id,
       title: signal.title,
       summary: signal.summary,
+      location: [signal.locationName, signal.country].filter(Boolean).join(', ') || signal.region || sceneLabel(signal.scene),
     }));
 
   if (candidates.length === 0) {
@@ -2853,18 +3015,41 @@ async function primeSignalTranslations(signals: WorldSignal[]): Promise<void> {
   }
 }
 
+async function primeDashboardSignalTranslations(scene: WorldScene, signals: WorldSignal[], allowModelRefresh: boolean): Promise<void> {
+  if (!allowModelRefresh || signals.length === 0) {
+    return;
+  }
+
+  const sceneSignals = scene === 'global' ? signals : signals.filter((signal) => signalMatchesScene(signal, scene));
+  const scopedSignals = sceneSignals.length || scene !== 'global' ? sceneSignals : signals;
+  const timelineSignals = selectTimelineEventSignals(scopedSignals);
+  const topSignals = buildTopSignalFeed(timelineSignals.length ? timelineSignals : scopedSignals).slice(0, DASHBOARD_TRANSLATION_SYNC_LIMIT);
+  const visibleSignals = Array.from(
+    new Map(
+      [
+        ...topSignals,
+        ...timelineSignals.slice(0, DASHBOARD_TRANSLATION_SYNC_LIMIT),
+        ...scopedSignals.slice(0, DASHBOARD_TRANSLATION_SYNC_LIMIT),
+      ].map((signal) => [signal.id, signal]),
+    ).values(),
+  );
+
+  await withWorldBatchModelRefresh(() => primeSignalTranslations(visibleSignals));
+}
+
 async function _ensureSignalTranslations(signals: WorldSignal[]): Promise<void> {
   const runtime = getRuntimeStore();
   await ensureTranslatedSignalsLoaded();
   const candidates = signals
     .filter((signal) => !runtime.localizedSignals.has(signal.id))
     .filter((signal) => needsBetterTranslation(signal, runtime.translatedSignals.get(signal.id)))
-    .filter((signal) => !containsCjk(signal.title) || !containsCjk(signal.summary))
+    .filter((signal) => !containsCjk(signal.title) || !containsCjk(signal.summary) || !containsCjk(signal.locationName || signal.country || signal.region))
     .slice(0, VISIBLE_TRANSLATION_BATCH_SIZE)
     .map((signal) => ({
       id: signal.id,
       title: signal.title,
       summary: signal.summary,
+      location: [signal.locationName, signal.country].filter(Boolean).join(', ') || signal.region || sceneLabel(signal.scene),
     }));
 
   if (candidates.length === 0) {
@@ -2901,6 +3086,7 @@ async function materializeLocalizedSignals(signals: WorldSignal[]): Promise<Worl
       ...signal,
       displayTitle: localized.displayTitle,
       displaySummary: localized.displaySummary,
+      locationName: localized.displayLocation || signal.locationName,
     };
   });
 }
@@ -2913,6 +3099,7 @@ function getLocalizedSignal(signal: WorldSignal) {
       return {
         ...localized,
         displayTitle: signalSummaryHeadline(signal.summary),
+        displayLocation: localized.displayLocation || buildDisplayLocation(signal),
       };
     }
     return localized;
@@ -2921,26 +3108,31 @@ function getLocalizedSignal(signal: WorldSignal) {
   const translated = runtime.translatedSignals.get(signal.id);
   if (translated) {
     const fallback = getDefaultDisplaySignal(signal);
+    const translatedTitle = shouldRewriteDisplayText(translated.displayTitle) ? '' : cleanDisplayText(translated.displayTitle);
+    const translatedSummary = shouldRewriteDisplayText(translated.displaySummary) ? '' : cleanDisplayText(translated.displaySummary);
+    const translatedSummaryTitle =
+      translatedSummary && !shouldRewriteDisplayText(translatedSummary)
+        ? signalSummaryHeadline(translatedSummary)
+        : '';
     if (isLowInformationSignalTitle(signal.title, signal.summary)) {
       return {
-        displayTitle: fallback.displayTitle,
-        displaySummary: shouldRewriteDisplayText(translated.displaySummary)
-          ? fallback.displaySummary
-          : cleanDisplayText(translated.displaySummary),
+        displayTitle: translatedTitle || translatedSummaryTitle || fallback.displayTitle,
+        displaySummary: translatedSummary || fallback.displaySummary,
+        displayLocation: shouldRewriteDisplayText(translated.displayLocation) ? buildDisplayLocation(signal) : translated.displayLocation,
         topicLabel: buildTopicLabel(signal),
       };
     }
     return {
-      displayTitle: shouldRewriteDisplayText(translated.displayTitle) ? fallback.displayTitle : cleanDisplayText(translated.displayTitle),
-      displaySummary: shouldRewriteDisplayText(translated.displaySummary)
-        ? fallback.displaySummary
-        : cleanDisplayText(translated.displaySummary),
+      displayTitle: translatedTitle || translatedSummaryTitle || fallback.displayTitle,
+      displaySummary: translatedSummary || fallback.displaySummary,
+      displayLocation: shouldRewriteDisplayText(translated.displayLocation) ? buildDisplayLocation(signal) : translated.displayLocation,
       topicLabel: buildTopicLabel(signal),
     };
   }
 
   return {
     ...getDefaultDisplaySignal(signal),
+    displayLocation: buildDisplayLocation(signal),
     topicLabel: buildTopicLabel(signal),
   };
 }
@@ -3944,7 +4136,7 @@ function toEvidenceSignal(signal: WorldSignal): WorldEvidenceSignal {
     source_name: signal.sourceName,
     source_url: resolveSignalSourceUrlForUi(signal),
     published_at: signal.publishedAt,
-    location_name: signal.locationName,
+    location_name: localized.displayLocation || signal.locationName,
     country: signal.country,
     latitude: signal.latitude,
     longitude: signal.longitude,
@@ -4005,8 +4197,8 @@ function resolveSourceReliability(
     return {
       tier: 'stable',
       label: 'stable-source',
-      reason: 'AI HOT 通过公开 Skill、RSS 和匿名 REST API 暴露精选 AI 动态；当前按整体 AI 信源接入，并保留原文链接供核对。',
-      source_name: sourceName || 'AI HOT',
+      reason: 'AI 前沿来源通过公开页面、RSS 和匿名 REST API 暴露精选 AI 动态；当前按整体 AI 信源接入，并保留原文链接供核对。',
+      source_name: sourceName || 'AI 前沿',
       source_url: sourceUrl || 'https://aihot.virxact.com/',
       connectivity: 'direct',
       matched_skill_name: 'aihot',
@@ -4381,7 +4573,7 @@ function buildProjection(signal: WorldSignal, relatedCount: number): WorldProjec
     },
     {
       title: `${thread.label} 会不会向外扩散`,
-      summary: `还要继续看 ${thread.watchHint}。如果相邻地点、供应链反应或政策回应同时抬头，这说明影响面已经开始外溢；如果这些侧面线索始终不跟，判断就该回到局部事件。`,
+      summary: `${thread.watchHint} 是接下来最该留意的变化。如果相邻地点、供应链反应或政策回应同时抬头，影响面可能已经开始外溢；如果这些侧面始终没有动静，判断就该回到局部事件。`,
       confidence: Number(clamp(baseConfidence - 0.1, 0.2, 0.72).toFixed(2)),
       assumptions: ['相关市场或政策主体开始响应', '同类信号在相邻地区出现'],
       invalidators: ['缺乏新的相邻市场或政策信号', '后续报道证明影响局限于局部事件'],
@@ -5632,12 +5824,12 @@ function normalizeAiHotSnapshot(data: unknown): SignalRow[] {
     return [];
   }
 
-  const anchor = getKnowledgeAnchor('', 'AI HOT', 'AI HOT', ['ai', 'technology']);
+  const anchor = getKnowledgeAnchor('', 'AI 前沿', 'AI 前沿', ['ai', 'technology']);
 
   return items.map((item, index) => {
     const category = normalizeTag(item.category);
     const eventTime = parseIsoDay(item.publishedAt || new Date().toISOString());
-    const sourceName = cleanDisplayText(item.source || 'AI HOT');
+    const sourceName = cleanDisplayText(item.source || 'AI 前沿');
     const score = scoreAiHotSelectedItem({
       title: item.title,
       titleEn: item.titleEn,
@@ -5656,7 +5848,7 @@ function normalizeAiHotSnapshot(data: unknown): SignalRow[] {
       source_url: item.url || 'https://aihot.virxact.com/',
       event_time: eventTime,
       created_at: new Date().toISOString(),
-      location: 'AI HOT',
+      location: 'AI 前沿',
       country: '',
       latitude: anchor?.latitude ?? null,
       longitude: anchor?.longitude ?? null,
@@ -5673,10 +5865,10 @@ function normalizeAiHotSnapshot(data: unknown): SignalRow[] {
         'aihot:scoring:code-formula',
         category ? `aihot:category:${category}` : '',
       ],
-      urgency_reason: `AI HOT selected item; tier=${score.sourceTier}; category=${category || 'unknown'}; relevance=${score.relevanceScore}`,
+      urgency_reason: `AI frontpage selected item; tier=${score.sourceTier}; category=${category || 'unknown'}; relevance=${score.relevanceScore}`,
       last_seen_at: new Date().toISOString(),
       source_type: 'api-json',
-      source_feed_name: 'AI HOT',
+      source_feed_name: 'AI 前沿',
       content_md: [cleanDisplayText(item.title), sourceName, concreteDisplayText(item.summary, 220), item.url].filter(Boolean).join(' — '),
     };
   });
@@ -7075,14 +7267,22 @@ function normalizeEvents(data: unknown): SignalRow[] {
 
   return markers.map((item) => {
     const relevanceScore = asNumber(item.relevanceScore);
-    const uniqueKey = `${asText(item.sourceUrl) || asText(item.id) || asText(item.headline)}-${asText(item.timestamp)}`;
+    const sourceUrl = asText(item.sourceUrl);
+    const text = chooseWorldMonitorReadableText({
+      title: asText(item.title),
+      headline: asText(item.headline),
+      notes: asText(item.notes),
+      sourceUrl,
+      fallbackTitle: 'Unknown Event',
+    });
+    const uniqueKey = `${sourceUrl || asText(item.id) || asText(item.headline)}-${asText(item.timestamp)}`;
     const alignmentTags = uniqueAlignmentTags(['source:world-monitor', 'wm:events']);
     return {
       id: generateStableId('event', uniqueKey),
-      title: asText(item.title) || asText(item.headline) || 'Unknown Event',
-      description: asText(item.notes) || asText(item.headline) || '',
+      title: text.title,
+      description: text.description,
       source_name: asText(item.source) || 'World Monitor',
-      source_url: asText(item.sourceUrl),
+      source_url: sourceUrl,
       event_time: asText(item.timestamp) || new Date().toISOString(),
       created_at: new Date().toISOString(),
       location: asText(item.location) || asText(item.title),
@@ -7151,8 +7351,16 @@ function normalizeSignalMarkers(data: unknown): SignalRow[] {
     const lat = positionAt(item, 0) ?? asNumber(item.lat);
     const lng = positionAt(item, 1) ?? asNumber(item.lng);
     const uniqueKey = `${asText(item.id) || asText(item.location_name) || asText(item.title)}-${lat ?? ''}-${lng ?? ''}`;
-    const title = asText(item.title) || asText(item.location_name) || asText(item.headline) || 'Unknown Signal';
-    const description = asText(item.summary) || asText(item.analysis) || asText(item.notes);
+    const sourceUrl = asText(item.sourceUrl);
+    const text = chooseWorldMonitorReadableText({
+      title: asText(item.title) || asText(item.location_name),
+      headline: asText(item.headline),
+      notes: asText(item.summary) || asText(item.analysis) || asText(item.notes),
+      sourceUrl,
+      fallbackTitle: 'Unknown Signal',
+    });
+    const title = text.title;
+    const description = text.description;
     const changes = item.last_changes && typeof item.last_changes === 'object'
       ? (item.last_changes as RawWorldMonitorItem)
       : {};
@@ -7171,7 +7379,7 @@ function normalizeSignalMarkers(data: unknown): SignalRow[] {
       title,
       description,
       source_name: asText(item.source) || 'World Monitor',
-      source_url: asText(item.sourceUrl),
+      source_url: sourceUrl,
       event_time: asText(item.first_seen_at) || asText(item.timestamp) || asText(item.last_mentioned_at) || new Date().toISOString(),
       created_at: asText(item.processed_at) || new Date().toISOString(),
       location: asText(item.location_name) || asText(item.location),
@@ -7218,7 +7426,7 @@ function normalizeIcArticles(data: unknown): SignalRow[] {
     return {
       id: generateStableId('ic-article', uniqueKey),
       title,
-      description: description || `${sourceFeedName} 的新文章，值得作为背景线索继续观察。`,
+      description: description || `${sourceFeedName} 有新文章，可以作为背景资料参考。`,
       source_name: sourceFeedName,
       source_url: asText(item.url),
       event_time: asText(item.publish_time) || asText(item.created_at) || new Date().toISOString(),
@@ -8236,7 +8444,7 @@ function buildWorldSubworldSummaries(
     {
       key: 'tech-ai',
       title: 'AI',
-      summary: '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。',
+      summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。',
       matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot'],
     },
   ];
@@ -8307,7 +8515,7 @@ function buildSubworldSummariesFromCachedDashboardState(
   const sourceCatalog = (state as { source_catalog?: WorldSourceCatalog | null }).source_catalog || null;
   const fixedWorlds: Array<{ key: WorldScene; title: string; summary: string; matched_tags: string[] }> = [
     { key: 'geo-politics-daily', title: '地缘', summary: '冲突、外交、制裁、选举、公共安全和区域风险。', matched_tags: ['geopolitics', 'war', 'conflict', 'diplomacy'] },
-    { key: 'tech-ai', title: 'AI', summary: '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。', matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot'] },
+    { key: 'tech-ai', title: 'AI', summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。', matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot'] },
   ];
 
   return fixedWorlds.map((world) => ({
@@ -8353,6 +8561,17 @@ async function readLegacyWorldDashboardSnapshot(): Promise<WorldDashboardSnapsho
 }
 
 async function persistWorldDashboardSnapshot(
+  scene: WorldScene,
+  state: WorldDashboardStatePayload,
+  subworlds: WorldDashboardSubworldSummary[],
+): Promise<void> {
+  dashboardSnapshotWriteQueue = dashboardSnapshotWriteQueue
+    .catch(() => undefined)
+    .then(() => persistWorldDashboardSnapshotNow(scene, state, subworlds));
+  return dashboardSnapshotWriteQueue;
+}
+
+async function persistWorldDashboardSnapshotNow(
   scene: WorldScene,
   state: WorldDashboardStatePayload,
   subworlds: WorldDashboardSubworldSummary[],
@@ -8436,6 +8655,67 @@ function dedupeCachedEvidenceSignals(signals: WorldEvidenceSignal[]) {
     seen.add(signal.id);
     return true;
   });
+}
+
+function dashboardTimestamp(state: WorldDashboardStatePayload | null | undefined): number {
+  const timestamp = state?.generated_at ? new Date(state.generated_at).getTime() : NaN;
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function dedupeCachedNodes(nodes: WorldDashboardStatePayload['nodes']) {
+  const seen = new Set<string>();
+  return nodes.filter((node) => {
+    const key = String(node.node_id || node.title || node.summary || '');
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function deriveCachedGlobalDashboardStateFromScenes(
+  snapshot: WorldDashboardSnapshotPayload | null,
+): WorldDashboardStatePayload | null {
+  const globalState = snapshot?.states?.global || null;
+  if (!globalState) return null;
+  const sceneStates = [snapshot?.states?.['geo-politics-daily'], snapshot?.states?.['tech-ai']]
+    .filter((state): state is WorldDashboardStatePayload => Boolean(state && isRenderableDashboardState(state)));
+  if (!sceneStates.length) return globalState;
+
+  const latestSceneTimestamp = Math.max(...sceneStates.map(dashboardTimestamp));
+  if (latestSceneTimestamp <= dashboardTimestamp(globalState)) return globalState;
+
+  const generated_at = new Date(latestSceneTimestamp).toISOString();
+  const graph_signals = dedupeCachedEvidenceSignals(sceneStates.flatMap((state) => state.graph_signals || [])).slice(0, 32);
+  const top_signals = dedupeCachedEvidenceSignals(sceneStates.flatMap((state) => state.top_signals || [])).slice(0, 120);
+  const knowledge_signals = dedupeCachedEvidenceSignals(
+    sceneStates.flatMap((state) => (state.knowledge_signals || []) as unknown as WorldEvidenceSignal[]),
+  ).slice(0, 12) as unknown as WorldKnowledgeSignal[];
+  const nodes = dedupeCachedNodes(sceneStates.flatMap((state) => state.nodes || [])).slice(0, 240);
+  const evidenceSignals = dedupeCachedEvidenceSignals([...top_signals, ...graph_signals]);
+  const mappedSignalCount = evidenceSignals.filter(
+    (signal) => signal.latitude !== null && signal.longitude !== null,
+  ).length;
+
+  return {
+    ...globalState,
+    generated_at,
+    metrics: {
+      ...globalState.metrics,
+      active_signal_count: evidenceSignals.length,
+      mapped_signal_count: mappedSignalCount,
+      hottest_region: evidenceSignals[0]?.region || globalState.metrics.hottest_region,
+      least_covered_region: evidenceSignals[evidenceSignals.length - 1]?.region || globalState.metrics.least_covered_region,
+    },
+    nodes,
+    graph_signals,
+    top_signals,
+    knowledge_signals,
+    world_view_summary: buildDashboardWorldViewSummaryFromSignals({
+      generated_at,
+      top_signals,
+      graph_signals,
+    }),
+  };
 }
 
 function deriveCachedDashboardStateForScene(
@@ -8543,8 +8823,10 @@ async function hydrateCachedSourceRefreshSummary(
 export async function getCachedWorldDashboardState(scene: WorldScene = 'global') {
   const snapshot = await readWorldDashboardSnapshot();
   const state =
-    snapshot?.states?.[scene] ||
-    deriveCachedDashboardStateForScene(snapshot?.states?.global || null, scene);
+    scene === 'global'
+      ? deriveCachedGlobalDashboardStateFromScenes(snapshot)
+      : snapshot?.states?.[scene] ||
+        deriveCachedDashboardStateForScene(snapshot?.states?.global || null, scene);
   if (!state) return null;
   const livebenchScene: WorldScene = 'global';
   const normalizedState: WorldDashboardStatePayload = {
@@ -8653,7 +8935,7 @@ function buildOpenClawSkillEntry(requestOrigin?: string | null) {
     return {
       mode: 'anonymous' as const,
       title: '信源 Skill',
-      description: '把这个地址交给接入方即可。主口径是过去 30 天信源查询，模型可直接查信号、AI Hot 和信源流回答。',
+      description: '把这个地址交给接入方即可。主口径是过去 30 天信源查询，模型可直接查 AI 日报和信源流回答。',
       copy_hint: 'LiveBench 先作为独立入口保留；常规回答不必先走知识库。',
       url: publicUrl,
     };
@@ -8675,8 +8957,12 @@ export async function getWorldState(
     allowExpiredDiskCache: true,
     preferCached: true,
     backgroundRefresh: false,
-    allowModelRefresh,
+    allowModelRefresh: false,
   });
+  if (allowModelRefresh) {
+    await reloadTranslatedSignals();
+  }
+  await primeDashboardSignalTranslations(scene, signals, allowModelRefresh);
   const localizedSignals = await materializeLocalizedSignals(signals);
   const sourceCatalog = await loadSourceCatalog({ force: options?.forceCatalogRefresh });
   const filteredSignals = localizedSignals.filter((signal) => signalMatchesScene(signal, scene));
@@ -8709,10 +8995,10 @@ export async function getWorldState(
     ).values(),
   );
   if (allowModelRefresh) {
-    await primeSignalTranslations([
+    void withWorldBatchModelRefresh(() => primeSignalTranslations([
       ...visibleSignalsForTranslation,
       ...scopedSignals.slice(12, 12 + TRANSLATION_PRIME_LIMIT),
-    ]);
+    ]));
   }
   const source_knowledge: WorldSourceKnowledgeState = {
     ...(await (allowModelRefresh
@@ -9073,14 +9359,33 @@ export async function getWorldDashboardState(
     allowExpiredDiskCache: true,
     preferCached: true,
     backgroundRefresh: false,
-    allowModelRefresh,
+    allowModelRefresh: false,
     forceRefresh: options?.forceSignalRefresh,
   });
   const candidateSignals = isTechAiScene ? signals.filter((signal) => signalMatchesScene(signal, scene)) : signals;
-  const localizedSignals = await materializeLocalizedSignals(candidateSignals);
-  const filteredSignals = isTechAiScene ? localizedSignals : localizedSignals.filter((signal) => signalMatchesScene(signal, scene));
-  const scopedSignals = filteredSignals.length || scene !== 'global' ? filteredSignals : localizedSignals;
-  const timelineEventSignals = selectTimelineEventSignals(scopedSignals);
+  if (allowModelRefresh) {
+    await reloadTranslatedSignals();
+  }
+  await primeDashboardSignalTranslations(scene, candidateSignals, allowModelRefresh);
+  let localizedSignals = await materializeLocalizedSignals(candidateSignals);
+  let filteredSignals = isTechAiScene ? localizedSignals : localizedSignals.filter((signal) => signalMatchesScene(signal, scene));
+  let scopedSignals = filteredSignals.length || scene !== 'global' ? filteredSignals : localizedSignals;
+  let timelineEventSignals = selectTimelineEventSignals(scopedSignals);
+  let topSignals = buildTopSignalFeed(timelineEventSignals).slice(
+    0,
+    isGeoPoliticsScene ? GEO_POLITICS_FEED_LIMIT : WORLD_VIEW_LIMIT,
+  );
+  if (allowModelRefresh) {
+    await withWorldBatchModelRefresh(() => primeSignalTranslations(topSignals.slice(0, DASHBOARD_TRANSLATION_SYNC_LIMIT)));
+    localizedSignals = await materializeLocalizedSignals(candidateSignals);
+    filteredSignals = isTechAiScene ? localizedSignals : localizedSignals.filter((signal) => signalMatchesScene(signal, scene));
+    scopedSignals = filteredSignals.length || scene !== 'global' ? filteredSignals : localizedSignals;
+    timelineEventSignals = selectTimelineEventSignals(scopedSignals);
+    topSignals = buildTopSignalFeed(timelineEventSignals).slice(
+      0,
+      isGeoPoliticsScene ? GEO_POLITICS_FEED_LIMIT : WORLD_VIEW_LIMIT,
+    );
+  }
   const graphSignals = [...timelineEventSignals]
     .sort(
       (left, right) =>
@@ -9089,10 +9394,6 @@ export async function getWorldDashboardState(
         right.hotspotScore - left.hotspotScore,
     )
     .slice(0, 32);
-  const topSignals = buildTopSignalFeed(timelineEventSignals).slice(
-    0,
-    isGeoPoliticsScene ? GEO_POLITICS_FEED_LIMIT : WORLD_VIEW_LIMIT,
-  );
   const knowledgeSignals = buildKnowledgeSignalFeed(scopedSignals);
   const mapCandidateSignals = timelineEventSignals.filter((signal) => signal.latitude !== null && signal.longitude !== null);
   const mapSourceSignals = mapCandidateSignals.length > 0
@@ -9118,10 +9419,10 @@ export async function getWorldDashboardState(
     ).values(),
   );
   if (allowModelRefresh) {
-    await primeSignalTranslations([
+    void withWorldBatchModelRefresh(() => primeSignalTranslations([
       ...visibleSignalsForTranslation,
       ...scopedSignals.slice(12, 12 + TRANSLATION_PRIME_LIMIT),
-    ]);
+    ]));
   }
 
   const sourceCatalogPromise: Promise<WorldSourceCatalog | null> = isTechAiScene
@@ -9236,7 +9537,7 @@ export async function getWorldDashboardState(
     what_to_do_next: skipLiveBenchForScene ? [] : buildWhatToDoNext(pending_question_previews, evaluation),
     quick_links: skipLiveBenchForScene ? [] : buildDashboardActions(skillUrl, pending_question_previews),
   };
-  void persistWorldDashboardSnapshot(scene, state, subworlds);
+  await persistWorldDashboardSnapshot(scene, state, subworlds);
   return state;
 }
 
@@ -10041,14 +10342,16 @@ export async function syncWorldLiveBenchArena(
 }
 
 export async function explainWorldPolicy(scene: WorldScene = 'global') {
-  const state = await getWorldState(scene);
-  const arena = state.livebench_arena;
+  const state = await getCachedWorldDashboardState(scene);
+  const pendingQuestions = state?.pending_question_previews || [];
+  const resolvedQuestions = state?.resolved_question_previews || [];
   const questionPoolCount =
-    (arena?.active_questions?.length || 0) +
-    (arena?.watchlist_questions?.length || 0) +
-    (arena?.resolved_questions?.length || 0);
-  const mappedSignalCount = state.metrics.mapped_signal_count || 0;
-  const activeSignalCount = state.metrics.active_signal_count || 0;
+    pendingQuestions.length +
+    resolvedQuestions.length;
+  const activeQuestions = pendingQuestions.filter((question) => question.status === 'active').length;
+  const watchlistQuestions = pendingQuestions.filter((question) => question.status === 'watchlist').length;
+  const mappedSignalCount = state?.metrics?.mapped_signal_count || 0;
+  const activeSignalCount = state?.metrics?.active_signal_count || 0;
 
   return {
     scene,
@@ -10061,13 +10364,13 @@ export async function explainWorldPolicy(scene: WorldScene = 'global') {
     },
     current_snapshot: {
       question_pool_count: questionPoolCount,
-      active_questions: arena?.active_questions?.length || 0,
-      watchlist_questions: arena?.watchlist_questions?.length || 0,
-      resolved_questions: arena?.resolved_questions?.length || 0,
+      active_questions: activeQuestions,
+      watchlist_questions: watchlistQuestions,
+      resolved_questions: resolvedQuestions.length,
       mapped_signal_count: mappedSignalCount,
       active_signal_count: activeSignalCount,
     },
-    source_health: state.source_health,
+    source_health: state?.source_health || null,
     knowledge_contract: [
       '题目进入题池后，只负责去重、规范化、中文化和平台元数据挂载，不单独维护题目向量库。',
       '近 30 天逐条信源是主知识底座，要先中文化与标签化，再统一进入 zvec 信源知识库。',

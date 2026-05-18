@@ -49,10 +49,14 @@ function isGenericWorldTitle(value?: string | null) {
 function compactSourceName(value?: string | null) {
   const text = cleanPresentationText(value);
   if (!text) return '信源';
-  if (/AI HOT/i.test(text)) return 'AI HOT';
+  if (/AI HOT/i.test(text)) return 'AI 前沿';
   const sentinelMatch = text.match(/ShunyaNet Sentinel\s+(.+?)\s+Bundle/i);
   if (sentinelMatch?.[1]) return `${sentinelMatch[1].replace(/Watch$/i, '').trim()}观察`;
-  return text.replace(/^www\./iu, '').replace(/\s*\(RSS.*?\)\s*/u, '').replace(/\s+Feed\s+\d+$/iu, '').trim();
+  return text
+    .replace(/^www\./iu, '')
+    .replace(/\s*[（(]\s*RSS.*?[）)]\s*/u, '')
+    .replace(/\s+Feed\s+\d+$/iu, '')
+    .trim();
 }
 
 function localizeKnownHeadline(value: string) {
@@ -105,6 +109,12 @@ function localizeKnownHeadline(value: string) {
     .replace(/^Massive Russian drone attack on Ukraine$/iu, '俄罗斯对乌克兰发动大规模无人机袭击')
     .replace(/^Israeli strikes kill 22 in Lebanon$/iu, '以军袭击黎巴嫩造成 22 人死亡')
     .replace(/^Child killed in missile strike$/iu, '导弹袭击造成儿童死亡')
+    .replace(/^俄罗斯 launches nearly (\d+) drones[，,]\s*(\d+) bodies returned$/iu, '俄罗斯发动近 $1 架无人机袭击，双方归还 $2 具遗体')
+    .replace(/^以色列 kills seven in 黎巴嫩 with ceasefire agreement$/iu, '停火协议下，以色列在黎巴嫩袭击造成 7 人死亡')
+    .replace(/^以色列 intensifies operations in 加沙 and 约旦河西岸$/iu, '以色列扩大在加沙和约旦河西岸的军事行动')
+    .replace(/^乌克兰 vows more strikes on 俄罗斯 after attack on 基辅 kills (\d+)$/iu, '基辅遇袭造成 $1 人死亡后，乌克兰称将继续打击俄罗斯')
+    .replace(/^Schoolchildren abducted by jihadists in 尼日尔$/iu, '尼日尔发生学生遭武装分子绑架事件')
+    .replace(/^Active war:\s*RU targeting decision-making centers near 基辅$/iu, '俄乌战事中，基辅附近决策目标受到威胁')
     .replace(/^Ship seized off UAE's Fujairah being pulled toward Iranian waters$/iu, '阿联酋富查伊拉外海被扣船只被拖向伊朗水域')
     .replace(/^Iran .*?close.*?developing nuclear weapons.*$/iu, '美国官员称伊朗接近发展核武能力')
     .replace(/^A Sprawling .*?War Explodes$/iu, '中东大范围冲突升级')
@@ -130,6 +140,57 @@ function isHeadlineLikeSignalSummary(value?: string | null) {
     text.length <= 90 &&
     /^(Israeli|Russian|Massive|Active|Boko Haram|Weapons|Ship|Iran|Day \d+|[0-9]+\s+killed|.+?\s+seized\s+in\s+)/iu.test(text)
   );
+}
+
+function hasLongLatinFragment(value?: string | null) {
+  const text = cleanPresentationText(value);
+  if (!text) return false;
+  if (/[A-Za-z]{4,}(?:[\s/-]+[A-Za-z]{2,}){1,}/.test(text)) return true;
+  const latinChars = (text.match(/[A-Za-z]/g) || []).length;
+  const visibleChars = text.replace(/\s+/g, '').length || 1;
+  return latinChars / visibleChars >= 0.28;
+}
+
+function readableLocationName(value?: string | null) {
+  const text = cleanPresentationText(value);
+  if (!text) return '';
+  const exact: Record<string, string> = {
+    'buni yadi': '布尼亚迪',
+    israel: '以色列',
+    'moscow sheremetyevo': '莫斯科谢列梅捷沃',
+    moscow: '莫斯科',
+    lagos: '拉各斯',
+    'jordan valley': '约旦河谷',
+    nigeria: '尼日利亚',
+    gaza: '加沙',
+    'gaza strip': '加沙地带',
+    'west bank': '约旦河西岸',
+  };
+  const mapped = exact[text.toLowerCase()];
+  if (mapped) return mapped;
+  const translated = text
+    .replace(/\bIsrael\b/giu, '以色列')
+    .replace(/\bNigeria\b/giu, '尼日利亚')
+    .replace(/\bMoscow\b/giu, '莫斯科')
+    .replace(/\bLagos\b/giu, '拉各斯')
+    .replace(/\bJordan Valley\b/giu, '约旦河谷')
+    .replace(/\bWest Bank\b/giu, '约旦河西岸')
+    .replace(/\bGaza Strip\b/giu, '加沙地带')
+    .replace(/\bGaza\b/giu, '加沙')
+    .trim();
+  return hasLongLatinFragment(translated) && !/[\u3400-\u9fff]/u.test(translated) ? '' : translated;
+}
+
+function stripRepeatedSummaryLead(summary: string, candidates: Array<string | null | undefined>) {
+  const text = cleanPresentationText(summary);
+  for (const candidate of candidates) {
+    const title = cleanPresentationText(candidate);
+    if (!title || title.length < 6) continue;
+    if (!text.startsWith(title)) continue;
+    const stripped = text.slice(title.length).replace(/^[\s。！？!?，,；;：:、-]+/u, '').trim();
+    if (stripped.length >= 12) return stripped;
+  }
+  return text;
 }
 
 function localizeCasualtyPhrase(value: string) {
@@ -165,24 +226,27 @@ function readableSignalFactFromTitle(signal: ReadableSignalInput) {
   if (/How Xi-Trump summit failed to yield Iran war breakthrough/i.test(factText)) {
     return `${source} 报道：美国希望中国在霍尔木兹海峡受阻问题上加大介入，但相关会晤未能带来伊朗战争突破。`;
   }
+  if (/以色列 kills seven in 黎巴嫩 with ceasefire agreement/i.test(factText)) {
+    return `${source} 报道：停火协议下，以色列在黎巴嫩袭击造成 7 人死亡。`;
+  }
   const suicide = factText.match(/^Suicide attack killing (\d+) security personnel/i);
   if (suicide) {
     return `${source} 报道：自杀式袭击造成 ${suicide[1]} 名安全人员死亡，属于高强度安全事件。`;
   }
   if (/Mass casualty gang clash/i.test(factText)) {
-    return `${source} 报道：海地帮派冲突造成重大伤亡，后续重点看官方伤亡更新和治安部署。`;
+    return `${source} 报道：海地帮派冲突造成重大伤亡，官方伤亡数字和治安部署会继续影响当地安全。`;
   }
   if (/Report of Saudi\/UAE attacking (?:Iran|伊朗)/i.test(factText)) {
-    return `${source} 报道：出现沙特/阿联酋可能袭击伊朗的线索，仍需第二来源和官方回应确认。`;
+    return `${source} 报道：出现沙特/阿联酋可能袭击伊朗的消息，仍需更多报道和官方回应支撑。`;
   }
   if (/(?:Iran|伊朗) uses (?:Pakistan|巴基斯坦) land corridor due to naval pressure/i.test(factText)) {
     return `${source} 报道：受海上压力影响，伊朗相关运输可能转向巴基斯坦陆路走廊。`;
   }
   if (/Political executions in (?:Iran|伊朗)/i.test(factText)) {
-    return `${source} 报道：伊朗出现政治处决相关动向，后续重点看司法口径和国际反应。`;
+    return `${source} 报道：伊朗出现政治处决相关动向，司法口径和国际反应会影响事件走向。`;
   }
   if (/Trump says China wants to keep buying oil from (?:Iran|伊朗)/i.test(factText)) {
-    return `${source} 报道：特朗普称中国仍希望购买伊朗石油，后续看制裁执行和能源流向变化。`;
+    return `${source} 报道：特朗普称中国仍希望购买伊朗石油，制裁执行和能源流向可能受到影响。`;
   }
   const seized = factText.match(/^(.+?) seized in (.+?) including (.+)$/iu);
   if (seized) {
@@ -217,6 +281,10 @@ export function readableSignalTitle(signal: ReadableSignalInput) {
   const rawTitle = cleanPresentationText(signal.title);
   const displayTitle = cleanPresentationText(signal.display_title);
   const rawSummary = cleanPresentationText(signal.summary || signal.display_summary);
+  const displaySummary = cleanPresentationText(signal.display_summary || signal.summary);
+  if (displaySummary && /[\u3400-\u9fff]/u.test(displaySummary) && !hasLongLatinFragment(displaySummary) && hasLongLatinFragment(displayTitle || rawTitle)) {
+    return compactText(displaySummary, 72);
+  }
   const quoted = extractQuotedHeadlines(rawSummary);
 
   if (quoted.length > 0 && (isGenericWorldTitle(rawTitle) || isGenericWorldTitle(displayTitle))) {
@@ -239,7 +307,14 @@ export function readableSignalTitle(signal: ReadableSignalInput) {
 
 export function readableSignalSummary(signal: ReadableSignalInput, max = 150) {
   const title = readableSignalTitle(signal);
-  const rawSummary = cleanPresentationText(signal.display_summary || signal.summary);
+  const rawSummary = stripRepeatedSummaryLead(signal.display_summary || signal.summary || '', [
+    title,
+    signal.display_title,
+    signal.title,
+  ]);
+  if (rawSummary && /[\u3400-\u9fff]/u.test(rawSummary) && !hasLongLatinFragment(rawSummary)) {
+    return compactText(rawSummary, max);
+  }
   const quoted = extractQuotedHeadlines(rawSummary);
 
   if (quoted.length > 0) {
@@ -274,7 +349,7 @@ export function readableSignalSummary(signal: ReadableSignalInput, max = 150) {
 export function readableSignalSourceLine(signal: ReadableSignalInput) {
   const parts = [
     compactSourceName(signal.source_name),
-    cleanPresentationText(signal.location_name),
+    readableLocationName(signal.location_name),
     sceneDisplayLabel((signal.scene || 'global') as WorldScene),
   ].filter((part, index, array) => part && array.indexOf(part) === index);
   return parts.join(' · ');
@@ -364,12 +439,39 @@ export function techAiRelevanceScore(signal: DashboardSignalLike) {
 
 export function isLowValueTechAiProductUpdate(signal: DashboardSignalLike) {
   const content = [signal.title, signal.summary || '', signal.display_title, signal.display_summary].join(' ');
-  return /处理大家的反馈|请继续反馈|反馈.*快捷键|快捷键.*(自定义|设置|配置)|keyboard shortcuts?.*(custom|setting|config)|custom.*keyboard shortcuts?|feedback.*keyboard/i.test(content);
+  return /处理大家的反馈|请继续反馈|反馈.*快捷键|快捷键.*(自定义|设置|配置)|抓紧申报|马斯克.*抖音.*老干妈|keyboard shortcuts?.*(custom|setting|config)|custom.*keyboard shortcuts?|feedback.*keyboard/i.test(content);
+}
+
+function isOperationalNonAiSourceSignal(signal: DashboardSignalLike) {
+  const sourceHaystack = [
+    signal.scene,
+    signal.source_name,
+    signal.source_url || '',
+    signal.tags.join(' '),
+    (signal.alignment_tags || []).join(' '),
+  ]
+    .join(' ')
+    .toLowerCase();
+  if (/(ai hot|aihot|source:aihot|model:ai-related)/i.test(sourceHaystack)) return false;
+  return /(scene:finance|\bfinance\b|\bmacro\b|alpha-vantage|openfda|catalog-source|source:selected-source|fda-database|treasury-yield|real_gdp|cpi)/i.test(
+    sourceHaystack,
+  );
+}
+
+function hasReadableTechAiHeadline(signal: DashboardSignalLike) {
+  const title = cleanPresentationText(signal.display_title || signal.title);
+  const summary = cleanPresentationText(signal.display_summary || signal.summary);
+  const text = `${title} ${summary}`;
+  if (/发送失败|违反相关法律法规|查看对应规则|内容无法显示|已被删除|不可见/u.test(text)) return false;
+  if (/^(抓紧申报了?|截至\d|报名|通知|活动预告|请继续反馈|处理大家的反馈)/iu.test(title)) return false;
+  if (/马斯克.*抖音.*老干妈/u.test(title)) return false;
+  if (title.length > 140 && !/[。！？!?]/u.test(title)) return false;
+  return true;
 }
 
 export function isTrustedTechAiDashboardSignal(signal: DashboardSignalLike) {
-  const content = [signal.title, signal.summary || '', signal.display_title, signal.display_summary].join(' ');
-  if (/发送失败|违反相关法律法规|查看对应规则|内容无法显示|已被删除|不可见/u.test(content)) return false;
+  if (!hasReadableTechAiHeadline(signal)) return false;
+  if (isOperationalNonAiSourceSignal(signal)) return false;
   if (isLowValueTechAiProductUpdate(signal)) return false;
   return techAiRelevanceScore(signal) >= 3;
 }
@@ -392,32 +494,22 @@ export function dashboardSignalMatchesScene(signal: DashboardSignalLike, scene: 
   if (scene === 'geo-politics-daily') {
     const sourceHaystack = `${signal.source_name} ${signal.source_url || ''} ${signal.tags.join(' ')} ${(signal.alignment_tags || []).join(' ')}`;
     if (/(ai hot|aihot|source:aihot)/iu.test(sourceHaystack)) return false;
+    const financeHaystack = `${signal.scene} ${sourceHaystack}`.toLowerCase();
+    if (/(scene:finance|\bfinance\b|\bmacro\b|\bmarket\b|\bequity\b|\bnse\b|alpha-vantage|treasury-yield|real_gdp|cpi|crypto|bitcoin|signal arena)/iu.test(financeHaystack)) {
+      return false;
+    }
     const haystack = `${signal.scene} ${signal.title} ${signal.summary || ''} ${signal.tags.join(' ')}`;
     return !/(kim kardashian|celebrity|defamation|entertainment|local-news|quiz|reality show|mbappe|real madrid|football|soccer|sports|news brief|no specific event|location mention only|children driving incident|low significance administrative ban|名人|娱乐|诽谤|问答|测验|真人秀|足球|体育)/iu.test(haystack);
   }
   if (scene === 'tech-ai') {
-    if (isLowValueTechAiProductUpdate(signal)) return false;
-    const haystack = [
-      signal.scene,
-      signal.title,
-      signal.summary || '',
-      signal.display_title,
-      signal.display_summary,
-      signal.source_name,
-      signal.tags.join(' '),
-    ].join(' ');
-    return /\b(ai|llm|ml)\b|aihot|openai|anthropic|claude|gemini|deepseek|qwen|kimi|minimax|agent|model|nvidia|semiconductor|chip|arxiv|hugging ?face|人工智能|大模型|模型|智能体|英伟达|芯片|半导体/iu.test(
-      haystack,
-    );
+    return isTrustedTechAiDashboardSignal(signal);
   }
   return true;
 }
 
 export function dashboardNodeMatchesScene(node: WorldStateNode, scene: WorldScene) {
   if (scene === 'tech-ai') {
-    if (isLowValueTechAiProductUpdate(node as unknown as DashboardSignalLike)) return false;
-    const haystack = `${node.scene} ${node.title} ${node.summary} ${node.display_title} ${node.display_summary} ${node.source_name} ${node.tags.join(' ')}`;
-    return /\bai\b|llm|model|agent|openai|anthropic|claude|gemini|nvidia|人工智能|大模型|模型|智能体|英伟达/iu.test(haystack);
+    return isTrustedTechAiDashboardSignal(node as unknown as DashboardSignalLike);
   }
   if (scene === 'geo-politics-daily' || scene === 'global') {
     const haystack = `${node.scene} ${node.title} ${node.summary} ${node.tags.join(' ')}`;
@@ -436,13 +528,15 @@ function readableTagLabel(tag: string) {
     'rss-item': 'RSS',
     technology: '科技',
     ai: 'AI',
-    aihot: 'AI Hot',
+    aihot: 'AI 前沿',
     'ai-news': 'AI',
     'daily:ai': 'AI',
     'daily:geo': '地缘',
     'ai-products': 'AI 产品',
     'ai-agents': 'Agent',
     'ai-research': '论文',
+    paper: '论文',
+    industry: '产业',
     'category:ai-daily': 'AI 日报',
     'category:technology-daily': '科技',
     'aihot:category:ai-products': 'AI 产品',
@@ -460,7 +554,7 @@ function readableTagLabel(tag: string) {
     literature: '论文',
   };
   if (labels[normalized]) return labels[normalized];
-  if (/^feed:|^type:|^source:/.test(normalized)) return '';
+  if (/^feed:|^type:|^source:|^scene:/.test(normalized)) return '';
   if (/^(aihot-tier|intake|model-tag|source-skill):/.test(normalized)) return '';
   if (/^daily:|^category:|^aihot:category:/.test(normalized)) return '';
   if (/use conventional military force|physically assault|security personnel|suicide bomber/i.test(tag)) return '';

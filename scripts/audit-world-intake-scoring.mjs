@@ -21,7 +21,13 @@ function parseCliArgs(argv) {
 }
 
 const cliArgs = parseCliArgs(process.argv.slice(2));
-const baseUrl = String(cliArgs.baseUrl || process.env.WORLD_INTAKE_AUDIT_BASE_URL || 'http://127.0.0.1:5001').replace(/\/+$/, '');
+const baseUrl = String(
+  cliArgs.baseUrl ||
+    process.env.WORLD_INTAKE_AUDIT_BASE_URL ||
+    process.env.WORLD_SMOKE_BASE_URL ||
+    process.env.WORLD_HEALTH_BASE_URL ||
+    'http://127.0.0.1:5000',
+).replace(/\/+$/, '');
 const scenes = String(cliArgs.scenes || 'geo-politics-daily,tech-ai')
   .split(',')
   .map((scene) => scene.trim())
@@ -203,6 +209,15 @@ function markdownReport(payload) {
       `| ${scene} | ${summary.count} | ${summary.pearson ?? ''} | ${summary.avg_upstream_score ?? ''} | ${summary.avg_intake_score ?? ''} | ${summary.avg_delta ?? ''} | ${summary.aligned_count} | ${summary.upgraded_count} | ${summary.downgraded_count} |`,
     );
   }
+  const hiddenScenes = Object.entries(payload.scenes)
+    .filter(([, summary]) => summary.public_scores_hidden)
+    .map(([scene]) => scene);
+  if (hiddenScenes.length > 0) {
+    lines.push(
+      '',
+      `Note: ${hiddenScenes.join(', ')} returned public signals with internal scores hidden. Run this audit against an internal scored cache if score correlation is required.`,
+    );
+  }
   lines.push('', '## Source Groups', '');
   for (const [scene, summary] of Object.entries(payload.scenes)) {
     lines.push(`### ${scene}`, '');
@@ -234,6 +249,7 @@ async function main() {
       ...summarizeRows(rows),
       total_signal_count: signals.length,
       missing_score_count: missingScoreCount,
+      public_scores_hidden: signals.length > 0 && rows.length === 0,
     };
   }
   await fs.mkdir(outputDir, { recursive: true });

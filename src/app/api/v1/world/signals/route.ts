@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 
 import { resolveRequestOrigin } from '@/lib/request-origin';
-import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
+import {
+  dashboardSignalMatchesScene,
+  mainWorldSignalPriority,
+  mainWorldSignalRank,
+  techAiRelevanceScore,
+  techAiSignalRank,
+} from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
 import { sanitizePublicSignal, sanitizePublicTags } from '@/lib/world/signal-quality';
 import type { WorldEvidenceSignal, WorldScene } from '@/lib/world/types';
@@ -52,6 +58,18 @@ function toSignalCard(signal: WorldEvidenceSignal) {
   };
 }
 
+function signalSortValue(scene: WorldScene, signal: WorldEvidenceSignal) {
+  if (scene === 'tech-ai') return techAiRelevanceScore(signal);
+  if (scene === 'geo-politics-daily') return mainWorldSignalPriority(signal);
+  return new Date(signal.published_at).getTime() / 1000000000000;
+}
+
+function signalSortRank(scene: WorldScene, signal: WorldEvidenceSignal) {
+  if (scene === 'tech-ai') return techAiSignalRank(signal);
+  if (scene === 'geo-politics-daily') return mainWorldSignalRank(signal);
+  return 0;
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -65,7 +83,12 @@ export async function GET(request: Request) {
       ...(dashboard.knowledge_signals || []),
     ])
       .filter((signal) => scene === 'global' || dashboardSignalMatchesScene(signal, scene))
-      .sort((left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime());
+      .sort(
+        (left, right) =>
+          signalSortValue(scene, right) - signalSortValue(scene, left) ||
+          signalSortRank(scene, left) - signalSortRank(scene, right) ||
+          new Date(right.published_at).getTime() - new Date(left.published_at).getTime(),
+      );
 
     return NextResponse.json(
       {

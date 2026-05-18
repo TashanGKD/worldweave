@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Bot, FileText, Globe2 } from 'lucide-react';
+import { ArrowLeft, Bot, FileText, Globe2 } from 'lucide-react';
 
+import { DailySharePoster } from '@/app/daily/daily-share-poster';
 import {
   asArray,
   cleanNarrativeText,
@@ -35,6 +36,8 @@ type DailyKind = 'geo' | 'ai' | 'livebench';
 type CachedDashboard = NonNullable<Awaited<ReturnType<typeof getCachedWorldDashboardState>>>;
 type DailySignal = CachedDashboard['top_signals'][number];
 
+const DAILY_TOP_LIMIT = 10;
+
 const DAILY_META: Record<
   DailyKind,
   {
@@ -63,8 +66,8 @@ const DAILY_META: Record<
   ai: {
     scene: 'tech-ai',
     title: 'AI 日报',
-    eyebrow: 'AI Hot、模型与产品',
-    subtitle: '围绕 AI Hot、模型、Agent、论文、开源和产业动态整理今日重点。',
+    eyebrow: '模型与产品',
+    subtitle: '把今天值得看的模型、Agent、论文、开源和产业动态整理在一页。',
     empty: '当前还没有可展示的 AI 日报线索。',
     href: worldHomeHref('tech-ai'),
     tone: 'border-teal-200 bg-[linear-gradient(135deg,#f0faf4,#fbfdf8)] text-[#08201c]',
@@ -101,32 +104,121 @@ function uniqueSignals(...sources: Array<DailySignal[] | null | undefined>) {
   );
 }
 
+function dailySignalScore(kind: DailyKind, signal: DailySignal) {
+  if (kind === 'ai') {
+    return techAiRelevanceScore(signal) + (signal.relevance_score || 0) * 0.5 + signal.hotspot_score * 0.25;
+  }
+  return mainWorldSignalPriority(signal);
+}
+
 function selectDailySignals(kind: DailyKind, state: CachedDashboard | null) {
   if (!state || kind === 'livebench') return [];
   const scene = DAILY_META[kind].scene;
   return uniqueSignals(state.top_signals, state.graph_signals, state.knowledge_signals)
     .filter((signal) => (kind === 'ai' ? isTrustedTechAiDashboardSignal(signal) : dashboardSignalMatchesScene(signal, scene)))
     .sort((left, right) => {
-      if (kind === 'ai') {
-        return (
-          techAiSignalRank(left) - techAiSignalRank(right) ||
-          techAiRelevanceScore(right) - techAiRelevanceScore(left) ||
-          new Date(right.published_at).getTime() - new Date(left.published_at).getTime()
-        );
-      }
       return (
-        mainWorldSignalRank(left) - mainWorldSignalRank(right) ||
-        mainWorldSignalPriority(right) - mainWorldSignalPriority(left) ||
+        dailySignalScore(kind, right) - dailySignalScore(kind, left) ||
+        (kind === 'ai' ? techAiSignalRank(left) - techAiSignalRank(right) : mainWorldSignalRank(left) - mainWorldSignalRank(right)) ||
         new Date(right.published_at).getTime() - new Date(left.published_at).getTime()
       );
     })
-    .slice(0, 6);
+    .slice(0, DAILY_TOP_LIMIT);
 }
 
-function dailyDigest(signals: DailySignal[], fallback: string) {
-  const titles = signals.map((signal) => readableSignalTitle(signal)).filter(Boolean).slice(0, 3);
-  if (titles.length === 0) return fallback;
-  return `今日重点：${titles.join('；')}。`;
+function dailyDigest(kind: DailyKind, signals: DailySignal[], fallback: string) {
+  if (signals.length === 0) return fallback;
+  if (kind === 'ai') {
+    return `今天先看这 ${signals.length} 条 AI 动态，早午晚各换一版。`;
+  }
+  return `今天先看这 ${signals.length} 条公共风险消息，早午晚各换一版。`;
+}
+
+function dailyEditionLabel(value?: string | null) {
+  if (!value) return '早 / 午 / 晚滚动';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '早 / 午 / 晚滚动';
+  const hourText = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    hour: '2-digit',
+    hour12: false,
+  }).format(date);
+  const hour = Number(hourText);
+  if (hour >= 20) return '晚版';
+  if (hour >= 12) return '午版';
+  return '早版';
+}
+
+function dailySourceLine(signal: DailySignal, kind: DailyKind) {
+  const line = readableSignalSourceLine(signal);
+  const dropped = new Set(kind === 'ai' ? ['AI HOT', 'AI 前沿', 'AI', '科技'] : kind === 'geo' ? ['地缘'] : []);
+  const parts = line
+    .split(' · ')
+    .map((part) => part.trim())
+    .filter((part, index, array) => part && array.indexOf(part) === index && !dropped.has(part));
+  return compactText(parts.join(' · ') || line || '来源', 46);
+}
+
+function dailySignalTags(signal: DailySignal, kind: DailyKind) {
+  const allowed =
+    kind === 'ai'
+      ? new Set(['论文', '产业', 'AI 产品', 'Agent', '研究', '开源'])
+      : new Set(['冲突', '外交', '制裁', '军事', '公共卫生', '安全', '市场', '航运', '能源']);
+  return readableSignalTags([...(signal.tags || []), ...(signal.alignment_tags || [])], 8)
+    .filter((tag) => allowed.has(tag))
+    .slice(0, 3);
+}
+
+function dailyFallbackSummary(signal: DailySignal, kind: DailyKind, max: number) {
+  const title = readableSignalTitle(signal);
+  const sourceParts = dailySourceLine(signal, kind).split(' · ').map((part) => part.trim()).filter(Boolean);
+  const location = sourceParts.find((part) => part !== '冲突' && part !== '科技' && !part.includes('.')) || '';
+  const topic = dailySignalTags(signal, kind)[0] || (kind === 'ai' ? 'AI' : '公共风险');
+
+  if (kind === 'ai') {
+    return compactText(`这条消息落在${topic}方向，影响会先体现在模型能力、产品节奏和开源生态的变化里。`, max);
+  }
+
+  if (/反恐|军官|训练学校/u.test(title)) {
+    return compactText(`反恐训练设施遇袭，会直接牵动当地安全力量和周边防务安排。`, max);
+  }
+  if (/学校|儿童|绑架|失踪/u.test(title)) {
+    return compactText(`学校和儿童相关事件最容易牵动公众情绪，也会把地方安全压力迅速推到台前。`, max);
+  }
+  if (/加强.*军事行动|军事行动|约旦河西岸/u.test(title)) {
+    return compactText(`军事行动范围继续外扩，加沙与约旦河西岸的紧张感也会一起被放大。`, max);
+  }
+  if (/公共厨房|平民|加沙/u.test(title)) {
+    return compactText(`公共设施和平民伤亡会继续推高人道压力，也让外部外交表态更难回避。`, max);
+  }
+  if (/防空|拦截|莫斯科/u.test(title)) {
+    return compactText(`莫斯科防空拦截说明风险仍在向后方城市传导，机场和城市安全感都会受到影响。`, max);
+  }
+  if (/无人机|乌克兰|俄罗斯/u.test(title)) {
+    return compactText(`无人机袭击把俄乌冲突的后方城市和交通节点重新拉回风险中心。`, max);
+  }
+  if (/加沙|约旦河西岸|以色列/u.test(title)) {
+    return compactText(`这条消息继续牵动加沙与约旦河西岸局势，平民安全和外交压力都会被一起推高。`, max);
+  }
+  if (/死亡|伤亡|遇袭|冲突/u.test(title)) {
+    return compactText(`这起事件已经进入今天最需要留意的公共风险消息，影响会沿着安全和舆论两条线扩散。`, max);
+  }
+
+  return compactText(
+    location
+      ? `${location} 的${topic}消息值得放在今天的风险脉络里一起看。`
+      : `这条${topic}消息值得放在今天的风险脉络里一起看。`,
+    max,
+  );
+}
+
+function dailyReadableSummary(signal: DailySignal, kind: DailyKind, max: number) {
+  const title = readableSignalTitle(signal);
+  const summary = readableSignalSummary(signal, max);
+  if (!summary || summary === title || summary.startsWith(title.slice(0, Math.min(18, title.length)))) {
+    return dailyFallbackSummary(signal, kind, max);
+  }
+  return summary;
 }
 
 function questionTime(preview: LiveBenchQuestionPreview) {
@@ -135,6 +227,25 @@ function questionTime(preview: LiveBenchQuestionPreview) {
 
 function questionLine(preview: LiveBenchQuestionPreview) {
   return cleanNarrativeText(preview.moderator_line || preview.background || preview.title);
+}
+
+function questionTitle(preview: LiveBenchQuestionPreview) {
+  return cleanNarrativeText(preview.title)
+    .replace(/^Anthropic's next ARR figure show an accelerating % growth rate会发生吗？$/u, 'Anthropic 下一次 ARR 增速是否继续加快？')
+    .replace(/^谷歌 announce Gemini 4 at I\/O 2026 \(May 19-20\)会发生吗？$/u, '谷歌是否会在 I/O 2026 发布 Gemini 4？')
+    .replace(/^在 5月22日之前，伊朗 \/ 美国 war resume 会发生吗？$/u, '5月22日前，伊朗与美国冲突是否会恢复？')
+    .replace(/会发生吗？$/u, '是否会发生？');
+}
+
+function questionSummary(preview: LiveBenchQuestionPreview) {
+  const raw = questionLine(preview);
+  const stance = raw.match(/^当前偏向(赞成|不赞成)。/u)?.[1];
+  const evidence = raw
+    .replace(/^当前偏向(?:赞成|不赞成)。/u, '')
+    .replace(/^当前更需要核对[^。]*。/u, '')
+    .replace(/^当前最关键的依据是：/u, '依据：')
+    .replace(/^眼前能抓住的依据是：/u, '依据：');
+  return compactText(stance ? `判断：${stance}。${evidence}` : evidence, 150);
 }
 
 function questionLabel(preview: LiveBenchQuestionPreview) {
@@ -162,18 +273,35 @@ export default async function DailyPage({ params }: PageProps) {
       ? [...asArray(state?.pending_question_previews), ...asArray(state?.resolved_question_previews)].slice(0, 6)
       : [];
   const lead = signals[0] || null;
+  const leadSummary = lead ? dailyReadableSummary(lead, kind, 320) : '';
+  const posterLead = lead
+    ? {
+        rank: '01',
+        title: readableSignalTitle(lead),
+        summary: leadSummary,
+        source: dailySourceLine(lead, kind),
+        time: formatTime(lead.published_at),
+      }
+    : null;
+  const posterItems = signals.slice(1, DAILY_TOP_LIMIT).map((signal, index) => ({
+    rank: String(index + 2).padStart(2, '0'),
+    title: readableSignalTitle(signal),
+    summary: dailyReadableSummary(signal, kind, 260),
+    source: dailySourceLine(signal, kind),
+    time: formatTime(signal.published_at),
+  }));
   const Icon = kind === 'geo' ? Globe2 : kind === 'ai' ? Bot : FileText;
   const digest =
     kind === 'livebench'
       ? questions.length > 0
-        ? `今日重点：${questions.slice(0, 4).map((item) => cleanNarrativeText(item.title)).join('；')}。`
+        ? `共整理 ${questions.length} 道题：优先看仍在跟踪和刚刚结算的判断。`
         : meta.empty
-      : dailyDigest(signals, meta.empty);
+      : dailyDigest(kind, signals, meta.empty);
 
   return (
     <main className="min-h-screen bg-[linear-gradient(180deg,#f5f7f4_0%,#fbfcf8_44%,#eef5f1_100%)] text-slate-950">
       <div className="pointer-events-none fixed inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(20,184,166,0.58),rgba(217,159,72,0.45),transparent)]" />
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
             href={meta.href}
@@ -207,83 +335,74 @@ export default async function DailyPage({ params }: PageProps) {
               <p className="mt-3 text-sm leading-7 text-slate-600">{meta.subtitle}</p>
             </div>
             <div className="rounded-2xl border border-white/80 bg-white/72 px-4 py-3 text-sm text-slate-600 shadow-[0_10px_24px_rgba(20,43,39,0.045)]">
-              最近更新 {state ? formatTime(state.generated_at) : '--'}
+              {dailyEditionLabel(state?.generated_at)} · 最近更新 {state ? formatTime(state.generated_at) : '--'}
             </div>
           </div>
-          <p className="mt-5 max-w-4xl text-[15px] leading-8 text-slate-800">{digest}</p>
+          <p className="mt-5 max-w-4xl text-[15px] leading-8 text-slate-800">{compactText(digest, 150)}</p>
         </section>
 
         {kind !== 'livebench' ? (
-          <section className="grid gap-4 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
-            <div className={`animate-rise-in rounded-[28px] border ${meta.softTone} px-5 py-5 shadow-[0_12px_30px_rgba(20,43,39,0.045)]`}>
-              <p className="text-xs font-semibold tracking-[0.12em] text-slate-400">今日主线</p>
-              <h2 className="mt-3 text-2xl font-semibold leading-9">{lead ? readableSignalTitle(lead) : meta.empty}</h2>
-              {lead ? <p className="mt-3 text-sm leading-7 text-slate-600">{readableSignalSummary(lead, 260)}</p> : null}
-              {lead ? (
-                <Link
-                  href={dailySignalHref(lead.id, meta.scene)}
-                  className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#d3ddd7] bg-white px-4 py-2 text-sm font-medium text-[#08201c] transition hover:border-teal-300"
-                >
-                  阅读原线索
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              ) : null}
-              {signals.length > 1 ? (
-                <div className="mt-6 rounded-[22px] border border-slate-200/70 bg-white/75 px-4 py-4">
-                  <p className="text-[12px] font-semibold text-slate-500">另外值得留意</p>
-                  <div className="mt-3 space-y-3">
-                    {signals.slice(1, 4).map((signal) => (
-                      <Link
-                        key={`side-${signal.id}`}
-                        href={dailySignalHref(signal.id, meta.scene)}
-                      className="block border-l-2 border-[#d3ddd7] pl-3 text-[13px] font-medium leading-6 text-slate-800 transition hover:border-teal-400 hover:text-slate-950"
-                      >
-                        {readableSignalTitle(signal)}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+          <section className="grid gap-5 lg:grid-cols-[0.98fr_1.02fr] lg:items-start">
+            <div>
+              <DailySharePoster
+                kind={kind}
+                title={meta.title}
+                eyebrow={meta.eyebrow}
+                dateLabel={state ? formatTime(state.generated_at) : '--'}
+                digest={compactText(digest, 96)}
+                lead={posterLead}
+                items={posterItems}
+              />
             </div>
 
             <div className="space-y-3">
               <div className="rounded-[22px] border border-[#d4ded8] bg-white/78 px-4 py-3">
-                <p className="text-[12px] font-semibold text-slate-700">精选线索</p>
-                <p className="mt-1 text-[12px] leading-5 text-slate-500">只展示今天最值得进入阅读的少量条目，完整线索回到时间线。</p>
+                <p className="text-[12px] font-semibold text-slate-700">今日 10 条</p>
+                <p className="mt-1 text-[12px] leading-5 text-slate-500">早午晚各换一版，只保留今天最值得先看的内容。</p>
               </div>
               {signals.length > 0 ? (
-                signals.slice(0, 5).map((signal, index) => (
-                  <Link
-                    key={signal.id}
-                    href={dailySignalHref(signal.id, meta.scene)}
-                    className="group animate-rise-in block rounded-[24px] border border-[#d4ded8] bg-white/88 px-4 py-4 transition duration-300 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)]"
-                    style={{ animationDelay: `${80 + index * 45}ms` }}
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] ${severitySoftTone(signal.severity)}`}>
-                        {severityLabel(signal.severity)}
-                      </span>
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
-                        {readableSignalSourceLine(signal)}
-                      </span>
-                      <span className="ml-auto text-[11px] text-slate-400">{formatTime(signal.published_at)}</span>
-                    </div>
-                    <h3 className="mt-3 text-[15px] font-semibold leading-7 text-slate-950 group-hover:text-slate-700">
-                      {readableSignalTitle(signal)}
-                    </h3>
-                    <p className="mt-2 text-[13px] leading-7 text-slate-600">{readableSignalSummary(signal, 210)}</p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
-                      {readableSignalTags(signal.tags, 4).map((tag) => (
-                        <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </Link>
-                ))
+                <div className="space-y-3 lg:max-h-[860px] lg:overflow-y-auto lg:pr-1">
+                  {signals.slice(0, DAILY_TOP_LIMIT).map((signal, index) => {
+                    const tags = dailySignalTags(signal, kind);
+                    const summary = dailyReadableSummary(signal, kind, 320);
+                    return (
+                      <Link
+                        key={signal.id}
+                        href={dailySignalHref(signal.id, meta.scene)}
+                        className="group animate-rise-in block rounded-[24px] border border-[#d4ded8] bg-white/88 px-4 py-4 transition duration-300 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)]"
+                        style={{ animationDelay: `${80 + index * 45}ms` }}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          {signal.severity >= 3 ? (
+                            <span className={`rounded-full border px-2.5 py-1 text-[11px] ${severitySoftTone(signal.severity)}`}>
+                              {severityLabel(signal.severity)}
+                            </span>
+                          ) : null}
+                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
+                            {dailySourceLine(signal, kind)}
+                          </span>
+                          <span className="ml-auto text-[11px] text-slate-400">{formatTime(signal.published_at)}</span>
+                        </div>
+                        <h3 className="mt-3 text-[15px] font-semibold leading-7 text-slate-950 group-hover:text-slate-700">
+                          {readableSignalTitle(signal)}
+                        </h3>
+                        {summary ? <p className="mt-2 text-[13px] leading-7 text-slate-600">{summary}</p> : null}
+                        {tags.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                            {tags.map((tag) => (
+                              <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/80 px-4 py-8 text-sm text-slate-500">
                   {meta.empty}
@@ -313,9 +432,9 @@ export default async function DailyPage({ params }: PageProps) {
                     <span className="ml-auto text-[11px] text-slate-400">{questionTime(preview) ? formatTime(questionTime(preview)) : '--'}</span>
                   </div>
                   <h3 className="mt-3 text-[15px] font-semibold leading-7 text-slate-950 group-hover:text-slate-700">
-                    {cleanNarrativeText(preview.title)}
+                    {questionTitle(preview)}
                   </h3>
-                  <p className="mt-2 text-[13px] leading-7 text-slate-600">{compactText(questionLine(preview), 220)}</p>
+                  <p className="mt-2 text-[13px] leading-7 text-slate-600">{questionSummary(preview)}</p>
                 </Link>
               ))
             ) : (
