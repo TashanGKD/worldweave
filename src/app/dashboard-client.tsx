@@ -221,7 +221,7 @@ function timelineViewLabel(view: TimelineView) {
 
 const DEFAULT_SUBWORLDS: WorldSubworld[] = [
   { key: 'geo-politics-daily', title: '地缘日报', summary: '冲突、外交、制裁、选举、公共安全和区域风险。', signal_count: 0, matched_tags: ['geopolitics', 'war', 'conflict', 'diplomacy'], recommended_bundles: [] },
-  { key: 'tech-ai', title: 'AI 日报', summary: '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。', signal_count: 0, matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'aihot'], recommended_bundles: [] },
+  { key: 'tech-ai', title: 'AI 日报', summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。', signal_count: 0, matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'aihot'], recommended_bundles: [] },
 ];
 const PRIMARY_SUBWORLD_ORDER = ['geo-politics-daily', 'tech-ai'];
 function techAiDayLabel(iso: string) {
@@ -263,7 +263,7 @@ function normalizeSubworlds(subworlds: WorldSubworld[] | null | undefined) {
             : item.title,
       summary:
         item.key === 'tech-ai'
-          ? '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。'
+          ? '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。'
           : item.key === 'geo-politics-daily' || item.key === 'global'
             ? '冲突、外交、制裁、选举、公共安全和区域风险。'
             : item.summary,
@@ -279,7 +279,7 @@ function normalizeSubworlds(subworlds: WorldSubworld[] | null | undefined) {
       byKey.set('tech-ai', {
         key: 'tech-ai',
         title: 'AI 日报',
-        summary: '模型、Agent、AI 产品、论文、开源和 AI Hot 精选动态。',
+        summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。',
         signal_count: (technology?.signal_count || 0) + (ai?.signal_count || 0),
         matched_tags: Array.from(new Set([...(technology?.matched_tags || []), ...(ai?.matched_tags || []), 'ai', 'aihot'])),
         recommended_bundles: [...(technology?.recommended_bundles || []), ...(ai?.recommended_bundles || [])],
@@ -471,33 +471,12 @@ function groupItemsByDay<T>(items: T[], getIso: (item: T) => string) {
 
 function signalDailyDigest(signals: DashboardSignal[], fallback: string) {
   if (signals.length === 0) return fallback;
-  const seen = new Set<string>();
-  const items: string[] = [];
-  for (const signal of signals) {
-    const title = readableSignalTitle(signal);
-    if (!title) continue;
-    const normalizedTitle = title.toLowerCase().replace(/\s+/g, '');
-    if (seen.has(normalizedTitle)) continue;
-    seen.add(normalizedTitle);
-    items.push(title);
-    if (items.length >= 3) break;
-  }
-  return items.length > 0 ? compactText(`今日重点：${items.join('；')}。`, 150) : fallback;
+  return `已整理 ${signals.length} 条精选线索，进入日报看主线、来源和后续阅读。`;
 }
 
 function livebenchDailyDigest(previews: LiveBenchQuestionPreview[], fallback: string) {
-  const seen = new Set<string>();
-  const items: string[] = [];
-  for (const preview of previews) {
-    const topic = livebenchDailyTopicLabel(preview);
-    if (!topic) continue;
-    const normalizedTopic = topic.toLowerCase().replace(/\s+/g, '');
-    if (seen.has(normalizedTopic)) continue;
-    seen.add(normalizedTopic);
-    items.push(topic);
-    if (items.length >= 2) break;
-  }
-  return items.length > 0 ? compactText(`今日跟踪：${items.join('；')}。`, 150) : fallback;
+  if (previews.length === 0) return fallback;
+  return `正在跟踪 ${previews.length} 道题，进入日报看结算时间、当前判断和结果反馈。`;
 }
 
 function livebenchDailyTopicLabel(preview: LiveBenchQuestionPreview) {
@@ -805,16 +784,6 @@ function timelineTabClass(active: boolean) {
     : 'border-[#d3ddd7] bg-white/82 text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-[#08201c]';
 }
 
-function SignalLevelDots() {
-  return (
-    <span className="mt-2 inline-flex items-center gap-1.5" aria-label="高热点、升温、监测">
-      <span className="h-2 w-2 rounded-full bg-[#ff5c73] shadow-[0_0_8px_rgba(255,92,115,0.45)]" />
-      <span className="h-2 w-2 rounded-full bg-[#28d7ff] shadow-[0_0_8px_rgba(40,215,255,0.42)]" />
-      <span className="h-2 w-2 rounded-full bg-[#86ffd8] shadow-[0_0_8px_rgba(134,255,216,0.42)]" />
-    </span>
-  );
-}
-
 function performanceSummaryHeadline(summary: LiveBenchPlatformModelSummary | null | undefined) {
   if (!summary) return '模型评分还在同步。';
   const scored = summary.source_formal_scored_question_count || summary.formal_scored_question_count || summary.scored_question_count;
@@ -943,7 +912,6 @@ export default function DashboardClient({
   );
   const [quickGeoSignals, setQuickGeoSignals] = useState<DashboardSignal[]>([]);
   const [quickTechAiSignals, setQuickTechAiSignals] = useState<DashboardSignal[]>([]);
-  const [subworlds, setSubworlds] = useState<WorldSubworld[]>(normalizedInitialSubworlds);
   const [questionPool, setQuestionPool] = useState<LiveBenchQuestionPreview[]>(normalizedInitialQuestionPool);
   const [globeTimeMode, setGlobeTimeMode] = useState<'today' | 'memory30'>('memory30');
   const [activeSignalId, setActiveSignalId] = useState<string | null>(null);
@@ -953,7 +921,6 @@ export default function DashboardClient({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emptySignalCheck, setEmptySignalCheck] = useState<EmptySignalCheck | null>(null);
-  const [sourceStatusState, setSourceStatusState] = useState<WorldSourceKnowledgeState | null>(null);
   const hasUsefulStateRef = useRef(hasUsefulDashboardState(normalizedInitialState));
   const emptySignalCheckKeyRef = useRef<string | null>(null);
   const worldMapPanelRef = useRef<HTMLDivElement | null>(null);
@@ -966,21 +933,6 @@ export default function DashboardClient({
   useEffect(() => {
     hasUsefulStateRef.current = hasUsefulDashboardState(state);
   }, [state]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void fetch(`/api/v1/world/source-knowledge/status?scene=global&_=${Date.now()}`, { cache: 'no-store' })
-      .then(async (response) => (response.ok ? ((await response.json()) as WorldSourceKnowledgeState) : null))
-      .then((payload) => {
-        if (!cancelled) setSourceStatusState(payload);
-      })
-      .catch(() => {
-        if (!cancelled) setSourceStatusState(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1052,7 +1004,6 @@ export default function DashboardClient({
           subworlds: nextSubworlds,
         });
       }
-      setSubworlds(nextSubworlds);
       setQuestionPool((currentPool) => (nextQuestionPool.length > 0 || currentPool.length === 0 ? nextQuestionPool : currentPool));
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : '加载世界状态失败');
@@ -1086,7 +1037,6 @@ export default function DashboardClient({
       const cached = readDashboardCache(scene);
       if (cached) {
         setState(cached.state);
-        setSubworlds(cached.subworlds);
         setQuestionPool(questionPoolFromState(cached.state));
         setActiveSignalId((current) =>
           current && cached.state?.nodes?.some((node) => node.node_id === current)
@@ -1590,7 +1540,7 @@ export default function DashboardClient({
         label: '主世界',
         title: '地缘与公共风险',
         summary: signalDailyDigest(geoDigestSignals, '地缘、公共安全和区域风险信号会在这里先聚合成今日摘要。'),
-        meta: geoDigestSignals.length > 0 ? `${geoDigestSignals.length} 条精选线索` : '暂无精选',
+        meta: geoDigestSignals.length > 0 ? `${geoDigestSignals.length} 条精选线索` : '打开日报',
         view: 'geo-politics-daily' as TimelineView,
         href: DAILY_PAGE_HREFS['geo-politics-daily'],
       },
@@ -1598,8 +1548,8 @@ export default function DashboardClient({
         key: 'ai',
         label: 'AI',
         title: '模型、Agent 与产业',
-        summary: signalDailyDigest(techCurationSignals, 'AI Hot、模型、Agent、论文和开源信源会在这里形成今日 AI 日报。'),
-        meta: techCurationSignals.length > 0 ? `${techCurationSignals.length} 条 AI 线索` : '暂无精选',
+        summary: signalDailyDigest(techCurationSignals, '模型、Agent、论文和开源信源会在这里形成今日 AI 日报。'),
+        meta: techCurationSignals.length > 0 ? `${techCurationSignals.length} 条 AI 线索` : '打开日报',
         view: 'tech-ai' as TimelineView,
         href: DAILY_PAGE_HREFS['tech-ai'],
       },
@@ -1608,15 +1558,18 @@ export default function DashboardClient({
         label: '演绎',
         title: '题池与结算反馈',
         summary: livebenchDailyDigest(livebenchDailyItems, '预测题会作为校准闭环保留，用来检验信源判断是否真正有用。'),
-        meta: livebenchLead ? questionTimingLabel(livebenchLead) : '暂无题目',
+        meta: livebenchLead ? questionTimingLabel(livebenchLead) : '打开题池',
         view: 'livebench' as TimelineView,
         href: DAILY_PAGE_HREFS.livebench,
       },
     ];
   }, [currentQuestions, geoDigestSignals, resolvedQuestions, techCurationSignals]);
+  const geoTimelineCount = geoTimelineState?.top_signals?.length || quickGeoSignals.length || geoDigestSignals.length;
+  const techTimelineCount = techSignalState?.top_signals?.length || quickTechAiSignals.length || techCurationSignals.length;
+  const livebenchTimelineCount = currentQuestions.length + resolvedQuestions.length;
   const sourceKnowledgeHref = mountedHomeHref('/source-knowledge', scene);
   const mainSkillHref = './api/v1/openclaw/skill.md';
-  const aihotSkillHref = './api/v1/openclaw/aihot.skill.md';
+  const aihotSkillHref = './api/v1/openclaw/ai.skill.md';
   const skillEntry = useMemo(() => {
     const base = state?.skill_entry || {
       mode: 'bound' as const,
@@ -1628,7 +1581,7 @@ export default function DashboardClient({
     return {
       ...base,
       description:
-        '把这个地址交给接入方。它会按近 30 天信源回答问题，也能读取 AI Hot 和主世界日报。',
+        '把这个地址交给接入方。它会按近 30 天信源回答问题，也能读取 AI 日报和主世界日报。',
       copy_hint: '日常回答优先用当前精选线索；需要深挖时再进入全部信源。',
     };
   }, [state?.skill_entry]);
@@ -1644,13 +1597,6 @@ export default function DashboardClient({
     setSkillEntryCopied(true);
     window.setTimeout(() => setSkillEntryCopied(false), 1600);
   };
-  const handleBriefCardClick = (view: TimelineView) => {
-    setTimelineScene(view);
-    window.setTimeout(() => {
-      timelinePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 0);
-  };
-
   return (
     <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f5f7f4_0%,#fbfcf8_42%,#eef5f1_100%)] text-slate-900">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(20,184,166,0.58),rgba(217,159,72,0.45),transparent)]" />
@@ -1751,7 +1697,7 @@ export default function DashboardClient({
                             className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
                           >
                             <span className="block text-[12px] font-semibold text-[#08201c]">AI</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">AI Hot 与模型线索</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">AI 前沿与模型线索</span>
                           </a>
                           <a
                             href={sourceKnowledgeHref}
@@ -1766,7 +1712,7 @@ export default function DashboardClient({
                             rel="noreferrer"
                             className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
                           >
-                            <span className="block text-[12px] font-semibold text-[#08201c]">AI Hot Skill</span>
+                            <span className="block text-[12px] font-semibold text-[#08201c]">AI 日报 Skill</span>
                             <span className="mt-1 block text-[11px] leading-5 text-slate-500">读取 AI 精选源</span>
                           </a>
                         </div>
@@ -2030,27 +1976,39 @@ export default function DashboardClient({
                     onClick={() => setTimelineScene('geo-politics-daily')}
                     className={`group rounded-[18px] border px-3 py-2.5 text-left transition duration-300 ${timelineTabClass(timelineScene === 'geo-politics-daily')}`}
                   >
-                    <span className="block text-[12px] font-semibold">地缘线索</span>
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] font-semibold">地缘线索</span>
+                      <span className="rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[10px] text-slate-500">
+                        {geoTimelineCount > 0 ? `${geoTimelineCount} 条` : '打开'}
+                      </span>
+                    </span>
                     <span className="mt-1 block text-[11px] leading-5 opacity-70">冲突、外交、公共风险</span>
-                    <SignalLevelDots />
                   </button>
                   <button
                     type="button"
                     onClick={() => setTimelineScene('tech-ai')}
                     className={`group rounded-[18px] border px-3 py-2.5 text-left transition duration-300 ${timelineTabClass(timelineScene === 'tech-ai')}`}
                   >
-                    <span className="block text-[12px] font-semibold">AI 线索</span>
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] font-semibold">AI 线索</span>
+                      <span className="rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[10px] text-slate-500">
+                        {techTimelineCount > 0 ? `${techTimelineCount} 条` : '打开'}
+                      </span>
+                    </span>
                     <span className="mt-1 block text-[11px] leading-5 opacity-70">模型、Agent、开源</span>
-                    <SignalLevelDots />
                   </button>
                   <button
                     type="button"
                     onClick={() => setTimelineScene('livebench')}
                     className={`group rounded-[18px] border px-3 py-2.5 text-left transition duration-300 ${timelineTabClass(timelineScene === 'livebench')}`}
                   >
-                    <span className="block text-[12px] font-semibold">演绎题池</span>
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-[12px] font-semibold">演绎题池</span>
+                      <span className="rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[10px] text-slate-500">
+                        {livebenchTimelineCount > 0 ? `${livebenchTimelineCount} 道` : '打开'}
+                      </span>
+                    </span>
                     <span className="mt-1 block text-[11px] leading-5 opacity-70">题池与结果</span>
-                    <SignalLevelDots />
                   </button>
                 </div>
               </div>

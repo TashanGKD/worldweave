@@ -11,9 +11,9 @@ for (let index = 2; index < process.argv.length; index += 2) {
 }
 
 const baseUrl = args.get('--base-url') || 'http://127.0.0.1:5000';
-const model = args.get('--model') || 'MiniMax-M2.5';
+const model = args.get('--model') || 'DeepSeek-V4-Flash';
 const xiaId = args.get('--xia-id') || 'hermes-minimax';
-const contributorLabel = args.get('--label') || 'Hermes / MiniMax-M2.5';
+const contributorLabel = args.get('--label') || 'Hermes / DeepSeek-V4-Flash';
 const limit = Number(args.get('--limit') || 10);
 const timeoutSec = Number(args.get('--timeout-sec') || 180);
 const cacheDir = path.join(root, '.cache');

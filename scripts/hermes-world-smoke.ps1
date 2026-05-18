@@ -1,6 +1,6 @@
 param(
   [string]$BaseUrl = "http://127.0.0.1:5000",
-  [string]$Model = "MiniMax-M2.5"
+  [string]$Model = "DeepSeek-V4-Flash"
 )
 
 $ErrorActionPreference = "Stop"

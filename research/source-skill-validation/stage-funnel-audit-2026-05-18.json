@@ -1,0 +1,194 @@
+{
+  "generated_at": "2026-05-18T01:47:29.836Z",
+  "day_key": "2026-05-18",
+  "log_path": ".cache/world-start-5016-cluster-check.out.log",
+  "cache_path": ".cache/world-signal-cache-cluster-check.json",
+  "all_funnels": [
+    {
+      "run": 1,
+      "loaded": 115,
+      "emitted": 300,
+      "kept": 115,
+      "publishable": 199,
+      "exactCollapsed": 0,
+      "eventClusters": 0,
+      "eventCollapsed": 0,
+      "sourceCollapsed": 101
+    },
+    {
+      "run": 2,
+      "loaded": 727,
+      "emitted": 1035,
+      "kept": 830,
+      "publishable": 930,
+      "exactCollapsed": 72,
+      "eventClusters": 18,
+      "eventCollapsed": 31,
+      "sourceCollapsed": 105
+    }
+  ],
+  "latest_funnel": {
+    "run": 2,
+    "loaded": 727,
+    "emitted": 1035,
+    "kept": 830,
+    "publishable": 930,
+    "exactCollapsed": 72,
+    "eventClusters": 18,
+    "eventCollapsed": 31,
+    "sourceCollapsed": 105
+  },
+  "cache_summary": {
+    "total_signals": 727,
+    "by_scene": {
+      "war": 232,
+      "global": 374,
+      "health": 13,
+      "technology": 87,
+      "finance": 18,
+      "capacity": 3
+    },
+    "by_source_group": {
+      "world-monitor": 610,
+      "rss-api-pool": 95,
+      "public-anchor": 4,
+      "aihot": 18
+    },
+    "clustered_count": 18,
+    "max_related_count": 5,
+    "cluster_samples": [
+      {
+        "title": "Manhattan, New York, United States",
+        "source_name": "thebusinessjournal.com",
+        "scene": "war",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:5",
+          "event:source-count:6",
+          "event:primary-source:thebusinessjournal-com"
+        ]
+      },
+      {
+        "title": "Democratic Republic of the Congo",
+        "source_name": "World Monitor",
+        "scene": "health",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:1",
+          "event:source-count:2",
+          "event:primary-source:world-monitor"
+        ]
+      },
+      {
+        "title": "South Dakota, United States",
+        "source_name": "www.yahoo.com",
+        "scene": "global",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:1",
+          "event:source-count:2",
+          "event:primary-source:www-yahoo-com"
+        ]
+      },
+      {
+        "title": "Broward County, Florida, United States",
+        "source_name": "www.wrdw.com",
+        "scene": "war",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:1",
+          "event:source-count:2",
+          "event:primary-source:www-wrdw-com"
+        ]
+      },
+      {
+        "title": "Abuja, Abuja Federal Capital Territory, Nigeria",
+        "source_name": "www.eluniversal.com.mx",
+        "scene": "war",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:2",
+          "event:source-count:3",
+          "event:primary-source:www-eluniversal-com-mx"
+        ]
+      },
+      {
+        "title": "Franklin County, Arkansas, United States",
+        "source_name": "www.4029tv.com",
+        "scene": "global",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:1",
+          "event:source-count:2",
+          "event:primary-source:www-4029tv-com"
+        ]
+      },
+      {
+        "title": "Douglas County, Colorado, United States",
+        "source_name": "www.9news.com",
+        "scene": "war",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:4",
+          "event:source-count:4",
+          "event:primary-source:www-9news-com"
+        ]
+      },
+      {
+        "title": "Lashkar, North-West Frontier, Pakistan",
+        "source_name": "www.orissapost.com",
+        "scene": "war",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:1",
+          "event:source-count:2",
+          "event:primary-source:www-orissapost-com"
+        ]
+      },
+      {
+        "title": "South Carolina, United States",
+        "source_name": "www.cbs58.com",
+        "scene": "war",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:1",
+          "event:source-count:2",
+          "event:primary-source:www-cbs58-com"
+        ]
+      },
+      {
+        "title": "Mclennan County, Texas, United States",
+        "source_name": "www.kcentv.com",
+        "scene": "war",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:5",
+          "event:source-count:6",
+          "event:primary-source:www-kcentv-com"
+        ]
+      },
+      {
+        "title": "Sydney, New South Wales, Australia",
+        "source_name": "www.aurora-israel.co.il",
+        "scene": "war",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:1",
+          "event:source-count:2",
+          "event:primary-source:www-aurora-israel-co-il"
+        ]
+      },
+      {
+        "title": "Nevinnomyssk, Stavropol'skiy Kray, Russia",
+        "source_name": "www.dailystar.co.uk",
+        "scene": "war",
+        "event_tags": [
+          "event:clustered",
+          "event:related-count:2",
+          "event:source-count:3",
+          "event:primary-source:www-dailystar-co-uk"
+        ]
+      }
+    ]
+  }
+}

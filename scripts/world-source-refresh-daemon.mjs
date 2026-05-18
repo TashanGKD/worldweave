@@ -26,7 +26,9 @@ function openLog(filePath) {
   return fs.openSync(filePath, 'a');
 }
 
-const intervalMinutes = process.env.WORLD_SOURCE_REFRESH_INTERVAL_MINUTES || '30';
+const intervalMinutes = process.env.WORLD_SOURCE_REFRESH_INTERVAL_MINUTES || '480';
+const dailySlots = process.env.WORLD_SOURCE_REFRESH_DAILY_SLOTS || '08:00,12:00,20:00';
+const refreshTimeZone = process.env.WORLD_SOURCE_REFRESH_TIME_ZONE || 'Asia/Shanghai';
 const timeoutMinutes = process.env.WORLD_SOURCE_REFRESH_TIMEOUT_MINUTES || '20';
 const manageWorker = process.env.WORLD_SOURCE_REFRESH_MANAGE_WORKER !== '0';
 const workerPort = process.env.WORLD_SOURCE_REFRESH_WORKER_PORT || '5020';
@@ -101,6 +103,10 @@ function startRefreshLoop() {
     '--loop',
     '--interval-minutes',
     intervalMinutes,
+    '--daily-slots',
+    dailySlots,
+    '--time-zone',
+    refreshTimeZone,
     '--timeout-minutes',
     timeoutMinutes,
     '--world-base-url',
@@ -124,7 +130,7 @@ function startRefreshLoop() {
   fs.writeFileSync(pidPath, `${child.pid}\n`, 'utf8');
   append(
     outPath,
-    `[${new Date().toISOString()}] source refresh loop started pid=${child.pid} interval=${intervalMinutes} timeout=${timeoutMinutes} base=${refreshBaseUrl} heavySync=${includeHeavyWorldSync ? '1' : '0'}\n`,
+      `[${new Date().toISOString()}] source refresh loop started pid=${child.pid} interval=${intervalMinutes} dailySlots=${dailySlots} timeZone=${refreshTimeZone} timeout=${timeoutMinutes} base=${refreshBaseUrl} heavySync=${includeHeavyWorldSync ? '1' : '0'}\n`,
   );
   child.on('exit', (code, signal) => {
     append(
@@ -147,6 +153,8 @@ console.log(
       pid: child.pid,
       workerPid: worker?.pid || null,
       intervalMinutes,
+      dailySlots,
+      refreshTimeZone,
       timeoutMinutes,
       refreshBaseUrl,
       includeHeavyWorldSync,

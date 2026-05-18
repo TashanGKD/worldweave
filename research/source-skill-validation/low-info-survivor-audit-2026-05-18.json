@@ -1,0 +1,773 @@
+{
+  "generated_at": "2026-05-18T01:47:29.778Z",
+  "day_key": "2026-05-18",
+  "cache_path": ".cache/world-signal-cache-funnel-check.json",
+  "suspect_count": 85,
+  "suspects": [
+    {
+      "id": "event-5df1cc9e59c293c2",
+      "title": "Amsterdam, Noord-Holland, Netherlands",
+      "summary": "Source country match | Local news source | High Goldstein intensity | 4 events at location",
+      "source_name": "nos.nl",
+      "scene": "war",
+      "relevance_score": 0.81,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-52955cbb800663b6",
+      "title": "Argentina",
+      "summary": "Source country match | Local news source | High Goldstein intensity | 5 events at location",
+      "source_name": "www.lanacion.com.ar",
+      "scene": "war",
+      "relevance_score": 0.83,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-e9baed2418547fff",
+      "title": "Auckland, Auckland, New Zealand",
+      "summary": "Location in headline | Source country match | High Goldstein intensity | 3 events at location",
+      "source_name": "www.nzherald.co.nz",
+      "scene": "global",
+      "relevance_score": 0.9,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-8fee8e5a49f7adce",
+      "title": "Baghdad, Baghdad, Iraq",
+      "summary": "High Goldstein intensity | 7 events at location",
+      "source_name": "www.spacewar.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-03795ee8cbcdeb16",
+      "title": "Bahia, Bahia, Brazil",
+      "summary": "Location in headline | High Goldstein intensity | 4 events at location",
+      "source_name": "www.elciudadano.com",
+      "scene": "global",
+      "relevance_score": 0.65,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-be6b0ab9c9000625",
+      "title": "Balochistan, Balochistan, Pakistan",
+      "summary": "Location in headline | High Goldstein intensity | 3 events at location",
+      "source_name": "www.bignewsnetwork.com",
+      "scene": "global",
+      "relevance_score": 0.66,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-a6b6454294bef30f",
+      "title": "Beijing, Beijing, China",
+      "summary": "High Goldstein intensity | 9 events at location",
+      "source_name": "www.secoloditalia.it",
+      "scene": "war",
+      "relevance_score": 0.65,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-2e17805d4e9612b4",
+      "title": "Belarus",
+      "summary": "High Goldstein intensity | 3 events at location",
+      "source_name": "www.zurnal24.si",
+      "scene": "war",
+      "relevance_score": 0.557,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-53afd238253f9cd5",
+      "title": "Belgorod, Belgorodskaya Oblast', Russia",
+      "summary": "High Goldstein intensity | 6 events at location",
+      "source_name": "war.telegraf.com.ua",
+      "scene": "war",
+      "relevance_score": 0.65,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-1377c00abe71a548",
+      "title": "Ben-Gurion, HaMerkaz, Israel",
+      "summary": "Source country match | High Goldstein intensity | 13 events at location",
+      "source_name": "www.newsru.co.il",
+      "scene": "war",
+      "relevance_score": 0.684,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-05e7368059ce01f3",
+      "title": "Billericay, Essex, United Kingdom",
+      "summary": "Source country match | High Goldstein intensity | 7 events at location",
+      "source_name": "www.echo-news.co.uk",
+      "scene": "global",
+      "relevance_score": 0.88,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-89c6a33fef6d3f48",
+      "title": "Brazil",
+      "summary": "High Goldstein intensity | 3 events at location",
+      "source_name": "www.massachusettssun.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-5a57b1b0e7daf3f5",
+      "title": "Broward County, Florida, United States",
+      "summary": "International source | High Goldstein intensity | 5 events at location",
+      "source_name": "www.wrdw.com",
+      "scene": "war",
+      "relevance_score": 0.7,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-07359696c36ce054",
+      "title": "Cambria County, Pennsylvania, United States",
+      "summary": "Location in headline | High Goldstein intensity | 6 events at location",
+      "source_name": "www.altoonamirror.com",
+      "scene": "global",
+      "relevance_score": 0.66,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-198b70350c26f2f0",
+      "title": "Cape Town, Western Cape, South Africa",
+      "summary": "High Goldstein intensity | 5 events at location",
+      "source_name": "www.enca.com",
+      "scene": "global",
+      "relevance_score": 0.502,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-900d979670b1bb7c",
+      "title": "Chad",
+      "summary": "Location in headline | High Goldstein intensity | 3 events at location",
+      "source_name": "fr.allafrica.com",
+      "scene": "war",
+      "relevance_score": 0.66,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-768479a828c7282a",
+      "title": "Chennai, Tamil Nadu, India",
+      "summary": "Location in headline | Local news source | High Goldstein intensity | 4 events at location",
+      "source_name": "timesofindia.indiatimes.com",
+      "scene": "global",
+      "relevance_score": 0.86,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-2c8c410aff5b3710",
+      "title": "Chicago, Illinois, United States",
+      "summary": "Location in headline | High Goldstein intensity",
+      "source_name": "www.casino.org",
+      "scene": "war",
+      "relevance_score": 0.567,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-cb75051ee8a942be",
+      "title": "Cleveland, Ohio, United States",
+      "summary": "High Goldstein intensity | 4 events at location",
+      "source_name": "www.chronicleonline.com",
+      "scene": "global",
+      "relevance_score": 0.502,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-3ff9c9017e91d390",
+      "title": "Congo",
+      "summary": "High Goldstein intensity | 4 events at location",
+      "source_name": "www.premiumtimesng.com",
+      "scene": "war",
+      "relevance_score": 0.559,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-8215031874ef5b28",
+      "title": "Dawakin Tofa, Kano, Nigeria",
+      "summary": "Local news source | High Goldstein intensity | 5 events at location",
+      "source_name": "punchng.com",
+      "scene": "global",
+      "relevance_score": 0.85,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-51f452714bdf7dfa",
+      "title": "Delhi, Delhi, India",
+      "summary": "Location in headline | High Goldstein intensity | 3 events at location",
+      "source_name": "www.tribuneindia.com",
+      "scene": "war",
+      "relevance_score": 0.66,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-c2597c079531cdcd",
+      "title": "Douglas County, Colorado, United States",
+      "summary": "Location in headline | High Goldstein intensity | 9 events at location",
+      "source_name": "www.9news.com",
+      "scene": "war",
+      "relevance_score": 0.701,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-01a8ddaa06c3143f",
+      "title": "Fateh Khel, Federally Administered Tribal Areas, Pakistan",
+      "summary": "Location in headline | Source country match | High Goldstein intensity | 9 events at location",
+      "source_name": "dnd.com.pk",
+      "scene": "war",
+      "relevance_score": 0.93,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-9e2c849f877d838e",
+      "title": "Folkestone, Kent, United Kingdom",
+      "summary": "Source country match | High Goldstein intensity",
+      "source_name": "www.dailystar.co.uk",
+      "scene": "global",
+      "relevance_score": 0.557,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-d7175048f0c76118",
+      "title": "France",
+      "summary": "Local news source | High Goldstein intensity | 4 events at location",
+      "source_name": "www.bfmtv.com",
+      "scene": "war",
+      "relevance_score": 0.667,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-0f4131648038cc90",
+      "title": "Ghezel Hesar, Ostan-e Alborz, Iran",
+      "summary": "Location in headline | High Goldstein intensity | 5 events at location",
+      "source_name": "www.ncr-iran.org",
+      "scene": "war",
+      "relevance_score": 0.65,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-78489ac1fb8d5ccf",
+      "title": "Greece",
+      "summary": "Source country match | High Goldstein intensity",
+      "source_name": "www.iefimerida.gr",
+      "scene": "war",
+      "relevance_score": 0.55,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-a4cd893aaf438574",
+      "title": "Havana, Ciudad de La Habana, Cuba",
+      "summary": "Location in headline | High Goldstein intensity | 12 events at location",
+      "source_name": "www.mankatofreepress.com",
+      "scene": "war",
+      "relevance_score": 0.705,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-53c7f471a7a8bd84",
+      "title": "Hebron, Israel (general), Israel",
+      "summary": "High Goldstein intensity | 13 events at location",
+      "source_name": "palinfo.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-4a09d2abd8619572",
+      "title": "Honduras",
+      "summary": "International source | High Goldstein intensity | 5 events at location",
+      "source_name": "edition.cnn.com",
+      "scene": "global",
+      "relevance_score": 0.536,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-d2373b2b3664486c",
+      "title": "Idaho, United States",
+      "summary": "High Goldstein intensity | 3 events at location",
+      "source_name": "www.kmvt.com",
+      "scene": "global",
+      "relevance_score": 0.502,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-97316d5d624d8515",
+      "title": "Illinois, United States",
+      "summary": "Location in headline | High Goldstein intensity | 3 events at location",
+      "source_name": "www.wandtv.com",
+      "scene": "global",
+      "relevance_score": 0.684,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-e7bb60970ab232d8",
+      "title": "Indore, Madhya Pradesh, India",
+      "summary": "Location in headline | Source country match | High Goldstein intensity | 5 events at location",
+      "source_name": "aninews.in",
+      "scene": "war",
+      "relevance_score": 0.93,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-0218c6f0029c5af7",
+      "title": "Isfahan, Esfahan, Iran",
+      "summary": "Location in headline | High Goldstein intensity | 8 events at location",
+      "source_name": "www.zazoom.it",
+      "scene": "war",
+      "relevance_score": 0.83,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-ce5f74656e8ee932",
+      "title": "Itori, Oyo, Nigeria",
+      "summary": "Local news source | High Goldstein intensity",
+      "source_name": "punchng.com",
+      "scene": "global",
+      "relevance_score": 0.54,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-56bfb79008941876",
+      "title": "Jakarta, Jakarta Raya, Indonesia",
+      "summary": "High Goldstein intensity | 5 events at location",
+      "source_name": "www.antaranews.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-e9f7bb0516e9e064",
+      "title": "Jalalabad, Nangarhar, Afghanistan",
+      "summary": "High Goldstein intensity | 3 events at location",
+      "source_name": "english.news.cn",
+      "scene": "global",
+      "relevance_score": 0.557,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-03218e43265ca2b2",
+      "title": "Jamaica Plain, Massachusetts, United States",
+      "summary": "Location in headline | High Goldstein intensity",
+      "source_name": "www.bostonherald.com",
+      "scene": "war",
+      "relevance_score": 0.567,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-a4d9435978fafd42",
+      "title": "Johnstown, Pennsylvania, United States",
+      "summary": "Location in headline | High Goldstein intensity | 4 events at location",
+      "source_name": "wjactv.com",
+      "scene": "global",
+      "relevance_score": 0.66,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-b192b2034bd23844",
+      "title": "Kane County, Illinois, United States",
+      "summary": "High Goldstein intensity | 7 events at location",
+      "source_name": "www.nbcchicago.com",
+      "scene": "global",
+      "relevance_score": 0.502,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-c4603eb937ac1f1f",
+      "title": "Kordofan, Shamal Kurdufan, Sudan",
+      "summary": "Location in headline | High Goldstein intensity | 6 events at location",
+      "source_name": "www.yahoo.com",
+      "scene": "war",
+      "relevance_score": 0.701,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-2753b9717d0d26e0",
+      "title": "Krasilnikova, Orlovskaya Oblast', Russia",
+      "summary": "Local news source | High Goldstein intensity",
+      "source_name": "russian.rt.com",
+      "scene": "war",
+      "relevance_score": 0.536,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-0d0aadda3368d102",
+      "title": "Kwara, Tahoua, Niger",
+      "summary": "Location in headline | High Goldstein intensity",
+      "source_name": "punchng.com",
+      "scene": "war",
+      "relevance_score": 0.574,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-bda4ac13c0b8d288",
+      "title": "La Paz, La Paz, Bolivia",
+      "summary": "Source country match | High Goldstein intensity | 5 events at location",
+      "source_name": "eldeber.com.bo",
+      "scene": "war",
+      "relevance_score": 0.684,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-7da92b74ffaf0f35",
+      "title": "Lashkar, North-West Frontier, Pakistan",
+      "summary": "Location in headline | High Goldstein intensity | 10 events at location",
+      "source_name": "www.orissapost.com",
+      "scene": "war",
+      "relevance_score": 0.781,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-b1c6c4dd0364a3d8",
+      "title": "Libya",
+      "summary": "High Goldstein intensity | 6 events at location",
+      "source_name": "www.telemundodenver.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-a578c41d073bad15",
+      "title": "Lima, Lima, Peru",
+      "summary": "High Goldstein intensity | 6 events at location",
+      "source_name": "www.5-tv.ru",
+      "scene": "war",
+      "relevance_score": 0.65,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-53f1cd48aec95712",
+      "title": "Lincolnshire, Lincolnshire, United Kingdom",
+      "summary": "Source country match | Local news source | High Goldstein intensity | 4 events at location",
+      "source_name": "www.express.co.uk",
+      "scene": "war",
+      "relevance_score": 0.83,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-0585e6b6fd884a2b",
+      "title": "Loba, Chuvashiya, Russia",
+      "summary": "High Goldstein intensity | 3 events at location",
+      "source_name": "laist.com",
+      "scene": "war",
+      "relevance_score": 0.582,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-7c20ff8f73c178a0",
+      "title": "Maiduguri, Borno, Nigeria",
+      "summary": "Location in headline | High Goldstein intensity | 7 events at location",
+      "source_name": "tribune.com.pk",
+      "scene": "war",
+      "relevance_score": 0.83,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-8450f850ff529d7f",
+      "title": "Mainok, Borno, Nigeria",
+      "summary": "High Goldstein intensity | 10 events at location",
+      "source_name": "home.nzcity.co.nz",
+      "scene": "war",
+      "relevance_score": 0.65,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-3ac2ae1d2a14bc0f",
+      "title": "Manhattan, New York, United States",
+      "summary": "High Goldstein intensity | 15 events at location",
+      "source_name": "thebusinessjournal.com",
+      "scene": "war",
+      "relevance_score": 0.679,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-7167441372052ffd",
+      "title": "Mclennan County, Texas, United States",
+      "summary": "Location in headline | High Goldstein intensity | 4 events at location",
+      "source_name": "www.kcentv.com",
+      "scene": "war",
+      "relevance_score": 0.701,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-2e4c85fccb4ccedb",
+      "title": "Meadow Lake, Saskatchewan, Canada",
+      "summary": "Location in headline | High Goldstein intensity | 3 events at location",
+      "source_name": "www.620ckrm.com",
+      "scene": "global",
+      "relevance_score": 0.65,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-929393c60c3ebd2a",
+      "title": "Mexico",
+      "summary": "High Goldstein intensity | 8 events at location",
+      "source_name": "hoydiariodelmagdalena.com.co",
+      "scene": "war",
+      "relevance_score": 0.65,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-22b6a0d382f28441",
+      "title": "Miami University, Ohio, United States",
+      "summary": "Location in headline | High Goldstein intensity",
+      "source_name": "www.wlwt.com",
+      "scene": "global",
+      "relevance_score": 0.57,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-0496273de0a15e27",
+      "title": "Miami, Florida, United States",
+      "summary": "High Goldstein intensity | 8 events at location",
+      "source_name": "www.telemundo51.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-7d3252782b04f310",
+      "title": "Missouri, United States",
+      "summary": "Location in headline | High Goldstein intensity | 5 events at location",
+      "source_name": "www.kcur.org",
+      "scene": "global",
+      "relevance_score": 0.684,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-1813a4c2e2d65b58",
+      "title": "Montana, United States",
+      "summary": "High Goldstein intensity | 5 events at location",
+      "source_name": "www.fairfieldsuntimes.com",
+      "scene": "global",
+      "relevance_score": 0.499,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-5415de99944656f0",
+      "title": "Mumbai, Maharashtra, India",
+      "summary": "High Goldstein intensity | 5 events at location",
+      "source_name": "www.madhyamam.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-66e43ba6a4326018",
+      "title": "Muridke, Punjab, Pakistan",
+      "summary": "Location in headline | High Goldstein intensity | 8 events at location",
+      "source_name": "www.worthynews.com",
+      "scene": "war",
+      "relevance_score": 0.701,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-b04c2a57fc331c29",
+      "title": "New Jersey, United States",
+      "summary": "High Goldstein intensity | 3 events at location",
+      "source_name": "punchng.com",
+      "scene": "global",
+      "relevance_score": 0.499,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-c48099a88d895310",
+      "title": "Novaya Kakhovka, Khersons'ka Oblast', Ukraine",
+      "summary": "High Goldstein intensity | 5 events at location",
+      "source_name": "www.eng.kavkaz-uzel.eu",
+      "scene": "war",
+      "relevance_score": 0.506,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-78c7cec23812cd0c",
+      "title": "Odisha, Orissa, India",
+      "summary": "High Goldstein intensity | 4 events at location",
+      "source_name": "www.siasat.com",
+      "scene": "global",
+      "relevance_score": 0.502,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-9172a6f65ba031ce",
+      "title": "Ohio, United States",
+      "summary": "High Goldstein intensity | 9 events at location",
+      "source_name": "www.wtol.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-98552127eabe080b",
+      "title": "Philadelphia, Pennsylvania, United States",
+      "summary": "Location in headline | High Goldstein intensity | 7 events at location",
+      "source_name": "6abc.com",
+      "scene": "war",
+      "relevance_score": 0.701,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-f3b960f3e4db8415",
+      "title": "Plateau State, Plateau, Nigeria",
+      "summary": "Source country match | High Goldstein intensity",
+      "source_name": "thesun.ng",
+      "scene": "global",
+      "relevance_score": 0.55,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-01a9bd6099e0d305",
+      "title": "Romania",
+      "summary": "Source country match | High Goldstein intensity | 4 events at location",
+      "source_name": "politiaromana.ro",
+      "scene": "war",
+      "relevance_score": 0.684,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-c09f17296e4fb558",
+      "title": "Searsmont, Maine, United States",
+      "summary": "Location in headline | High Goldstein intensity | 7 events at location",
+      "source_name": "www.nbcconnecticut.com",
+      "scene": "war",
+      "relevance_score": 0.66,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-8bb342684fc79f95",
+      "title": "Senegal",
+      "summary": "High Goldstein intensity",
+      "source_name": "www.zazoom.it",
+      "scene": "global",
+      "relevance_score": 0.603,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-0febbdc18cccd76f",
+      "title": "Seoul, Soul-t'ukpyolsi, South Korea",
+      "summary": "Source country match | High Goldstein intensity",
+      "source_name": "www.edaily.co.kr",
+      "scene": "war",
+      "relevance_score": 0.55,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-782f47bc4cafda48",
+      "title": "Siedlce, Swietokrzyskie, Poland",
+      "summary": "Source country match | High Goldstein intensity",
+      "source_name": "www.bankier.pl",
+      "scene": "global",
+      "relevance_score": 0.553,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-0ea0262c6dfc2464",
+      "title": "South Carolina, United States",
+      "summary": "High Goldstein intensity | 9 events at location",
+      "source_name": "www.cbs58.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-f965be66f89d946a",
+      "title": "Sullivan County, Tennessee, United States",
+      "summary": "High Goldstein intensity | 3 events at location",
+      "source_name": "fox17.com",
+      "scene": "global",
+      "relevance_score": 0.502,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-89264933309991cd",
+      "title": "Tennessee, United States",
+      "summary": "High Goldstein intensity | 9 events at location",
+      "source_name": "www.yumasun.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-fafac611d967f13b",
+      "title": "Thunder Bay, Ontario, Canada",
+      "summary": "Source country match | High Goldstein intensity",
+      "source_name": "www.stcatharinesstandard.ca",
+      "scene": "global",
+      "relevance_score": 0.553,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-64d7733dd1a64810",
+      "title": "Tinubu, Lagos, Nigeria",
+      "summary": "Location in headline | High Goldstein intensity | 6 events at location",
+      "source_name": "www.bignewsnetwork.com",
+      "scene": "war",
+      "relevance_score": 0.701,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-3bfa71cd921fdc53",
+      "title": "Trumbull County, Ohio, United States",
+      "summary": "High Goldstein intensity | 4 events at location",
+      "source_name": "www.tribtoday.com",
+      "scene": "global",
+      "relevance_score": 0.506,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-332b43632fdd762c",
+      "title": "Uganda",
+      "summary": "High Goldstein intensity | 3 events at location",
+      "source_name": "www.lepoint.fr",
+      "scene": "global",
+      "relevance_score": 0.637,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-8f884eaa6b9ff2d9",
+      "title": "Venezuela",
+      "summary": "High Goldstein intensity",
+      "source_name": "profile.ru",
+      "scene": "war",
+      "relevance_score": 0.516,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-ac12b8a5aa570a4f",
+      "title": "Virar, Maharashtra, India",
+      "summary": "Source country match | High Goldstein intensity",
+      "source_name": "www.freepressjournal.in",
+      "scene": "global",
+      "relevance_score": 0.553,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-15911fac924d793f",
+      "title": "Virginia, United States",
+      "summary": "High Goldstein intensity | 7 events at location",
+      "source_name": "www.mesabitribune.com",
+      "scene": "war",
+      "relevance_score": 0.599,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-49d7194237221127",
+      "title": "Walmersley, Bury, United Kingdom",
+      "summary": "Source country match | High Goldstein intensity | 5 events at location",
+      "source_name": "www.burytimes.co.uk",
+      "scene": "global",
+      "relevance_score": 0.61,
+      "reason": "world-monitor-diagnostic-only"
+    },
+    {
+      "id": "event-138ab3bf85d53561",
+      "title": "Warsaw, (PL67), Poland",
+      "summary": "Source country match | Local news source | High Goldstein intensity | 3 events at location",
+      "source_name": "wiadomosci.onet.pl",
+      "scene": "war",
+      "relevance_score": 0.81,
+      "reason": "world-monitor-diagnostic-only"
+    }
+  ]
+}

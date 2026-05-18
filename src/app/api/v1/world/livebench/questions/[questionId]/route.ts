@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
-import { getCachedLiveBenchQuestionDetail } from '@/lib/world/livebench';
+import { getCachedLiveBenchQuestionDetail, getLiveBenchQuestionDetailFromStore } from '@/lib/world/livebench';
 import {
   getCachedWorldLiveBenchQuestionPreviews,
   getWorldLiveBenchQuestionDetail,
@@ -183,47 +183,6 @@ async function findQuestionPreviewFallback(scene: WorldScene, questionId: string
     timeout<LiveBenchQuestionPreview[]>(1000, []),
   ]);
   return fromRuntime.find((preview) => questionIdsMatch(preview.question_id, questionId)) || null;
-}
-
-async function readPreviewSourceFeedEvidence(request: Request, scene: WorldScene, preview: LiveBenchQuestionPreview) {
-  const query = [
-    preview.title,
-    preview.background,
-    preview.topic_label,
-    preview.region_label,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .slice(0, 500);
-  const isAiQuestion = /ai|llm|model|agent|openai|anthropic|claude|chatgpt|gemini|codex|人工智能|大模型|智能体|模型/i.test(query);
-  try {
-    const url = new URL('/api/v1/topiclab/source-feed/articles', request.url);
-    url.searchParams.set('scene', isAiQuestion ? 'tech-ai' : scene);
-    if (isAiQuestion) {
-      url.searchParams.set('source', 'aihot');
-    } else if (query.trim()) {
-      url.searchParams.set('q', query);
-    }
-    url.searchParams.set('limit', '6');
-    const response = await fetch(url, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!response.ok) return [];
-    const body = (await response.json()) as { list?: Array<Record<string, unknown>> };
-    return Array.isArray(body.list)
-      ? body.list.map((item) => ({
-          id: typeof item.id === 'number' || typeof item.id === 'string' ? String(item.id) : undefined,
-          title: typeof item.title === 'string' ? item.title : undefined,
-          summary: typeof item.description === 'string' ? item.description : undefined,
-          url: typeof item.url === 'string' ? item.url : null,
-          published_at: typeof item.publish_time === 'string' ? item.publish_time : null,
-          source_name: typeof item.source_feed_name === 'string' ? item.source_feed_name : 'source-feed',
-        }))
-      : [];
-  } catch {
-    return [];
-  }
 }
 
 function buildPreviewFallbackDetail(
@@ -418,19 +377,6 @@ export async function GET(
     const { questionId } = await context.params;
     const pathQuestionId = questionId || url.pathname.split('/').filter(Boolean).pop() || '';
     const decodedQuestionId = decodeURIComponent(pathQuestionId);
-    if (xiaFacing) {
-      const previewFallback = await findQuestionPreviewFallback(scene, decodedQuestionId);
-      if (previewFallback) {
-        const sourceFeedSignals = await readPreviewSourceFeedEvidence(request, scene, previewFallback);
-        const fallbackDetail = buildPreviewFallbackDetail(scene, previewFallback, sourceFeedSignals);
-        return NextResponse.json(toXiaFacingQuestionDetail(fallbackDetail), {
-          headers: {
-            'Cache-Control': 'no-store, max-age=0',
-            'x-world-detail-source': sourceFeedSignals.length ? 'preview-source-feed' : 'preview-fallback',
-          },
-        });
-      }
-    }
     const cachedDetailPromise = getCachedLiveBenchQuestionDetail(scene, decodedQuestionId).catch(() => null);
     const cachedDetail = await Promise.race([
       cachedDetailPromise,
@@ -441,6 +387,18 @@ export async function GET(
         headers: {
           'Cache-Control': 'no-store, max-age=0',
           'x-world-detail-source': 'cache',
+        },
+      });
+    }
+    const storeDetail = await Promise.race([
+      getLiveBenchQuestionDetailFromStore(scene, decodedQuestionId).catch(() => null),
+      timeout<Record<string, unknown> | null>(QUESTION_DETAIL_CACHE_TIMEOUT_MS, null),
+    ]);
+    if (storeDetail) {
+      return NextResponse.json(xiaFacing ? toXiaFacingQuestionDetail(storeDetail as unknown as XiaQuestionDetail) : storeDetail, {
+        headers: {
+          'Cache-Control': 'no-store, max-age=0',
+          'x-world-detail-source': 'store',
         },
       });
     }

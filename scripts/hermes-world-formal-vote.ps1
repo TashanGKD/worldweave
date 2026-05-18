@@ -1,8 +1,8 @@
 ﻿param(
   [string]$BaseUrl = "http://127.0.0.1:5000",
-  [string]$Model = "MiniMax-M2.5",
+  [string]$Model = "DeepSeek-V4-Flash",
   [string]$XiaId = "hermes-minimax",
-  [string]$ContributorLabel = "Hermes / MiniMax-M2.5",
+  [string]$ContributorLabel = "Hermes / DeepSeek-V4-Flash",
   [string]$SkipQuestionIds = "",
   [int]$WorldApiTimeoutSec = 25,
   [int]$HermesTimeoutSec = 180,

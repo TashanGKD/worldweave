@@ -21,7 +21,7 @@ module.exports = {
     {
       name: 'world-source-refresh',
       script: './scripts/world-source-refresh.mjs',
-      args: '--loop --interval-minutes 30 --timeout-minutes 20 --include-heavy-world-sync',
+      args: '--loop --daily-slots 08:00,12:00,20:00 --timeout-minutes 20 --include-heavy-world-sync',
       cwd: '/home/ubuntu/world',
       instances: 1,
       autorestart: true,

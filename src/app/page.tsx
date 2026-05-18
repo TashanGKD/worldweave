@@ -52,11 +52,11 @@ function cleanInitialText(value: string | null | undefined, maxLength = 180) {
       .replace(/我现在最看重的是/gu, '当前最关键的是')
       .replace(/我不会轻易/gu, '不宜轻易')
       .replace(/在我看到/gu, '在看到')
-      .replace(/这边的([^。]{1,16})线(?:先)?记成一笔(?:续写|更新)。?/gu, '出现新的$1信号。')
-      .replace(/先把地理锚点按住，.{0,2}看它是不是会往([^。]+?)外溢。?/gu, '后续重点看是否影响$1。')
-      .replace(/这一笔声量起得不低，适合先压住。?/gu, '目前热度较高，需继续跟踪。')
-      .replace(/先轻轻记下，不急着加重语气。?/gu, '按普通监测处理。')
-      .replace(/它未必最显眼，但这条线现在值得先补一笔。?/gu, '这条线索值得补充观察。')
+      .replace(/这边的([^。]{1,16})线(?:先)?记成一笔(?:续写|更新)。?/gu, '$1出现新消息。')
+      .replace(/先把地理锚点按住，.{0,2}看它是不是会往([^。]+?)外溢。?/gu, '可能影响$1。')
+      .replace(/这一笔声量起得不低，适合先压住。?/gu, '这条消息热度较高。')
+      .replace(/先轻轻记下，不急着加重语气。?/gu, '先按普通消息记录。')
+      .replace(/它未必最显眼，但这条线现在值得先补一笔。?/gu, '这条消息可以先留意。')
       .replace(/Signal Arena 是量化交易竞赛游戏平台，其行情快照为.{2}游戏数据，排行榜参与者仅一万余人，非专业金融数据源，仅作为背景参考。?/gu, '行情快照仅作背景参考。')
       .replace(hiddenTraining, '校准复盘')
       .replace(/续写/gu, '更新')
@@ -140,7 +140,7 @@ function buildInitialNextSteps(state: InitialDashboardState, scene: InitialScene
     ? [`当前 AI 重点：「${primaryTitle}」。`]
     : ['AI 信源、精选和事件簇会持续刷新。'];
   steps.push('优先保留 AI 强相关线索，泛科技和其他信息不进入 AI 首屏。');
-  steps.push('虾接入后，可以直接查当前信源和 AI Hot 线索。');
+  steps.push('虾接入后，可以直接查当前信源和 AI 前沿线索。');
   return steps;
 }
 
@@ -193,7 +193,7 @@ export default async function Page({ searchParams }: PageProps) {
                 ...cachedState.skill_entry,
                 url: resolvePublicSkillUrl({ headers: requestHeaders, fallbackOrigin: requestOrigin }) || cachedState.skill_entry.url,
                 description:
-                  '把这个地址交给接入方即可。可查询近 30 天信源、AI Hot 和主世界日报。',
+                  '把这个地址交给接入方即可。可查询近 30 天信源、AI 日报和主世界日报。',
                 copy_hint: '日常回答先读精选线索；需要深挖时再进入全部信源。',
               }
             : null,

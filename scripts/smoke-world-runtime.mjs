@@ -58,6 +58,18 @@ function isAiSignal(signal) {
   );
 }
 
+function isTechAiMismatch(signal) {
+  const text = signalText(signal);
+  const aiSource = /source:aihot|aihot|model:ai-related|daily:ai/i.test(text);
+  const operationalSource =
+    /scene:finance|\bfinance\b|\bmacro\b|alpha-vantage|openfda|treasury-yield|fda-database/i.test(text) ||
+    (!aiSource && /catalog-source|source:selected-source/i.test(text));
+  return (
+    operationalSource ||
+    /发送失败|违反相关法律法规|抓紧申报|马斯克.*抖音.*老干妈/i.test(text)
+  );
+}
+
 function request(pathname, options = {}) {
   return new Promise((resolve, reject) => {
     const url = new URL(pathname, baseUrl);
@@ -107,6 +119,7 @@ async function main() {
   const signals = collectSignals(stateJson);
   const lowInformationCount = signals.filter(isLowInformationSignal).length;
   const aiSignalCount = signals.filter(isAiSignal).length;
+  const techAiMismatchCount = scene === 'tech-ai' ? signals.filter(isTechAiMismatch).length : 0;
 
   console.log(
     JSON.stringify(
@@ -120,6 +133,7 @@ async function main() {
           sourceHealth: stateJson.source_health?.freshness_status || null,
           lowInformationCount,
           aiSignalCount,
+          techAiMismatchCount,
         },
         livebench: {
           status: livebench.status,
@@ -147,7 +161,7 @@ async function main() {
     !Array.isArray(stateJson.top_signals) ||
     lowInformationCount > 0 ||
     (databaseConfigured && sourceMonitorDb?.connected === false) ||
-    (scene === 'tech-ai' && aiSignalCount === 0)
+    (scene === 'tech-ai' && (aiSignalCount === 0 || techAiMismatchCount > 0))
   ) {
     process.exit(1);
   }

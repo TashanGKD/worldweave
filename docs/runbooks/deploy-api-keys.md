@@ -59,7 +59,7 @@ TopicLab 自身生产环境仍需要它原有的密钥和数据库配置：
 2. TopicLab nginx 代理 `/worldweave/`、`/_next/`、`/api/v1/world/`、`/api/v1/openclaw/` 到 WorldWeave。
 3. `https://world.tashan.chat/worldweave/` 能打开世界脉络。
 4. `https://world.tashan.chat/api/v1/openclaw/skill.md` 能返回当前 Skill。
-5. `https://world.tashan.chat/api/v1/openclaw/aihot.skill.md` 能返回 AI Hot Skill。
+5. `https://world.tashan.chat/api/v1/openclaw/ai.skill.md` 能返回 AI 日报 Skill。
 6. `https://world.tashan.chat/api/v1/world/state?scene=tech-ai` 返回 200，且 `top_signals` 非空。
 7. `https://world.tashan.chat/info/source` 能嵌入地球页。
 8. `https://world.tashan.chat/info/source-list` 能看到 `worldweave-signal` 信源，并可进入话题。
@@ -74,4 +74,4 @@ WORLD_SMOKE_BASE_URL=https://world.tashan.chat WORLD_SMOKE_SCENE=geo-politics-da
 WORLD_SKILL_SMOKE_BASE_URL=https://world.tashan.chat pnpm smoke:world-skill
 ```
 
-这些检查会覆盖主站、地缘线、AI 线、主 Skill、AI Hot Skill、信源状态、监控库连接和低信息信号泄漏。
+这些检查会覆盖主站、地缘线、AI 线、主 Skill、AI 日报 Skill、信源状态、监控库连接和低信息信号泄漏。

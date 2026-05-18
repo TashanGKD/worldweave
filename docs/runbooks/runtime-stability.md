@@ -20,7 +20,7 @@ What they cover:
 - `world/state?scene=tech-ai` responds and has current AI signals
 - MiniMax responds through the Anthropic-compatible endpoint
 - MiniMax base URL is the expected one
-- main OpenClaw Skill and AI Hot Skill routes are present
+- main OpenClaw Skill and AI 日报 Skill routes are present
 - source-monitor database connection is healthy when configured
 - root-level directory layout stays within the agreed boundary
 

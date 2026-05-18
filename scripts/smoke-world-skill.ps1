@@ -38,16 +38,16 @@ function Read-Text($path) {
 
 Step "1. Skill markdown"
 $mainSkill = Read-Text "/openclaw/skill.md?key=$BindKey"
-$aiHotSkill = Read-Text '/openclaw/aihot.skill.md'
+$aiHotSkill = Read-Text '/openclaw/ai.skill.md'
 $liveBenchSkill = Read-Text '/openclaw/livebench.skill.md'
 Ensure ($mainSkill -match 'name: world-threads') 'main skill marker missing'
 Ensure ($mainSkill -match 'title:') 'main skill title missing'
-Ensure ($aiHotSkill -match 'AI Hot') 'AI Hot skill marker missing'
+Ensure ($aiHotSkill -match 'ai-daily-world-source') 'AI daily skill marker missing'
 Ensure ($liveBenchSkill -match 'LiveBench') 'LiveBench skill marker missing'
 Write-Host "skills OK"
 
 Step "2. World state"
-$state = Invoke-RestMethod -Uri "$apiBase/world/state?scene=$Scene&fresh=1" -TimeoutSec 30
+$state = Invoke-RestMethod -Uri "$apiBase/world/state?scene=$Scene" -TimeoutSec 60
 $nodeCount = @($state.nodes).Count
 $topSignalCount = @($state.top_signals).Count
 Ensure (($nodeCount + $topSignalCount) -gt 0) 'world state returned no visible signals'
@@ -58,7 +58,7 @@ $aiSignals = Invoke-RestMethod -Uri "$apiBase/world/signals?scene=tech-ai&limit=
 $aiSignalItems = if ($aiSignals.signals) { @($aiSignals.signals) } elseif ($aiSignals.list) { @($aiSignals.list) } else { @($aiSignals) }
 Ensure ($aiSignalItems.Count -gt 0) 'AI signals endpoint returned no items'
 $aiHotFeed = Invoke-RestMethod -Uri "$apiBase/topiclab/source-feed/articles?scene=tech-ai&source=aihot&limit=5" -TimeoutSec 30
-Ensure (@($aiHotFeed.list).Count -gt 0) 'AI Hot source-feed returned no items'
+Ensure (@($aiHotFeed.list).Count -gt 0) 'AI frontpage source-feed returned no items'
 Write-Host ("ai_signals={0} aihot_items={1}" -f $aiSignalItems.Count, @($aiHotFeed.list).Count)
 
 Step "4. Source governance"

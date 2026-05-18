@@ -15,6 +15,7 @@ export type PublicSignalQualityRow = {
   display_title?: string | null;
   display_summary?: string | null;
   source_name?: string | null;
+  location_name?: string | null;
   urgency_reason?: string | null;
   tags?: string[] | null;
   alignment_tags?: string[] | null;
@@ -39,6 +40,94 @@ function normalizeTag(value?: string | null) {
 
 function normalizeText(value?: string | null) {
   return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function compactPublicTitle(value?: string | null, maxLength = 96) {
+  const text = normalizeText(value);
+  if (text.length <= maxLength) return text;
+  const sentence = text
+    .split(/(?<=[。！？!?])\s*/u)
+    .map((part) => part.trim())
+    .find((part) => part.length >= 12 && part.length <= maxLength);
+  if (sentence) return sentence;
+  return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
+}
+
+function looksLikeMachineOnlySignalText(value?: string | null) {
+  return /Location in headline|Source country match|Local news source|High Goldstein intensity|Goldstein|^\d+\s+events? at location$/iu.test(
+    normalizeText(value),
+  );
+}
+
+function looksLikeLocationOnlyTitle(title?: string | null) {
+  const normalized = normalizeText(title);
+  if (!normalized || normalized.length > 96) return false;
+  const parts = normalized.split(/[，,]/).map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 2 || parts.length > 4) return false;
+  return !/\b(kill|killed|seize|seized|launch|launched|strike|strikes|attack|attacks|warn|warns|approve|approves|report|reports|say|says|face|faces|rise|falls?|arrest|arrests|fire|fires|outbreak|protest|clash|court|indict|convict)\b/iu.test(
+    normalized,
+  );
+}
+
+function hasLongLatinFragment(value?: string | null) {
+  const normalized = normalizeText(value);
+  if (!normalized) return false;
+  if (/[A-Za-z]{4,}(?:[\s/-]+[A-Za-z]{2,}){1,}/.test(normalized)) return true;
+  const latinChars = (normalized.match(/[A-Za-z]/g) || []).length;
+  const visibleChars = normalized.replace(/\s+/g, '').length || 1;
+  return latinChars / visibleChars >= 0.28;
+}
+
+function readablePublicLocation(value?: string | null) {
+  const text = normalizeText(value);
+  if (!text) return text;
+  const exact: Record<string, string> = {
+    'buni yadi': '布尼亚迪',
+    israel: '以色列',
+    'moscow sheremetyevo': '莫斯科谢列梅捷沃',
+    moscow: '莫斯科',
+    lagos: '拉各斯',
+    'jordan valley': '约旦河谷',
+    nigeria: '尼日利亚',
+    gaza: '加沙',
+    'gaza strip': '加沙地带',
+    'west bank': '约旦河西岸',
+  };
+  const mapped = exact[text.toLowerCase()];
+  if (mapped) return mapped;
+  const translated = text
+    .replace(/\bIsrael\b/giu, '以色列')
+    .replace(/\bNigeria\b/giu, '尼日利亚')
+    .replace(/\bMoscow\b/giu, '莫斯科')
+    .replace(/\bLagos\b/giu, '拉各斯')
+    .replace(/\bJordan Valley\b/giu, '约旦河谷')
+    .replace(/\bWest Bank\b/giu, '约旦河西岸')
+    .replace(/\bGaza Strip\b/giu, '加沙地带')
+    .replace(/\bGaza\b/giu, '加沙')
+    .trim();
+  return hasLongLatinFragment(translated) && !/[\u3400-\u9fff]/u.test(translated) ? '' : translated;
+}
+
+function choosePublicReadableTitle(signal: PublicSignalQualityRow) {
+  const title = normalizeText(signal.title);
+  const candidates = [
+    signal.display_title,
+    signal.display_summary,
+    signal.summary,
+    title,
+  ].map((candidate) => normalizeText(candidate));
+  const readableCandidates = candidates.filter(
+    (candidate) =>
+      candidate.length >= 12 &&
+      !looksLikeMachineOnlySignalText(candidate) &&
+      !looksLikeLocationOnlyTitle(candidate) &&
+      !hasLongLatinFragment(candidate),
+  );
+  const readable =
+    readableCandidates.find((candidate) => /[\u3400-\u9fff]/u.test(candidate)) ||
+    readableCandidates[0] ||
+    (!looksLikeMachineOnlySignalText(title) && !looksLikeLocationOnlyTitle(title) && !hasLongLatinFragment(title) ? title : '');
+  return compactPublicTitle(readable);
 }
 
 function isInternalPublicTag(value?: string | null) {
@@ -70,8 +159,16 @@ function sanitizePublicReliability(value: unknown) {
 }
 
 export function sanitizePublicSignal<T extends PublicSignalQualityRow>(signal: T): T {
+  const displaySummary = normalizeText(signal.display_summary);
+  const readableTitle =
+    displaySummary && /[\u3400-\u9fff]/u.test(displaySummary) && !hasLongLatinFragment(displaySummary)
+      ? compactPublicTitle(displaySummary)
+      : choosePublicReadableTitle(signal);
   const next = {
     ...signal,
+    title: readableTitle || signal.title,
+    display_title: readableTitle || signal.display_title,
+    location_name: readablePublicLocation(signal.location_name),
     tags: sanitizePublicTags(signal.tags),
     alignment_tags: sanitizePublicTags(signal.alignment_tags),
   } as Record<string, unknown>;
