@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { resolveRequestOrigin } from '@/lib/request-origin';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
+import { isPublicEventSignal, sanitizePublicSignal } from '@/lib/world/signal-quality';
 import type { WorldEvidenceSignal, WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -75,17 +76,18 @@ function scoreSignal(signal: WorldEvidenceSignal, tokens: string[]) {
 }
 
 function toRecallCard(signal: WorldEvidenceSignal, score: number) {
+  const publicSignal = sanitizePublicSignal(signal);
   return {
-    id: signal.id,
-    title: signal.display_title || signal.title,
-    summary: signal.display_summary || signal.summary || signal.urgency_reason || '',
-    scene: signal.scene,
-    display_level: signal.display_level,
-    severity: signal.severity,
-    region_label: signal.location_name || signal.region || signal.country || signal.scene,
-    published_at: signal.published_at,
-    tags: signal.tags || [],
-    url: signal.source_url || null,
+    id: publicSignal.id,
+    title: publicSignal.display_title || publicSignal.title,
+    summary: publicSignal.display_summary || publicSignal.summary || publicSignal.urgency_reason || '',
+    scene: publicSignal.scene,
+    display_level: publicSignal.display_level,
+    severity: publicSignal.severity,
+    region_label: publicSignal.location_name || publicSignal.region || publicSignal.country || publicSignal.scene,
+    published_at: publicSignal.published_at,
+    tags: publicSignal.tags || [],
+    url: publicSignal.source_url || null,
     recall_score: Number(score.toFixed(3)),
   };
 }
@@ -102,7 +104,7 @@ export async function GET(request: Request) {
       ...(dashboard.knowledge_signals || []),
       ...(dashboard.top_signals || []),
       ...(dashboard.graph_signals || []),
-    ]);
+    ]).filter(isPublicEventSignal);
     const scored = signals
       .map((signal) => ({ signal, score: scoreSignal(signal, tokens) }))
       .filter((entry) => hasTokenMatch(entry.signal, tokens))

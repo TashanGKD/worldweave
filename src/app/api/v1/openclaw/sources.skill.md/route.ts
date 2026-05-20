@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { resolveRequestOrigin } from '@/lib/request-origin';
+import { resolvePublicBaseUrl } from '@/lib/request-origin';
 
 function mainSkillUrl(origin: string) {
   const apiBase = `${origin}/api/v1`;
@@ -8,8 +8,8 @@ function mainSkillUrl(origin: string) {
 }
 
 export async function GET(request: Request) {
-  const origin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url }) || new URL(request.url).origin;
-  return NextResponse.redirect(mainSkillUrl(origin), {
+  const baseUrl = resolvePublicBaseUrl({ headers: request.headers, requestUrl: request.url }) || new URL(request.url).origin;
+  return NextResponse.redirect(mainSkillUrl(baseUrl), {
     status: 307,
     headers: {
       'Cache-Control': 'no-store',

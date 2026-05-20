@@ -398,6 +398,8 @@ export function techAiRelevanceScore(signal: DashboardSignalLike) {
 
   if (/(ai hot|aihot|source:aihot)/i.test(sourceHaystack)) {
     score += 4.5;
+  } else if (/(ai-news-radar|source:ai-news-radar)/i.test(sourceHaystack)) {
+    score += 1;
   } else if (/model:ai-related/i.test(sourceHaystack)) {
     score += 3;
   } else if (/model:not-ai-related/i.test(sourceHaystack)) {
@@ -418,7 +420,7 @@ export function techAiRelevanceScore(signal: DashboardSignalLike) {
     score += 1;
   }
   if (
-    !/(ai hot|aihot|source:aihot)/i.test(sourceHaystack) &&
+    !/(ai hot|aihot|ai-news-radar|source:aihot|source:ai-news-radar)/i.test(sourceHaystack) &&
     /(we-mp-rss|source:wechat|feed:)/i.test(sourceHaystack) &&
     !/(\bai\b|\bllm\b|openai|anthropic|claude|chatgpt|gemini|codex|agent|agentic|model|inference|benchmark|aigc|人工智能|大模型|智能体|模型|推理|训练|评测|算力|芯片|开源)/i.test(contentHaystack)
   ) {
@@ -452,7 +454,7 @@ function isOperationalNonAiSourceSignal(signal: DashboardSignalLike) {
   ]
     .join(' ')
     .toLowerCase();
-  if (/(ai hot|aihot|source:aihot|model:ai-related)/i.test(sourceHaystack)) return false;
+  if (/(ai hot|aihot|ai-news-radar|source:aihot|source:ai-news-radar|model:ai-related)/i.test(sourceHaystack)) return false;
   return /(scene:finance|\bfinance\b|\bmacro\b|alpha-vantage|openfda|catalog-source|source:selected-source|fda-database|treasury-yield|real_gdp|cpi)/i.test(
     sourceHaystack,
   );
@@ -481,6 +483,7 @@ export function techAiSignalRank(signal: DashboardSignalLike) {
     .join(' ')
     .toLowerCase();
   if (/(ai hot|aihot|source:aihot)/.test(haystack)) return 0;
+  if (/(ai-news-radar|source:ai-news-radar)/.test(haystack)) return 1;
   if (/inkwell ai/.test(haystack)) return 1;
   if (/openai|anthropic|claude|hugging face|berkeley rdi/.test(haystack)) return 2;
   if (/新智元|智猩猩|ai工程化|机器之心|量子位|aigc|ai科技评论|ai信息gap|深度学习与nlp/.test(haystack)) return 3;
@@ -493,7 +496,7 @@ export function dashboardSignalMatchesScene(signal: DashboardSignalLike, scene: 
   }
   if (scene === 'geo-politics-daily') {
     const sourceHaystack = `${signal.source_name} ${signal.source_url || ''} ${signal.tags.join(' ')} ${(signal.alignment_tags || []).join(' ')}`;
-    if (/(ai hot|aihot|source:aihot)/iu.test(sourceHaystack)) return false;
+    if (/(ai hot|aihot|ai-news-radar|source:aihot|source:ai-news-radar)/iu.test(sourceHaystack)) return false;
     const financeHaystack = `${signal.scene} ${sourceHaystack}`.toLowerCase();
     if (/(scene:finance|\bfinance\b|\bmacro\b|\bmarket\b|\bequity\b|\bnse\b|alpha-vantage|treasury-yield|real_gdp|cpi|crypto|bitcoin|signal arena)/iu.test(financeHaystack)) {
       return false;

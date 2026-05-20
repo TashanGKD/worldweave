@@ -376,6 +376,36 @@ type MiniMaxChatRequest = {
   requestLabel: string;
 };
 
+export type WorldDailyCurationCandidate = {
+  id: string;
+  rank: number;
+  title: string;
+  summary: string;
+  source: string;
+  publishedAt: string;
+  score: number;
+  tags: string[];
+};
+
+export type WorldDailyCurationItem = {
+  id: string;
+  displayTitle: string;
+  displaySummary: string;
+};
+
+type WorldDailyCurationInput = {
+  kind: 'geo' | 'ai';
+  generatedAt?: string | null;
+  limit?: number;
+  candidates: WorldDailyCurationCandidate[];
+};
+
+type WorldDailyCurationCache = {
+  key: string;
+  generated_at: string;
+  selected_items: WorldDailyCurationItem[];
+};
+
 function resolveMiniMaxApiKey(): string {
   return (process.env.MINIMAX_API_KEY || process.env.ANTHROPIC_API_KEY || '').trim();
 }
@@ -628,6 +658,158 @@ async function requestMiniMaxChatCompletion({
     console.warn(`[MiniMax] ${requestLabel} failed after retries:`, lastError);
   }
   return null;
+}
+
+function worldDailyCurationCachePath(kind: 'geo' | 'ai') {
+  return path.join(process.cwd(), '.cache', `world-daily-curation-${kind}.json`);
+}
+
+function worldDailyCurationKey(input: WorldDailyCurationInput) {
+  const hash = crypto.createHash('sha256');
+  hash.update(input.kind);
+  hash.update(input.generatedAt || '');
+  hash.update(String(input.limit || 10));
+  for (const item of input.candidates) {
+    hash.update(JSON.stringify({
+      id: item.id,
+      title: item.title,
+      summary: item.summary,
+      source: item.source,
+      publishedAt: item.publishedAt,
+    }));
+  }
+  return hash.digest('hex');
+}
+
+function cleanWorldDailyCurationText(value: unknown, fallback: string, maxLength: number): string {
+  const cleaned = cleanDisplayText(normalizeText(typeof value === 'string' ? value : ''))
+    .replace(/^(标题|摘要|summary|title)[:：]\s*/iu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const selected = cleaned || cleanDisplayText(fallback);
+  const chars = Array.from(selected);
+  if (chars.length <= maxLength) return selected;
+  return `${chars.slice(0, Math.max(1, maxLength - 1)).join('').replace(/[，。；、,.!?！？;:：-]+$/u, '').trim()}…`;
+}
+
+function parseWorldDailyCurationItems(
+  content: string,
+  candidatesById: Map<string, WorldDailyCurationCandidate>,
+  limit: number,
+): WorldDailyCurationItem[] {
+  const parsed = parseMiniMaxJsonPayload<{
+    selected_ids?: unknown;
+    ids?: unknown;
+    items?: Array<string | {
+      id?: unknown;
+      signal_id?: unknown;
+      display_title?: unknown;
+      title?: unknown;
+      display_summary?: unknown;
+      summary?: unknown;
+    }>;
+  }>(content);
+  const rawItems = Array.isArray(parsed.selected_ids)
+    ? parsed.selected_ids
+    : Array.isArray(parsed.ids)
+      ? parsed.ids
+      : Array.isArray(parsed.items)
+        ? parsed.items
+        : [];
+  const items: WorldDailyCurationItem[] = [];
+  for (const item of rawItems) {
+    const id = typeof item === 'string'
+      ? item
+      : item && typeof item === 'object' && typeof item.id === 'string'
+        ? item.id
+        : item && typeof item === 'object' && typeof item.signal_id === 'string'
+          ? item.signal_id
+          : '';
+    const candidate = candidatesById.get(id);
+    if (!id || !candidate || items.some((selected) => selected.id === id)) continue;
+    const displayTitle = typeof item === 'object' && item
+      ? cleanWorldDailyCurationText(
+          (item as { display_title?: unknown; title?: unknown }).display_title ?? (item as { title?: unknown }).title,
+          candidate.title,
+          58,
+        )
+      : cleanWorldDailyCurationText('', candidate.title, 58);
+    const displaySummary = typeof item === 'object' && item
+      ? cleanWorldDailyCurationText(
+          (item as { display_summary?: unknown; summary?: unknown }).display_summary ?? (item as { summary?: unknown }).summary,
+          candidate.summary,
+          96,
+        )
+      : cleanWorldDailyCurationText('', candidate.summary, 96);
+    items.push({ id, displayTitle, displaySummary });
+    if (items.length >= limit) break;
+  }
+  return items;
+}
+
+export async function curateWorldDailySignals(input: WorldDailyCurationInput): Promise<WorldDailyCurationItem[]> {
+  const limit = Math.min(Math.max(Math.floor(input.limit || 10), 1), 10);
+  const candidates = input.candidates.filter((item) => item.id && item.title).slice(0, 30);
+  if (candidates.length === 0 || !resolveMiniMaxApiKey()) return [];
+
+  const key = worldDailyCurationKey({ ...input, limit, candidates });
+  const cachePath = worldDailyCurationCachePath(input.kind);
+  const cached = await readRuntimeJson<WorldDailyCurationCache>(cachePath);
+  if (cached?.key === key && Array.isArray(cached.selected_items)) {
+    const candidateIds = new Set(candidates.map((item) => item.id));
+    return cached.selected_items.filter((item) => candidateIds.has(item.id)).slice(0, limit);
+  }
+
+  const candidatesById = new Map(candidates.map((item) => [item.id, item]));
+  const content = await withWorldBatchModelRefresh(() =>
+    requestMiniMaxChatCompletion({
+      system: [
+        '你是 WorldWeave 的日报编辑。',
+        `你会收到已经按分数排好的一批候选，请整体看一遍，合并重复、近似重复或同一事件的条目，最后选出不超过 ${limit} 条用于日报图片和页面。`,
+        '只返回 JSON，不要解释。格式：{"items":[{"id":"id1","display_title":"整理后的标题","display_summary":"整理后的摘要"}]}。',
+        'items 里的 id 必须全部来自候选 id，不能编造。重复或同一事件只保留最具体、来源更清楚、摘要信息量更高的一条。',
+        '同时修正明显的格式和内容问题：去掉模板腔、编号残留、重复前缀、截断符、机翻痕迹和不通顺句子；不要新增候选里没有的事实。',
+        'display_title 要短、具体、可放进日报图片；display_summary 用一句中文说明这条为什么值得看。',
+        input.kind === 'ai'
+          ? 'AI 日报要兼顾模型、产品、Agent、开源、论文、算力与产业变化；同一公司同一动作不要重复上榜。'
+          : '主世界日报要兼顾冲突、外交、公共安全和区域风险；同一地点同一事件不要重复上榜。',
+      ].join('\n'),
+      promptData: JSON.stringify({
+        kind: input.kind,
+        limit,
+        candidates: candidates.map((item) => ({
+          id: item.id,
+          rank: item.rank,
+          title: item.title,
+          summary: item.summary,
+          source: item.source,
+          published_at: item.publishedAt,
+          score: Number(item.score.toFixed(4)),
+          tags: item.tags.slice(0, 8),
+        })),
+      }),
+      temperature: 0.1,
+      timeoutMs: 4500,
+      retryLimit: 0,
+      requestLabel: `daily-curation-${input.kind}`,
+    }),
+  );
+  if (!content) return [];
+
+  try {
+    const selectedItems = parseWorldDailyCurationItems(content, candidatesById, limit);
+    if (selectedItems.length > 0) {
+      await writeRuntimeJson(cachePath, {
+        key,
+        generated_at: new Date().toISOString(),
+        selected_items: selectedItems,
+      } satisfies WorldDailyCurationCache);
+    }
+    return selectedItems;
+  } catch (error) {
+    console.warn('[daily] model curation parse failed:', error instanceof Error ? error.message : String(error));
+    return [];
+  }
 }
 
 function buildDraftProjection(
@@ -902,6 +1084,8 @@ const PUBLIC_ANCHOR_COOLDOWN_THRESHOLD = 2;
 const SELECTED_SOURCE_COOLDOWN_MS = 20 * 60 * 1000;
 const SELECTED_SOURCE_COOLDOWN_THRESHOLD = 2;
 const SOURCE_FEED_SOURCE_LIMIT = 3;
+const AI_NEWS_RADAR_MAX_ITEMS = resolveRuntimeInteger('WORLD_AI_NEWS_RADAR_MAX_ITEMS', 36, 1, 100);
+const AI_NEWS_RADAR_PER_SITE_LIMIT = resolveRuntimeInteger('WORLD_AI_NEWS_RADAR_PER_SITE_LIMIT', 6, 1, 20);
 const CATALOG_SOURCE_FETCH_CONCURRENCY = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_FETCH_CONCURRENCY', 2, 1, 64);
 const CATALOG_SOURCE_REFRESH_BATCH_SIZE = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_REFRESH_BATCH_SIZE', 48, 1, 1000);
 const CATALOG_SOURCE_MAX_RESPONSE_BYTES = resolveRuntimeInteger('WORLD_CATALOG_SOURCE_MAX_RESPONSE_BYTES', 384 * 1024, 64 * 1024, 8 * 1024 * 1024);
@@ -1546,11 +1730,11 @@ function cleanDisplayText(value: string): string {
     .replace(/\bunspecified locations?\b/gi, '未指明地点')
     .replace(/\bimplied operational area\b/gi, '相关行动区域')
     .replace(/\bmass shooting\b/gi, '大规模枪击')
-    .replace(/这边的([^。]{1,16})线(?:先)?记成一笔(?:续写|更新)。?/gu, '$1出现新消息。')
+    .replace(/这边的([^。]{1,16})线(?:先)?记成一笔(?:续写|更新)。?/gu, '$1有相关报道。')
     .replace(/先把地理锚点按住，.{0,2}看它是不是会往([^。]+?)外溢。?/gu, '可能影响$1。')
-    .replace(/这一笔声量起得不低，适合先压住。?/gu, '这条消息热度较高。')
-    .replace(/先轻轻记下，不急着加重语气。?/gu, '先按普通消息记录。')
-    .replace(/它未必最显眼，但这条线现在值得先补一笔。?/gu, '这条消息可以先留意。')
+    .replace(/这一笔声量起得不低，适合先压住。?/gu, '相关报道较集中。')
+    .replace(/先轻轻记下，不急着加重语气。?/gu, '暂按一般报道处理。')
+    .replace(/它未必最显眼，但这条线现在值得先补一笔。?/gu, '可作为补充材料。')
     .replace(/Signal Arena 是量化交易竞赛游戏平台，其行情快照为.{2}游戏数据，排行榜参与者仅一万余人，非专业金融数据源，仅作为背景参考。?/gu, '行情快照仅作背景参考。')
     .replace(/续写/gu, '更新')
     .replace(/\s+/g, ' ')
@@ -1649,14 +1833,14 @@ function buildDisplaySummary(
   const location = buildDisplayLocation(signal);
   const emphasis =
     signal.hotspotScore >= 0.74
-      ? '这条消息热度较高。'
+      ? '相关报道较集中。'
       : signal.coverageGap >= 0.72
-        ? '同类消息不多，可以先留意。'
-        : '先按普通消息记录。';
+        ? '同类报道还不多。'
+        : '暂按一般报道处理。';
   const translatedFact = applyQuickTextTranslations(signal.summary || signal.title).slice(0, 120);
   const fact = hasLongEnglishFragment(translatedFact) ? '' : translatedFact;
 
-  return `${location} 出现新的${thread.label}消息。${fact ? `${fact}。` : ''}主要看${thread.watchHint}。${emphasis}`;
+  return `${location}有${thread.label}相关报道。${fact ? `${fact}。` : ''}${emphasis}`;
 }
 
 function describeSignalStage(signal: WorldSignal, relatedCount: number): SignalStageDescriptor {
@@ -1951,35 +2135,87 @@ const EVENT_CLUSTER_STOPWORDS = new Set([
   '最新',
 ]);
 
+const TECH_AI_ENTITY_TERMS: Array<[string, RegExp]> = [
+  ['openai', /openai|chatgpt|gpt[-\s]?\d|奥特曼|sam\s+altman/i],
+  ['anthropic', /anthropic|claude|opus|sonnet|haiku/i],
+  ['google', /google|gemini|deepmind|谷歌/i],
+  ['meta', /meta\s+ai|llama|facebook/i],
+  ['mistral', /mistral/i],
+  ['nvidia', /nvidia|英伟达|gpu|cuda/i],
+  ['xai', /\bxai\b|grok|马斯克/i],
+  ['qwen', /qwen|通义千问|千问|阿里云|阿里/i],
+  ['deepseek', /deepseek|深度求索/i],
+  ['kimi', /kimi|moonshot|月之暗面/i],
+  ['minimax', /minimax|abab|海螺/i],
+  ['huggingface', /hugging\s?face|huggingface/i],
+  ['github', /github|copilot/i],
+  ['cursor', /cursor/i],
+  ['kling', /kling|可灵/i],
+  ['runway', /runway/i],
+];
+
+const TECH_AI_TOPIC_TERMS: Array<[string, RegExp]> = [
+  ['model', /model|llm|gpt|claude|gemini|qwen|kimi|grok|大模型|模型|推理模型|基础模型/i],
+  ['agent', /agent|agentic|智能体|工作流|workflow/i],
+  ['coding', /code|coding|codex|cursor|copilot|claude\s+code|编程|代码|生码/i],
+  ['search', /search|搜索/i],
+  ['multimodal', /multimodal|vision|video|audio|image|多模态|视频|图像|语音/i],
+  ['infra', /gpu|chip|inference|datacenter|data\s+center|算力|芯片|推理|数据中心/i],
+  ['benchmark', /benchmark|eval|sota|leaderboard|基准|评测|榜单|得分/i],
+  ['opensource', /open[-\s]?source|github|开源/i],
+  ['safety', /safety|security|risk|alignment|安全|对齐|风险/i],
+  ['business', /funding|revenue|arr|融资|投资|收入|估值|财报|收购/i],
+  ['product', /release|launch|announce|available|api|sdk|cli|发布|上线|推出|接入|集成|产品/i],
+  ['research', /paper|arxiv|research|论文|研究/i],
+];
+
+function extractTermTokens(text: string, terms: Array<[string, RegExp]>): Set<string> {
+  const tokens = new Set<string>();
+  for (const [token, pattern] of terms) {
+    if (pattern.test(text)) tokens.add(token);
+  }
+  return tokens;
+}
+
 function eventClusterTokens(row: SignalRow): Set<string> {
-  const text = normalizeSignatureText([
+  const rawText = [
     row.title,
     row.description,
     row.location,
     row.country,
     ...(row.tags || []),
-  ].filter(Boolean).join(' '));
+  ].filter(Boolean).join(' ');
+  const text = normalizeSignatureText(rawText);
   const tokens = text
     .split(' ')
     .map((token) => token.trim())
     .filter((token) => token.length >= 3 && !EVENT_CLUSTER_STOPWORDS.has(token));
-  return new Set(tokens.slice(0, 80));
+  return new Set([
+    ...tokens.slice(0, 80),
+    ...extractTermTokens(rawText, TECH_AI_ENTITY_TERMS),
+    ...extractTermTokens(rawText, TECH_AI_TOPIC_TERMS),
+  ]);
 }
 
 function eventTitleTokens(row: SignalRow): Set<string> {
-  const title = normalizeSignatureText(normalizeText(row.title));
+  const rawTitle = normalizeText(row.title);
+  const title = normalizeSignatureText(rawTitle);
   return new Set(
-    title
+    [
+      ...title
       .split(' ')
       .map((token) => token.trim())
       .filter((token) => token.length >= 3 && !EVENT_CLUSTER_STOPWORDS.has(token))
       .slice(0, 40),
+      ...extractTermTokens(rawTitle, TECH_AI_ENTITY_TERMS),
+      ...extractTermTokens(rawTitle, TECH_AI_TOPIC_TERMS),
+    ],
   );
 }
 
 function rowLooksLikeTechAi(row: SignalRow): boolean {
   const haystack = rowTextHaystack(row);
-  return /(\bai\b|aihot|source:aihot|llm|openai|anthropic|claude|chatgpt|gemini|deepmind|模型|大模型|智能体|agent|github|code|代码|开源|论文|benchmark|sota)/.test(haystack);
+  return /(\bai\b|aihot|ai-news-radar|source:ai-news-radar|llm|openai|anthropic|claude|chatgpt|gemini|deepmind|模型|大模型|智能体|agent|github|code|代码|开源|论文|benchmark|sota)/.test(haystack);
 }
 
 function techEntityOverlap(left: Set<string>, right: Set<string>): number {
@@ -2004,6 +2240,11 @@ function techEntityOverlap(left: Set<string>, right: Set<string>): number {
     'minimax',
     'huggingface',
     'openrouter',
+    'alibaba',
+    'xai',
+    'qwen',
+    'kling',
+    'runway',
   ]);
   let count = 0;
   for (const token of left) {
@@ -2012,8 +2253,8 @@ function techEntityOverlap(left: Set<string>, right: Set<string>): number {
   return count;
 }
 
-function techActionOverlap(left: Set<string>, right: Set<string>): number {
-  const actions = new Set([
+function techTopicOverlap(left: Set<string>, right: Set<string>): number {
+  const topics = new Set([
     'release',
     'launch',
     'announce',
@@ -2041,10 +2282,22 @@ function techActionOverlap(left: Set<string>, right: Set<string>): number {
     '收购',
     '诉讼',
     '代码',
+    'model',
+    'agent',
+    'coding',
+    'search',
+    'multimodal',
+    'infra',
+    'benchmark',
+    'opensource',
+    'safety',
+    'business',
+    'product',
+    'research',
   ]);
   let count = 0;
   for (const token of left) {
-    if (actions.has(token) && right.has(token)) count += 1;
+    if (topics.has(token) && right.has(token)) count += 1;
   }
   return count;
 }
@@ -2109,10 +2362,12 @@ function signalRowsLookLikeSameEvent(left: SignalRow, right: SignalRow): boolean
 
   if (rowLooksLikeTechAi(left) || rowLooksLikeTechAi(right)) {
     const entityOverlap = techEntityOverlap(leftTokens, rightTokens);
-    const actionOverlap = techActionOverlap(leftTokens, rightTokens);
+    const topicOverlap = techTopicOverlap(leftTokens, rightTokens);
     return (
       (titleOverlap.jaccard >= 0.55 && titleOverlap.overlap >= 4) ||
-      (entityOverlap >= 1 && actionOverlap >= 1 && titleOverlap.jaccard >= 0.32 && titleOverlap.overlap >= 3)
+      (entityOverlap >= 1 && topicOverlap >= 1 && titleOverlap.jaccard >= 0.32 && titleOverlap.overlap >= 3) ||
+      (entityOverlap >= 1 && topicOverlap >= 2 && tokenOverlapScore(leftTokens, rightTokens).jaccard >= 0.18) ||
+      (entityOverlap >= 1 && topicOverlap >= 1 && titleOverlap.overlap >= 2 && tokenOverlapScore(leftTokens, rightTokens).overlap >= 4)
     );
   }
 
@@ -2136,14 +2391,14 @@ function sourceAuthorityScore(row: SignalRow): number {
   const sourceScore =
     category === 'world-monitor'
       ? 0.24
-      : haystack.includes('source:aihot')
+      : haystack.includes('source:aihot') || haystack.includes('source:ai-news-radar')
         ? 0.23
         : category === 'public-anchor'
           ? 0.18
           : category === 'source-feed'
             ? 0.1
             : 0.08;
-  const officialBoost = /(official|官网|官方|newsroom|engineering-blog|developers-blog|github-releases|source:world-monitor|source:aihot)/.test(haystack)
+  const officialBoost = /(official|官网|官方|newsroom|engineering-blog|developers-blog|github-releases|source:world-monitor|source:aihot|source:ai-news-radar)/.test(haystack)
     ? 0.06
     : 0;
   const contentScore = clamp(normalizeText(row.description).length / 800, 0, 0.08);
@@ -3290,7 +3545,7 @@ function techAiSceneScore(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' | 
   const rawContentHaystack = [signal.title, signal.summary].join(' ');
   let score = 0;
 
-  if (/(source:aihot|aihot|ai-hot)/.test(sourceHaystack)) {
+  if (/(source:aihot|source:ai-news-radar|aihot|ai-hot|ai-news-radar)/.test(sourceHaystack)) {
     score += 4.5;
   } else if (/model:ai-related/.test(sourceHaystack)) {
     score += 3;
@@ -3315,7 +3570,7 @@ function techAiSceneScore(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' | 
     score += 1;
   }
   if (
-    !/(source:aihot|aihot|ai-hot)/.test(sourceHaystack) &&
+    !/(source:aihot|source:ai-news-radar|aihot|ai-hot|ai-news-radar)/.test(sourceHaystack) &&
     /(we-mp-rss|source:wechat|feed:)/.test(sourceHaystack) &&
     !/(\bai\b|\bllm\b|openai|anthropic|claude|chatgpt|gemini|codex|agent|agentic|model|inference|benchmark|aigc|人工智能|大模型|智能体|模型|推理|训练|评测|算力|芯片|开源)/.test(contentHaystack)
   ) {
@@ -3374,7 +3629,7 @@ function isAiHotSourceSignal(signal: Pick<WorldSignal, 'alignmentTags' | 'source
     signal.tags.join(' '),
     signal.alignmentTags.join(' '),
   ].join(' '));
-  return haystack.includes('aihot') || haystack.includes('aihotskill');
+  return haystack.includes('aihot') || haystack.includes('aihotskill') || haystack.includes('ai-news-radar');
 }
 
 function signalMatchesScene(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' | 'sourceName' | 'sourceUrl' | 'title' | 'summary' | 'tags'>, scene: WorldScene): boolean {
@@ -5874,6 +6129,194 @@ function normalizeAiHotSnapshot(data: unknown): SignalRow[] {
   });
 }
 
+function collectAiNewsRadarItems(data: unknown): RawWorldMonitorItem[] {
+  const directItems = getPayloadArray(data, ['items']) || [];
+  if (!data || typeof data !== 'object') {
+    return directItems;
+  }
+
+  const record = data as Record<string, unknown>;
+  const candidates = [
+    ...directItems,
+    ...(Array.isArray(record.news) ? record.news : []),
+    ...(Array.isArray(record.entries) ? record.entries : []),
+  ];
+  return candidates.filter((item): item is RawWorldMonitorItem => item !== null && typeof item === 'object');
+}
+
+function aiNewsRadarSiteLimit(siteId: string) {
+  if (siteId === 'official-ai' || siteId === 'official_ai') return Math.max(AI_NEWS_RADAR_PER_SITE_LIMIT, 10);
+  if (siteId === 'aihot' || siteId === 'opmlrss') return Math.max(AI_NEWS_RADAR_PER_SITE_LIMIT, 8);
+  if (siteId === 'aibase' || siteId === 'zeli') return Math.max(AI_NEWS_RADAR_PER_SITE_LIMIT, 6);
+  return AI_NEWS_RADAR_PER_SITE_LIMIT;
+}
+
+function aiNewsRadarTrustedSourceBoost(siteId: string, sourceName: string) {
+  const haystack = normalizeTag(`${siteId} ${sourceName}`);
+  if (/(official-ai|official_ai|aihot|openai|anthropic|deepmind|google|meta|mistral|nvidia|huggingface|hugging-face|github|infoq|aibase|zeli)/.test(haystack)) {
+    return 0.08;
+  }
+  if (/(buzzing|techurls|tophub|info-flow|newsnow)/.test(haystack)) {
+    return -0.04;
+  }
+  return 0;
+}
+
+function aiNewsRadarRequiresHardAiSignal(siteId: string) {
+  return /(buzzing|techurls|tech-urls|tophub|info-flow|infoflow|newsnow|zeli)/.test(siteId);
+}
+
+function aiNewsRadarHasHardAiSignal(item: {
+  title: string;
+  titleEn: string;
+  sourceName: string;
+  signals: string[];
+}) {
+  const text = [item.title, item.titleEn, item.sourceName, item.signals.join(' ')].join(' ');
+  return /(\bai\b|aigc|llm|agent|agentic|openai|anthropic|claude|chatgpt|gemini|deepmind|deepseek|qwen|kimi|grok|xai|mistral|hugging\s?face|cursor|codex|copilot|nvidia|gpu|inference|benchmark|eval|sota|model|transformer|diffusion|multimodal|robot|机器人|人工智能|大模型|模型|智能体|多模态|生成式|推理|训练|算力|芯片|开源|论文|评测)/i.test(text);
+}
+
+function normalizeAiNewsRadarEventTime(item: {
+  publishedAt: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}, generatedAt: string) {
+  const generated = Date.parse(generatedAt || item.lastSeenAt || item.firstSeenAt || new Date().toISOString());
+  const published = Date.parse(item.publishedAt || '');
+  if (Number.isFinite(published) && Number.isFinite(generated) && published <= generated + 36 * 60 * 60 * 1000) {
+    return parseIsoDay(item.publishedAt);
+  }
+  return parseIsoDay(item.firstSeenAt || item.lastSeenAt || generatedAt || new Date().toISOString());
+}
+
+function aiNewsRadarCategoryLabel(label: string, signals: string[]) {
+  const haystack = normalizeTag([label, signals.join(' ')].join(' '));
+  if (/(model-release|model|llm|claude|gemini|gpt|qwen|deepseek|kimi)/.test(haystack)) return 'ai-models';
+  if (/(agent|workflow|code|coding|developer|devtools|cursor|codex|claude-code)/.test(haystack)) return 'ai-agents';
+  if (/(research|paper|benchmark|eval|sota|arxiv)/.test(haystack)) return 'ai-research';
+  if (/(chip|gpu|nvidia|inference|datacenter|data-center|算力|芯片)/.test(haystack)) return 'ai-infra';
+  return label ? normalizeTag(label) : 'ai-general';
+}
+
+function normalizeAiNewsRadarSnapshot(data: unknown): SignalRow[] {
+  const generatedAt = data && typeof data === 'object' ? asText((data as Record<string, unknown>).generated_at) : '';
+  const seen = new Set<string>();
+  const perSiteCount = new Map<string, number>();
+  const anchor = getKnowledgeAnchor('', 'AI 前沿', 'AI 前沿', ['ai', 'technology']);
+  const items = collectAiNewsRadarItems(data)
+    .map((item) => {
+      const siteId = normalizeTag(asText(item.site_id));
+      const siteName = asText(item.site_name);
+      const sourceName = cleanDisplayText(asText(item.source) || siteName || 'AI News Radar');
+      const title = cleanDisplayText(asText(item.title_zh) || asText(item.title_bilingual) || asText(item.title) || asText(item.title_original));
+      const titleEn = cleanDisplayText(asText(item.title_en));
+      const url = asText(item.url);
+      const aiScore = Number(item.ai_score);
+      const aiIsRelated = item.ai_is_related === true || asText(item.ai_is_related) === 'true';
+      const label = normalizeTag(asText(item.ai_label));
+      const signals = Array.isArray(item.ai_signals) ? item.ai_signals.map(asText).filter(Boolean) : [];
+      const noise = Array.isArray(item.ai_noise) ? item.ai_noise.map(asText).filter(Boolean) : [];
+      const publishedAt = asText(item.published_at);
+      const firstSeenAt = asText(item.first_seen_at);
+      const lastSeenAt = asText(item.last_seen_at);
+      const trustedBoost = aiNewsRadarTrustedSourceBoost(siteId, sourceName);
+      const effectiveScore = clamp((Number.isFinite(aiScore) ? aiScore : 0) + trustedBoost, 0, 1);
+      return {
+        id: asText(item.id),
+        siteId,
+        siteName,
+        sourceName,
+        title,
+        titleEn,
+        url,
+        aiScore: Number.isFinite(aiScore) ? aiScore : 0,
+        aiIsRelated,
+        label,
+        signals,
+        noise,
+        publishedAt,
+        firstSeenAt,
+        lastSeenAt,
+        effectiveScore,
+      };
+    })
+    .filter((item) => item.title && item.url)
+    .filter((item) => item.aiIsRelated && item.effectiveScore >= 0.72)
+    .filter((item) => !aiNewsRadarRequiresHardAiSignal(item.siteId) || (item.aiScore >= 0.82 && aiNewsRadarHasHardAiSignal(item)))
+    .filter((item) => aiNewsRadarHasHardAiSignal(item) || /(official-ai|official_ai|aihot|aibase)/.test(item.siteId))
+    .filter((item) => !item.noise.some((value) => /jobs?|招聘|活动|报名|coupon|deal|ad|sponsor/i.test(value)))
+    .sort((left, right) => {
+      const leftTrusted = aiNewsRadarTrustedSourceBoost(left.siteId, left.sourceName);
+      const rightTrusted = aiNewsRadarTrustedSourceBoost(right.siteId, right.sourceName);
+      return (
+        right.effectiveScore - left.effectiveScore ||
+        rightTrusted - leftTrusted ||
+        Date.parse(right.firstSeenAt || right.publishedAt || '') - Date.parse(left.firstSeenAt || left.publishedAt || '')
+      );
+    })
+    .filter((item) => {
+      const key = normalizeTag(item.url || item.title);
+      if (!key || seen.has(key)) return false;
+      const current = perSiteCount.get(item.siteId) || 0;
+      if (current >= aiNewsRadarSiteLimit(item.siteId)) return false;
+      seen.add(key);
+      perSiteCount.set(item.siteId, current + 1);
+      return true;
+    })
+    .slice(0, AI_NEWS_RADAR_MAX_ITEMS);
+
+  return items.map((item, index) => {
+    const category = aiNewsRadarCategoryLabel(item.label, item.signals);
+    const eventTime = normalizeAiNewsRadarEventTime(item, generatedAt);
+    const relevanceScore = clamp(0.58 + item.aiScore * 0.26 + aiNewsRadarTrustedSourceBoost(item.siteId, item.sourceName) + (1 - index / Math.max(items.length, 1)) * 0.04, 0.6, 0.95);
+    const severity = relevanceScore >= 0.86 ? 4 : relevanceScore >= 0.76 ? 3 : 2;
+    return {
+      id: generateStableId('selected-source', `ai-news-radar-${item.id || item.url || item.title}`),
+      title: item.title,
+      description: concreteDisplayText(item.titleEn && item.titleEn !== item.title ? item.titleEn : item.title, 260),
+      source_name: item.sourceName,
+      source_url: item.url,
+      event_time: eventTime,
+      created_at: generatedAt || new Date().toISOString(),
+      location: 'AI 前沿',
+      country: '',
+      latitude: anchor?.latitude ?? null,
+      longitude: anchor?.longitude ?? null,
+      severity,
+      relevance_score: Number(relevanceScore.toFixed(3)),
+      tags: [
+        'technology',
+        'ai',
+        'ai-news',
+        'source-feed',
+        'daily:ai',
+        'ai-news-radar',
+        category,
+        item.siteId ? `ai-radar-site:${item.siteId}` : '',
+        item.label ? `ai-radar-label:${item.label}` : '',
+        ...item.signals.map((signal) => normalizeTag(signal)).filter(Boolean).slice(0, 4),
+      ].filter(Boolean),
+      alignment_tags: [
+        'source:selected-source',
+        'source:ai-news-radar',
+        'source:news-feed',
+        'category:ai-daily',
+        'ai-news-radar:selected',
+        category ? `ai-radar:category:${category}` : '',
+        item.siteId ? `ai-radar:site:${item.siteId}` : '',
+        item.label ? `ai-radar:label:${item.label}` : '',
+        `ai-radar:score:${item.aiScore.toFixed(2)}`,
+      ].filter(Boolean),
+      urgency_reason: `AI News Radar selected item; site=${item.siteId || 'unknown'}; label=${item.label || 'unknown'}; score=${item.aiScore.toFixed(2)}; relevance=${relevanceScore.toFixed(3)}`,
+      last_seen_at: item.lastSeenAt || generatedAt || new Date().toISOString(),
+      external_id: item.id,
+      source_type: 'api-json',
+      source_feed_name: 'AI News Radar',
+      content_md: [item.title, item.sourceName, item.titleEn, item.url].filter(Boolean).join(' — '),
+    };
+  });
+}
+
 function catalogSourceSceneTags(scene: string) {
   if (scene === 'finance') return ['finance', 'market', 'catalog-source'];
   if (scene === 'technology') return ['technology', 'research', 'catalog-source'];
@@ -6847,6 +7290,14 @@ async function loadSelectedHighQualityRows(): Promise<SignalRow[]> {
         ]).then(([selected, daily]) => normalizeAiHotSnapshot({ items: [...collectAiHotItems(selected), ...collectAiHotItems(daily)] })),
     },
     {
+      key: 'ai-news-radar',
+      run: () =>
+        fetch('https://raw.githubusercontent.com/LearnPrompt/ai-news-radar/master/data/latest-24h.json', {
+          headers,
+          signal: AbortSignal.timeout(PUBLIC_ANCHOR_TIMEOUT_MS),
+        }).then((response) => (response.ok ? response.json() : null)).then(normalizeAiNewsRadarSnapshot),
+    },
+    {
       key: 'signal-arena',
       run: () =>
         Promise.all([
@@ -7684,7 +8135,7 @@ function classifyUnifiedSourceTier(row: SignalRow, category: SignalRowSourceCate
   const haystack = rowTextHaystack(row);
   const sourceName = normalizeText(row.source_name);
   if (category === 'world-monitor' || haystack.includes('source:world-monitor') || /world-monitor/.test(haystack)) return 't1';
-  if (haystack.includes('source:aihot') || /aihot|ai-hot|ai-hot/.test(haystack)) return 't1';
+  if (haystack.includes('source:aihot') || haystack.includes('source:ai-news-radar') || /aihot|ai-hot|ai-news-radar/.test(haystack)) return 't1';
   if (
     /(官网|官方|official|newsroom|engineering-blog|developers-blog|github-releases|openai|anthropic|claude|deepmind|google|meta-ai|mistral|nvidia|huggingface|hugging-face|who|treasury|fda|arxiv|openalex|semantic-scholar|pubmed)/.test(
       haystack,
@@ -7710,7 +8161,7 @@ function unifiedTierWeight(tier: UnifiedSourceTier) {
 function unifiedContentRelevance(row: SignalRow, category: SignalRowSourceCategory) {
   const haystack = rowTextHaystack(row);
   if (category === 'world-monitor') return 0.12;
-  if (haystack.includes('source:aihot')) return 0.22;
+  if (haystack.includes('source:aihot') || haystack.includes('source:ai-news-radar')) return 0.22;
   const aiMatch = /(\bai\b|llm|openai|anthropic|claude|chatgpt|gemini|deepmind|模型|大模型|智能体|agent|benchmark|sota|huggingface|github|paper|论文|开源)/.test(haystack);
   const worldMatch = /(war|conflict|strike|missile|drone|ceasefire|sanction|diplomacy|outbreak|epidemic|energy|supply-chain|shipping|election|regulation|战争|冲突|导弹|停火|制裁|外交|疫情|能源|供应链|监管)/.test(haystack);
   const financeInfraMatch = /(treasury|yield|cpi|gdp|fda|market|shipping|crypto|oil|gas|capacity|logistics)/.test(haystack);
@@ -8445,7 +8896,7 @@ function buildWorldSubworldSummaries(
       key: 'tech-ai',
       title: 'AI',
       summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。',
-      matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot'],
+      matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot', 'ai-news-radar'],
     },
   ];
 
@@ -8515,7 +8966,7 @@ function buildSubworldSummariesFromCachedDashboardState(
   const sourceCatalog = (state as { source_catalog?: WorldSourceCatalog | null }).source_catalog || null;
   const fixedWorlds: Array<{ key: WorldScene; title: string; summary: string; matched_tags: string[] }> = [
     { key: 'geo-politics-daily', title: '地缘', summary: '冲突、外交、制裁、选举、公共安全和区域风险。', matched_tags: ['geopolitics', 'war', 'conflict', 'diplomacy'] },
-    { key: 'tech-ai', title: 'AI', summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。', matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot'] },
+    { key: 'tech-ai', title: 'AI', summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。', matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot', 'ai-news-radar'] },
   ];
 
   return fixedWorlds.map((world) => ({
@@ -9140,6 +9591,110 @@ function buildDashboardStateNodes(hotspotSourceSignals: WorldSignal[], explorati
   return [...hotspotNodes, ...explorationNodes];
 }
 
+function dashboardEvidenceText(signal: Pick<WorldEvidenceSignal, 'title' | 'summary' | 'display_title' | 'display_summary' | 'source_name' | 'tags' | 'alignment_tags'>) {
+  return [
+    signal.display_title,
+    signal.title,
+    signal.display_summary,
+    signal.summary,
+    signal.source_name,
+    ...(signal.tags || []),
+    ...(signal.alignment_tags || []),
+  ].filter(Boolean).join(' ');
+}
+
+function dashboardEvidenceCompactKey(signal: WorldEvidenceSignal): string | null {
+  const title = cleanDisplayText(signal.display_title || signal.title);
+  const normalizedTitle = normalizeSignatureText(title);
+  const day = (signal.published_at || '').slice(0, 10);
+  const evidenceText = dashboardEvidenceText(signal);
+  const entities = [...extractTermTokens(evidenceText, TECH_AI_ENTITY_TERMS)].sort();
+  const topics = [...extractTermTokens(evidenceText, TECH_AI_TOPIC_TERMS)].sort();
+  const isTechAi = rowLooksLikeTechAi({
+    id: signal.id,
+    title: signal.title,
+    description: signal.summary,
+    source_name: signal.source_name,
+    source_url: signal.source_url,
+    event_time: signal.published_at,
+    created_at: signal.published_at,
+    location: signal.location_name,
+    country: signal.country,
+    latitude: signal.latitude,
+    longitude: signal.longitude,
+    severity: signal.severity,
+    relevance_score: signal.relevance_score,
+    tags: signal.tags,
+    alignment_tags: signal.alignment_tags,
+    last_seen_at: signal.published_at,
+  });
+  const genericDisplayTitle = /有新动向|相关报道|信号更新|强度上升|风险上升/u.test(title);
+  if (isTechAi && entities[0] && topics[0] && (genericDisplayTitle || normalizedTitle.length <= 34)) {
+    return `ai:${day}:${entities[0]}:${topics[0]}`;
+  }
+  if (genericDisplayTitle && normalizedTitle) {
+    return `title:${day}:${normalizedTitle}`;
+  }
+  return null;
+}
+
+function evidenceAuthorityScore(signal: WorldEvidenceSignal) {
+  const haystack = normalizeTag(dashboardEvidenceText(signal));
+  const sourceScore =
+    /source:aihot|source:world-monitor/.test(haystack)
+      ? 0.22
+      : /source:ai-news-radar/.test(haystack)
+        ? 0.14
+        : /official|官网|newsroom|engineering-blog|github-releases/.test(haystack)
+          ? 0.18
+          : 0.08;
+  return sourceScore + Number(signal.relevance_score || 0) * 0.36 + Number(signal.severity || 0) * 0.025 + Number(signal.hotspot_score || 0) * 0.12;
+}
+
+function mergeDashboardEvidenceSignals<T extends WorldEvidenceSignal>(existing: T, incoming: T): T {
+  const primary = evidenceAuthorityScore(incoming) > evidenceAuthorityScore(existing) ? incoming : existing;
+  const secondary = primary === incoming ? existing : incoming;
+  const tags = [...new Set([...(primary.tags || []), ...(secondary.tags || [])].filter(Boolean))];
+  const alignmentTags = uniqueAlignmentTags([
+    'event:clustered',
+    ...(primary.alignment_tags || []),
+    ...(secondary.alignment_tags || []),
+  ]);
+  const sourceNames = [...new Set([primary.source_name, secondary.source_name].map((value) => normalizeText(value)).filter(Boolean))];
+  return {
+    ...primary,
+    tags,
+    alignment_tags: alignmentTags,
+    severity: Math.max(primary.severity || 0, secondary.severity || 0) || primary.severity,
+    relevance_score: Math.max(primary.relevance_score || 0, secondary.relevance_score || 0) || primary.relevance_score,
+    hotspot_score: Math.max(primary.hotspot_score || 0, secondary.hotspot_score || 0) || primary.hotspot_score,
+    exploration_score: Math.max(primary.exploration_score || 0, secondary.exploration_score || 0) || primary.exploration_score,
+    mention_count: Math.max(primary.mention_count || 0, secondary.mention_count || 0) || primary.mention_count,
+    urgency_reason: sourceNames.length > 1
+      ? `${primary.urgency_reason || '同类信息已合并'}；同类报道来源：${sourceNames.slice(0, 4).join('、')}。`
+      : primary.urgency_reason,
+  };
+}
+
+function compactDashboardEvidenceSignals<T extends WorldEvidenceSignal>(signals: T[]): T[] {
+  const byKey = new Map<string, T>();
+  const passthrough: T[] = [];
+  for (const signal of signals) {
+    const key = dashboardEvidenceCompactKey(signal);
+    if (!key) {
+      passthrough.push(signal);
+      continue;
+    }
+    const existing = byKey.get(key);
+    byKey.set(key, existing ? mergeDashboardEvidenceSignals(existing, signal) : signal);
+  }
+  return [...passthrough, ...byKey.values()].sort(
+    (left, right) =>
+      evidenceAuthorityScore(right) - evidenceAuthorityScore(left) ||
+      new Date(right.published_at).getTime() - new Date(left.published_at).getTime(),
+  );
+}
+
 function buildDashboardWorldViewSummaryFromSignals(input: {
   generated_at: string;
   top_signals: WorldEvidenceSignal[];
@@ -9471,12 +10026,23 @@ export async function getWorldDashboardState(
     evaluation?.platform_model,
   );
   const nodes = buildDashboardStateNodes(hotspotSourceSignals, explorationSourceSignals);
-  const graphSignalFeed = graphSignals.map((signal) =>
+  let graphSignalFeed = compactDashboardEvidenceSignals(graphSignals.map((signal) =>
     sourceCatalog ? toEvidenceSignalWithReliability(signal, sourceCatalog) : toEvidenceSignal(signal),
-  );
-  const topSignalFeed = topSignals.map((signal) =>
+  ));
+  let topSignalFeed = compactDashboardEvidenceSignals(topSignals.map((signal) =>
     sourceCatalog ? toEvidenceSignalWithReliability(signal, sourceCatalog) : toEvidenceSignal(signal),
-  );
+  ));
+  let compactKnowledgeSignals = compactDashboardEvidenceSignals(knowledgeSignals);
+  const seenPublicSignalKeys = new Set<string>();
+  const keepPublicSignalOnce = (signal: WorldEvidenceSignal) => {
+    const key = dashboardEvidenceCompactKey(signal) || `id:${signal.id}`;
+    if (seenPublicSignalKeys.has(key)) return false;
+    seenPublicSignalKeys.add(key);
+    return true;
+  };
+  topSignalFeed = topSignalFeed.filter(keepPublicSignalOnce);
+  graphSignalFeed = graphSignalFeed.filter(keepPublicSignalOnce);
+  compactKnowledgeSignals = compactKnowledgeSignals.filter(keepPublicSignalOnce);
   const pending_question_previews = skipLiveBenchForScene
     ? []
     : arena
@@ -9521,7 +10087,7 @@ export async function getWorldDashboardState(
     nodes,
     graph_signals: graphSignalFeed,
     top_signals: topSignalFeed,
-    knowledge_signals: knowledgeSignals,
+    knowledge_signals: compactKnowledgeSignals,
     skill_entry,
     dashboard_kind: 'world-dashboard',
     world_view_summary: buildDashboardWorldViewSummaryFromSignals({

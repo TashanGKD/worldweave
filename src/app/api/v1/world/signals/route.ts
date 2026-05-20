@@ -9,7 +9,7 @@ import {
   techAiSignalRank,
 } from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
-import { sanitizePublicSignal, sanitizePublicTags } from '@/lib/world/signal-quality';
+import { isPublicEventSignal, sanitizePublicSignal, sanitizePublicTags } from '@/lib/world/signal-quality';
 import type { WorldEvidenceSignal, WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -82,6 +82,7 @@ export async function GET(request: Request) {
       ...(dashboard.graph_signals || []),
       ...(dashboard.knowledge_signals || []),
     ])
+      .filter(isPublicEventSignal)
       .filter((signal) => scene === 'global' || dashboardSignalMatchesScene(signal, scene))
       .sort(
         (left, right) =>

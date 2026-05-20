@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { aggregateSideSummary, cleanNarrativeText, cleanPresentationText, formatBrierScore, formatPercent, formatTime, liveQuestionStatusLabel, liveQuestionStatusTone, officialOutcomeLabel, regionDisplayLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, voteSideTone, worldHomeHref, worldHref } from '@/components/world-ui';
 import { getCachedLiveBenchQuestionDetail, getLiveBenchQuestionDetailFromStore } from '@/lib/world/livebench';
 import { getWorldLiveBenchQuestionDetail } from '@/lib/world/runtime';
+import { sanitizePublicNarrativeText } from '@/lib/world/signal-quality';
 import type { LiveBenchQuestionDetail, LiveBenchQuestionPosition, LiveQuestionSide, WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -40,11 +41,11 @@ function PositionCard({ position }: { position: LiveBenchQuestionPosition }) {
         <span className={`rounded-full border px-2.5 py-1 text-[11px] ${voteSideTone(position.side)}`}>{voteSideLabel(position.side)}</span>
         <span className="text-[11px] text-slate-400">{formatTime(position.created_at)}</span>
       </div>
-      <p className="mt-3 text-sm font-medium leading-7 text-slate-950">{cleanNarrativeText(position.prediction)}</p>
-      <p className="mt-2 text-[13px] leading-7 text-slate-600">{cleanNarrativeText(position.why)}</p>
+      <p className="mt-3 text-sm font-medium leading-7 text-slate-950">{cleanNarrativeText(sanitizePublicNarrativeText(position.prediction))}</p>
+      <p className="mt-2 text-[13px] leading-7 text-slate-600">{cleanNarrativeText(sanitizePublicNarrativeText(position.why))}</p>
       <div className="mt-3 rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-3">
         <p className="text-[11px] tracking-[0.08em] text-slate-400">改判条件</p>
-        <p className="mt-1 text-[12px] leading-6 text-slate-700">{cleanNarrativeText(position.what_changes_my_mind)}</p>
+        <p className="mt-1 text-[12px] leading-6 text-slate-700">{cleanNarrativeText(sanitizePublicNarrativeText(position.what_changes_my_mind))}</p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
         <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">参考信源 {position.cited_signal_ids.length} 条</span>
@@ -152,7 +153,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
               <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sky-700">{regionDisplayLabel(preview.region_label)}</span>
             </div>
             <h1 className="mt-4 max-w-4xl font-serif text-3xl font-semibold tracking-[-0.03em] text-slate-950">{cleanPresentationText(preview.title)}</h1>
-            <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">{cleanNarrativeText(preview.background)}</p>
+            <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">{cleanNarrativeText(sanitizePublicNarrativeText(preview.background))}</p>
 
             <div className="mt-5 grid gap-3 lg:grid-cols-4">
               <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
@@ -186,15 +187,15 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
             <div className="space-y-5">
               <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">主持人串讲</p>
-                <p className="mt-3 text-sm leading-7 text-slate-700">{cleanNarrativeText(detail.moderator_brief.summary)}</p>
+                <p className="mt-3 text-sm leading-7 text-slate-700">{cleanNarrativeText(sanitizePublicNarrativeText(detail.moderator_brief.summary))}</p>
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
                   <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">怎么判</p>
-                    <p className="mt-1 text-[12px] leading-6 text-slate-700">{cleanNarrativeText(detail.moderator_brief.resolution_rule)}</p>
+                    <p className="mt-1 text-[12px] leading-6 text-slate-700">{cleanNarrativeText(sanitizePublicNarrativeText(detail.moderator_brief.resolution_rule))}</p>
                   </div>
                   <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">当前偏向</p>
-                    <p className="mt-1 text-[12px] leading-6 text-slate-700">{cleanNarrativeText(detail.moderator_brief.current_bias)}</p>
+                    <p className="mt-1 text-[12px] leading-6 text-slate-700">{cleanNarrativeText(sanitizePublicNarrativeText(detail.moderator_brief.current_bias))}</p>
                   </div>
                 </div>
                 <div className="mt-4 rounded-[18px] border border-slate-200 bg-white px-3 py-3">
@@ -202,7 +203,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                   <div className="mt-2 space-y-2">
                     {detail.moderator_brief.watch_for.map((item) => (
                       <div key={item} className="rounded-[14px] border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] leading-6 text-slate-700">
-                        {cleanNarrativeText(item)}
+                        {cleanNarrativeText(sanitizePublicNarrativeText(item))}
                       </div>
                     ))}
                   </div>
@@ -217,7 +218,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                   </div>
                   <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">{detail.external_discussion.entries.length} 条</span>
                 </div>
-                <p className="mt-3 text-[13px] leading-7 text-slate-600">{cleanNarrativeText(detail.external_discussion.summary)}</p>
+                <p className="mt-3 text-[13px] leading-7 text-slate-600">{cleanNarrativeText(sanitizePublicNarrativeText(detail.external_discussion.summary))}</p>
                 <div className="mt-4 space-y-3">
                   {detail.external_discussion.entries.length > 0 ? (
                     detail.external_discussion.entries.map((entry) => (
@@ -230,8 +231,8 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                           ) : null}
                           {entry.created_at ? <span className="text-[11px] text-slate-400">{formatTime(entry.created_at)}</span> : null}
                         </div>
-                        <p className="mt-2 text-[13px] leading-7 text-slate-700">{cleanNarrativeText(entry.summary)}</p>
-                        {entry.detail ? <p className="mt-1 text-[12px] leading-6 text-slate-500">{cleanNarrativeText(entry.detail)}</p> : null}
+                        <p className="mt-2 text-[13px] leading-7 text-slate-700">{cleanNarrativeText(sanitizePublicNarrativeText(entry.summary))}</p>
+                        {entry.detail ? <p className="mt-1 text-[12px] leading-6 text-slate-500">{cleanNarrativeText(sanitizePublicNarrativeText(entry.detail))}</p> : null}
                         {entry.origin_url ? (
                           <a href={entry.origin_url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[12px] text-sky-700 underline underline-offset-4">
                             打开原帖
@@ -356,7 +357,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                                   </span>
                                   {reference.published_at ? <span className="text-[11px] text-slate-400">{formatTime(reference.published_at)}</span> : null}
                                 </div>
-                                {reference.note ? <p className="mt-2 text-[12px] leading-6 text-slate-600">{cleanNarrativeText(reference.note)}</p> : null}
+                                {reference.note ? <p className="mt-2 text-[12px] leading-6 text-slate-600">{cleanNarrativeText(sanitizePublicNarrativeText(reference.note))}</p> : null}
                                 <a href={reference.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[12px] text-sky-700 underline underline-offset-4">
                                   打开原文
                                 </a>
@@ -375,7 +376,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                                         {cleanPresentationText(reference.source_name)}
                                       </span>
                                     </div>
-                                    {reference.note ? <p className="mt-2 text-[12px] leading-6 text-slate-600">{cleanNarrativeText(reference.note)}</p> : null}
+                                    {reference.note ? <p className="mt-2 text-[12px] leading-6 text-slate-600">{cleanNarrativeText(sanitizePublicNarrativeText(reference.note))}</p> : null}
                                     <a href={reference.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[12px] text-sky-700 underline underline-offset-4">
                                       打开原文
                                     </a>
@@ -397,7 +398,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
 
               <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">结算与评分</p>
-                <p className="mt-3 text-[13px] leading-7 text-slate-600">{cleanNarrativeText(detail.settlement.replay_summary)}</p>
+                <p className="mt-3 text-[13px] leading-7 text-slate-600">{cleanNarrativeText(sanitizePublicNarrativeText(detail.settlement.replay_summary))}</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">官方结果</p>

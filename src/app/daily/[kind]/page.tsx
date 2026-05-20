@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, Bot, FileText, Globe2 } from 'lucide-react';
+import { headers } from 'next/headers';
 
 import { DailySharePoster } from '@/app/daily/daily-share-poster';
 import {
@@ -26,7 +27,9 @@ import {
   techAiRelevanceScore,
   techAiSignalRank,
 } from '@/lib/world/dashboard-presentation';
-import { getCachedWorldDashboardState } from '@/lib/world/runtime';
+import { curateWorldDailySignals, getCachedWorldDashboardState, type WorldDailyCurationItem } from '@/lib/world/runtime';
+import { resolveRequestOrigin } from '@/lib/request-origin';
+import { isPublicEventSignal, sanitizePublicNarrativeText, sanitizePublicSignal } from '@/lib/world/signal-quality';
 import type { LiveBenchQuestionPreview, WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -35,8 +38,14 @@ export const revalidate = 0;
 type DailyKind = 'geo' | 'ai' | 'livebench';
 type CachedDashboard = NonNullable<Awaited<ReturnType<typeof getCachedWorldDashboardState>>>;
 type DailySignal = CachedDashboard['top_signals'][number];
+type CuratedDailySignal = DailySignal & {
+  daily_display_title?: string;
+  daily_display_summary?: string;
+};
 
 const DAILY_TOP_LIMIT = 10;
+const DAILY_CANDIDATE_LIMIT = 24;
+const DAILY_STATE_TIMEOUT_MS = 2500;
 
 const DAILY_META: Record<
   DailyKind,
@@ -104,6 +113,40 @@ function uniqueSignals(...sources: Array<DailySignal[] | null | undefined>) {
   );
 }
 
+function normalizeDailyTitleKey(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/[\u3000\s]+/g, ' ')
+    .replace(/[^\p{L}\p{N}\u3400-\u9fff]+/gu, ' ')
+    .trim();
+}
+
+function dailySignalTitle(signal: CuratedDailySignal) {
+  return compactText(cleanNarrativeText(signal.daily_display_title || readableSignalTitle(signal)), 90);
+}
+
+function applyDailyCuration(signal: DailySignal, item: WorldDailyCurationItem | undefined): CuratedDailySignal {
+  if (!item) return signal;
+  return {
+    ...signal,
+    daily_display_title: sanitizePublicNarrativeText(item.displayTitle),
+    daily_display_summary: sanitizePublicNarrativeText(item.displaySummary),
+  };
+}
+
+function dedupeDailyVisibleTitles(signals: CuratedDailySignal[]) {
+  const byKey = new Map<string, CuratedDailySignal>();
+  for (const signal of signals) {
+    const key = normalizeDailyTitleKey(dailySignalTitle(signal)) || signal.id;
+    if (!byKey.has(key)) {
+      byKey.set(key, signal);
+    }
+  }
+  return [...byKey.values()];
+}
+
 function dailySignalScore(kind: DailyKind, signal: DailySignal) {
   if (kind === 'ai') {
     return techAiRelevanceScore(signal) + (signal.relevance_score || 0) * 0.5 + signal.hotspot_score * 0.25;
@@ -111,10 +154,12 @@ function dailySignalScore(kind: DailyKind, signal: DailySignal) {
   return mainWorldSignalPriority(signal);
 }
 
-function selectDailySignals(kind: DailyKind, state: CachedDashboard | null) {
+async function selectDailySignals(kind: DailyKind, state: CachedDashboard | null): Promise<CuratedDailySignal[]> {
   if (!state || kind === 'livebench') return [];
   const scene = DAILY_META[kind].scene;
-  return uniqueSignals(state.top_signals, state.graph_signals, state.knowledge_signals)
+  const sortedSignals = uniqueSignals(state.top_signals, state.graph_signals, state.knowledge_signals)
+    .filter(isPublicEventSignal)
+    .map(sanitizePublicSignal)
     .filter((signal) => (kind === 'ai' ? isTrustedTechAiDashboardSignal(signal) : dashboardSignalMatchesScene(signal, scene)))
     .sort((left, right) => {
       return (
@@ -122,8 +167,33 @@ function selectDailySignals(kind: DailyKind, state: CachedDashboard | null) {
         (kind === 'ai' ? techAiSignalRank(left) - techAiSignalRank(right) : mainWorldSignalRank(left) - mainWorldSignalRank(right)) ||
         new Date(right.published_at).getTime() - new Date(left.published_at).getTime()
       );
+    });
+  const candidates = sortedSignals.slice(0, DAILY_CANDIDATE_LIMIT);
+  const modelItems = await curateWorldDailySignals({
+    kind: kind === 'ai' ? 'ai' : 'geo',
+    generatedAt: state.generated_at,
+    limit: DAILY_TOP_LIMIT,
+    candidates: candidates.map((signal, index) => ({
+      id: signal.id,
+      rank: index + 1,
+      title: readableSignalTitle(signal),
+      summary: dailyReadableSummary(signal, kind, 220),
+      source: dailySourceLine(signal, kind),
+      publishedAt: signal.published_at,
+      score: dailySignalScore(kind, signal),
+      tags: [...(signal.tags || []), ...(signal.alignment_tags || [])],
+    })),
+  });
+  const byId = new Map(candidates.map((signal) => [signal.id, signal]));
+  const itemById = new Map(modelItems.map((item) => [item.id, item]));
+  const selected = modelItems
+    .map((item) => {
+      const signal = byId.get(item.id);
+      return signal ? applyDailyCuration(signal, item) : null;
     })
-    .slice(0, DAILY_TOP_LIMIT);
+    .filter((signal): signal is CuratedDailySignal => Boolean(signal));
+  const filled = [...selected, ...candidates.filter((signal) => !selected.some((item) => item.id === signal.id))];
+  return dedupeDailyVisibleTitles(filled.map((signal) => applyDailyCuration(signal, itemById.get(signal.id)))).slice(0, DAILY_TOP_LIMIT);
 }
 
 function dailyDigest(kind: DailyKind, signals: DailySignal[], fallback: string) {
@@ -212,8 +282,11 @@ function dailyFallbackSummary(signal: DailySignal, kind: DailyKind, max: number)
   );
 }
 
-function dailyReadableSummary(signal: DailySignal, kind: DailyKind, max: number) {
-  const title = readableSignalTitle(signal);
+function dailyReadableSummary(signal: CuratedDailySignal, kind: DailyKind, max: number) {
+  const title = dailySignalTitle(signal);
+  if (signal.daily_display_summary) {
+    return compactText(cleanNarrativeText(signal.daily_display_summary), max);
+  }
   const summary = readableSignalSummary(signal, max);
   if (!summary || summary === title || summary.startsWith(title.slice(0, Math.min(18, title.length)))) {
     return dailyFallbackSummary(signal, kind, max);
@@ -225,8 +298,17 @@ function questionTime(preview: LiveBenchQuestionPreview) {
   return preview.official_resolved_at || preview.resolve_at || preview.aggregate_vote.updated_at || '';
 }
 
+function sanitizeQuestionPreviewForPage(preview: LiveBenchQuestionPreview): LiveBenchQuestionPreview {
+  return {
+    ...preview,
+    title: sanitizePublicNarrativeText(preview.title),
+    background: sanitizePublicNarrativeText(preview.background),
+    moderator_line: sanitizePublicNarrativeText(preview.moderator_line),
+  };
+}
+
 function questionLine(preview: LiveBenchQuestionPreview) {
-  return cleanNarrativeText(preview.moderator_line || preview.background || preview.title);
+  return cleanNarrativeText(sanitizePublicNarrativeText(preview.moderator_line || preview.background || preview.title));
 }
 
 function questionTitle(preview: LiveBenchQuestionPreview) {
@@ -259,6 +341,26 @@ function dailySignalHref(id: string | undefined, scene: WorldScene) {
   return href.startsWith('/') ? `..${href}` : href;
 }
 
+function timeout<T>(ms: number, value: T): Promise<T> {
+  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+}
+
+async function getDailyState(kind: DailyKind, scene: WorldScene): Promise<CachedDashboard | null> {
+  if (kind !== 'livebench') return getCachedWorldDashboardState(scene);
+  const requestOrigin = resolveRequestOrigin({ headers: await headers() });
+  if (!requestOrigin) return getCachedWorldDashboardState(scene);
+  const apiState = await Promise.race([
+    fetch(`${requestOrigin}/api/v1/world/state?scene=${scene}&limit=80`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(DAILY_STATE_TIMEOUT_MS),
+    })
+      .then(async (response) => (response.ok ? ((await response.json()) as CachedDashboard) : null))
+      .catch(() => null),
+    timeout<CachedDashboard | null>(DAILY_STATE_TIMEOUT_MS, null),
+  ]);
+  return apiState || getCachedWorldDashboardState(scene);
+}
+
 type PageProps = {
   params?: Promise<{ kind?: string }>;
 };
@@ -266,18 +368,18 @@ type PageProps = {
 export default async function DailyPage({ params }: PageProps) {
   const kind = resolveKind((await params)?.kind);
   const meta = DAILY_META[kind];
-  const state = await getCachedWorldDashboardState(meta.scene);
-  const signals = selectDailySignals(kind, state);
+  const state = await getDailyState(kind, meta.scene);
+  const signals = await selectDailySignals(kind, state);
   const questions =
     kind === 'livebench'
-      ? [...asArray(state?.pending_question_previews), ...asArray(state?.resolved_question_previews)].slice(0, 6)
+      ? [...asArray(state?.pending_question_previews), ...asArray(state?.resolved_question_previews)].map(sanitizeQuestionPreviewForPage).slice(0, 6)
       : [];
   const lead = signals[0] || null;
   const leadSummary = lead ? dailyReadableSummary(lead, kind, 320) : '';
   const posterLead = lead
     ? {
         rank: '01',
-        title: readableSignalTitle(lead),
+        title: dailySignalTitle(lead),
         summary: leadSummary,
         source: dailySourceLine(lead, kind),
         time: formatTime(lead.published_at),
@@ -285,7 +387,7 @@ export default async function DailyPage({ params }: PageProps) {
     : null;
   const posterItems = signals.slice(1, DAILY_TOP_LIMIT).map((signal, index) => ({
     rank: String(index + 2).padStart(2, '0'),
-    title: readableSignalTitle(signal),
+    title: dailySignalTitle(signal),
     summary: dailyReadableSummary(signal, kind, 260),
     source: dailySourceLine(signal, kind),
     time: formatTime(signal.published_at),
@@ -387,7 +489,7 @@ export default async function DailyPage({ params }: PageProps) {
                           <span className="ml-auto text-[11px] text-slate-400">{formatTime(signal.published_at)}</span>
                         </div>
                         <h3 className="mt-3 text-[15px] font-semibold leading-7 text-slate-950 group-hover:text-slate-700">
-                          {readableSignalTitle(signal)}
+                          {dailySignalTitle(signal)}
                         </h3>
                         {summary ? <p className="mt-2 text-[13px] leading-7 text-slate-600">{summary}</p> : null}
                         {tags.length > 0 ? (

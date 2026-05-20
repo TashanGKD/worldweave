@@ -1,43 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { resolveConfiguredPublicOrigin, resolveRequestOrigin } from '@/lib/request-origin';
-
-function isLocalOrigin(origin: string | null | undefined) {
-  if (!origin) return false;
-  try {
-    const hostname = new URL(origin).hostname;
-    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname === '::1';
-  } catch {
-    return false;
-  }
-}
-
-function withRequestPortWhenLocal(configuredOrigin: string | null | undefined, requestOrigin: string | null | undefined) {
-  if (!configuredOrigin || !requestOrigin || !isLocalOrigin(requestOrigin)) return configuredOrigin || null;
-  try {
-    const configured = new URL(configuredOrigin);
-    const request = new URL(requestOrigin);
-    if (!configured.port && request.port && configured.protocol === request.protocol) {
-      configured.port = request.port;
-      return configured.toString().replace(/\/+$/, '');
-    }
-  } catch {
-    return configuredOrigin;
-  }
-  return configuredOrigin;
-}
-
-function resolveSkillOrigin(request: Request) {
-  const requestOrigin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
-  const configuredOrigin = withRequestPortWhenLocal(resolveConfiguredPublicOrigin(), requestOrigin);
-  if (isLocalOrigin(requestOrigin)) {
-    return requestOrigin || new URL(request.url).origin;
-  }
-  if (configuredOrigin && (!requestOrigin || isLocalOrigin(requestOrigin))) {
-    return configuredOrigin;
-  }
-  return requestOrigin || configuredOrigin || new URL(request.url).origin;
-}
+import { resolvePublicBaseUrl } from '@/lib/request-origin';
 
 function buildAiDailySkillMarkdown(origin: string) {
   const skillVersion = '2026-05-15';
@@ -99,8 +62,8 @@ skill_url: ${apiBase}/openclaw/ai.skill.md
 }
 
 export async function GET(request: Request) {
-  const origin = resolveSkillOrigin(request);
-  return new NextResponse(buildAiDailySkillMarkdown(origin), {
+  const baseUrl = resolvePublicBaseUrl({ headers: request.headers, requestUrl: request.url }) || new URL(request.url).origin;
+  return new NextResponse(buildAiDailySkillMarkdown(baseUrl), {
     headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
       'Cache-Control': 'no-store',
