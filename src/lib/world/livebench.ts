@@ -6,6 +6,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 
 import { readWorldApiSnapshot } from './api-snapshot';
+import { sanitizePublicNarrativeText } from './signal-quality';
 import type {
   ArenaScorecard,
   LiveBenchArenaState,
@@ -4098,7 +4099,7 @@ function hasStrongEvidenceForQuestion(question: LiveQuestion, chunks: SourceEmbe
 
 function cleanHumanReadableText(value?: string | null, max = 260) {
   return compactText(
-    String(value || '')
+    sanitizePublicNarrativeText(String(value || ''))
       .replace(/\b(?:World Monitor|world-monitor|world monitor|Signal Arena|Metaculus|Manifold|Polymarket)\b/giu, '')
       .replace(/观察池级别|世界脉络补位源/giu, '')
       .replace(/我现在偏向赞成/gu, '当前倾向赞成')
@@ -4109,11 +4110,11 @@ function cleanHumanReadableText(value?: string | null, max = 260) {
       .replace(/我现在/gu, '当前')
       .replace(/我不会轻易/gu, '暂不宜')
       .replace(/在我看到/gu, '在看到')
-      .replace(/这边的([^。]{1,16})线(?:先)?记成一笔(?:续写|更新)。?/gu, '出现新的$1信号。')
-      .replace(/先把地理锚点按住，.{0,2}看它是不是会往([^。]+?)外溢。?/gu, '后续重点看是否影响$1。')
-      .replace(/这一笔声量起得不低，适合先压住。?/gu, '目前热度较高，需继续跟踪。')
-      .replace(/先轻轻记下，不急着加重语气。?/gu, '按普通监测处理。')
-      .replace(/它未必最显眼，但这条线现在值得先补一笔。?/gu, '这条线索值得补充观察。')
+      .replace(/这边的([^。]{1,16})线(?:先)?记成一笔(?:续写|更新)。?/gu, '$1有相关报道。')
+      .replace(/先把地理锚点按住，.{0,2}看它是不是会往([^。]+?)外溢。?/gu, '可能影响$1。')
+      .replace(/这一笔声量起得不低，适合先压住。?/gu, '相关报道较集中。')
+      .replace(/先轻轻记下，不急着加重语气。?/gu, '暂按普通材料处理。')
+      .replace(/它未必最显眼，但这条线现在值得先补一笔。?/gu, '可作为补充材料。')
       .replace(/续写/gu, '更新')
       .replace(/\b[A-Za-z][A-Za-z\s-]*Bundle Feed\s*\d+\s*信源更新\b/giu, '信源包更新')
       .replace(/\b[A-Za-z][A-Za-z\s-]*Bundle Feed\s*\d+\b/giu, '信源包')

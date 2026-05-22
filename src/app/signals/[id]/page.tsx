@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { worldHomeHref } from '@/components/world-ui';
 import { isLowValueTechAiProductUpdate, readableSignalTags } from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
+import { isPublicEventSignal, sanitizePublicSignal } from '@/lib/world/signal-quality';
 import type { WorldScene } from '@/lib/world/types';
 
 type PageProps = {
@@ -118,20 +119,25 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
   if ((signal && isLowValueTechAiProductUpdate(signal)) || (node && isLowValueTechAiProductUpdate(node))) {
     notFound();
   }
+  if ((signal && !isPublicEventSignal(signal)) || (node && !isPublicEventSignal(node))) {
+    notFound();
+  }
 
-  const title = signal?.display_title || node?.display_title || signal?.title || node?.title || id;
-  const summary = signal?.display_summary || node?.display_summary || signal?.summary || node?.summary || '这条线索暂时只有结构化信息，等待后续来源补充。';
-  const sourceName = signal?.source_name || node?.source_name || '未标注来源';
-  const sourceUrl = signal?.source_url || node?.source_url || '';
-  const region = signal?.region || node?.geo?.region || '--';
-  const location = signal?.location_name || node?.geo?.label || '--';
-  const country = signal?.country || node?.geo?.country || '--';
-  const publishedAt = signal?.published_at || node?.published_at || null;
-  const updatedAt = node?.updated_at || node?.last_report_at || publishedAt;
-  const tags = signal?.tags || node?.tags || [];
-  const alignmentTags = signal?.alignment_tags || node?.alignment_tags || [];
+  const publicSignal = signal ? sanitizePublicSignal(signal) : null;
+  const publicNode = node ? sanitizePublicSignal(node) : null;
+  const title = publicSignal?.display_title || publicNode?.display_title || publicSignal?.title || publicNode?.title || id;
+  const summary = publicSignal?.display_summary || publicNode?.display_summary || publicSignal?.summary || publicNode?.summary || '这条消息暂时只有结构化信息，等待更多来源补充。';
+  const sourceName = publicSignal?.source_name || publicNode?.source_name || '未标注来源';
+  const sourceUrl = publicSignal?.source_url || publicNode?.source_url || '';
+  const region = publicSignal?.region || publicNode?.geo?.region || '--';
+  const location = publicSignal?.location_name || publicNode?.geo?.label || '--';
+  const country = publicSignal?.country || publicNode?.geo?.country || '--';
+  const publishedAt = publicSignal?.published_at || publicNode?.published_at || null;
+  const updatedAt = publicNode?.updated_at || publicNode?.last_report_at || publishedAt;
+  const tags = publicSignal?.tags || publicNode?.tags || [];
+  const alignmentTags = publicSignal?.alignment_tags || publicNode?.alignment_tags || [];
   const displayTags = readableSignalTags([...tags, ...alignmentTags], 6);
-  const reliability = signal?.source_reliability;
+  const reliability = publicSignal?.source_reliability;
   const relatedQuestions = [
     ...(state.pending_question_previews || []),
     ...(state.resolved_question_previews || []),
@@ -149,7 +155,7 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
         <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/92 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
           <div className="border-b border-slate-100 px-6 py-5">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">{signalSceneLabel(signal?.scene || node?.scene || 'global')}</span>
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">{signalSceneLabel(publicSignal?.scene || publicNode?.scene || 'global')}</span>
               <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">{region}</span>
               <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">{sourceName}</span>
               {reliability ? (

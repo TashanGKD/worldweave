@@ -181,14 +181,32 @@ function posterTextPayload(kind: 'geo' | 'ai', title: string, digest: string, le
   return `${lines.join('\n')}\n\n${kind === 'ai' ? '#AI日报 #模型动态 #产品更新' : '#世界日报 #公共安全 #今日简报'}`;
 }
 
+function posterSignalKey(item: PosterSignal) {
+  return item.title
+    .toLowerCase()
+    .replace(/[\u3000\s]+/g, ' ')
+    .replace(/[^\p{L}\p{N}\u3400-\u9fff]+/gu, ' ')
+    .trim();
+}
+
+function uniquePosterSignals(signals: PosterSignal[]) {
+  const seen = new Set<string>();
+  return signals.filter((signal) => {
+    const key = posterSignalKey(signal) || signal.rank;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function DailySharePoster({ kind, title, eyebrow, dateLabel, digest, lead, items }: DailySharePosterProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const [saved, setSaved] = useState<'idle' | 'done' | 'copied'>('idle');
+  const [saved, setSaved] = useState<'idle' | 'saving' | 'done' | 'copied' | 'error'>('idle');
 
   const isAi = kind === 'ai';
   const itemsLabel = '今日前十';
   const digestLines = wrapText(trimPosterText(digest, 54), 34, 2);
-  const posterSignals = [lead, ...items].filter((item): item is PosterSignal => Boolean(item)).slice(0, 10);
+  const posterSignals = uniquePosterSignals([lead, ...items].filter((item): item is PosterSignal => Boolean(item))).slice(0, 10);
   const itemBlocks = posterSignals.map((item) => ({
     ...item,
     titleLines: wrapText(posterListHeadline(item.title), 44, 1),
@@ -217,6 +235,7 @@ export function DailySharePoster({ kind, title, eyebrow, dateLabel, digest, lead
 
   async function downloadPoster() {
     if (!svgRef.current) return;
+    setSaved('saving');
     const svg = svgRef.current;
     const serialized = new XMLSerializer().serializeToString(svg);
     const blob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
@@ -228,16 +247,39 @@ export function DailySharePoster({ kind, title, eyebrow, dateLabel, digest, lead
       canvas.width = 1080;
       canvas.height = 1440;
       const context = canvas.getContext('2d');
-      if (!context) return;
+      if (!context) {
+        URL.revokeObjectURL(url);
+        setSaved('error');
+        window.setTimeout(() => setSaved('idle'), 1800);
+        return;
+      }
       context.fillStyle = '#f7fbf4';
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0);
       URL.revokeObjectURL(url);
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = `${title.replace(/\s+/g, '-')}-小红书日报.png`;
-      link.click();
-      setSaved('done');
+      canvas.toBlob((pngBlob) => {
+        if (!pngBlob) {
+          setSaved('error');
+          window.setTimeout(() => setSaved('idle'), 1800);
+          return;
+        }
+        const pngUrl = URL.createObjectURL(pngBlob);
+        const link = document.createElement('a');
+        link.href = pngUrl;
+        link.download = `${title.replace(/\s+/g, '-')}-小红书日报.png`;
+        link.rel = 'noopener';
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(pngUrl), 1200);
+        setSaved('done');
+        window.setTimeout(() => setSaved('idle'), 1800);
+      }, 'image/png');
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      setSaved('error');
       window.setTimeout(() => setSaved('idle'), 1800);
     };
     image.src = url;
@@ -334,7 +376,7 @@ export function DailySharePoster({ kind, title, eyebrow, dateLabel, digest, lead
             className="inline-flex items-center gap-2 rounded-full border border-[#0B8F7E] bg-[#0B8F7E] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#087265]"
           >
             {saved === 'done' ? <Check className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-            {saved === 'done' ? '已生成' : '保存 PNG'}
+            {saved === 'done' ? '已生成' : saved === 'saving' ? '生成中' : saved === 'error' ? '请重试' : '保存 PNG'}
           </button>
           <button
             type="button"

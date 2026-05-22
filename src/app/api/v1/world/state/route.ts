@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { resolveRequestOrigin } from '@/lib/request-origin';
+import { resolvePublicBaseUrl } from '@/lib/request-origin';
 import {
   getCachedWorldDashboardState,
   getWorldDashboardState,
@@ -10,8 +10,8 @@ import {
   isWorldRuntimeHeavyRefreshEnabled,
 } from '@/lib/world/runtime';
 import { dashboardNodeMatchesScene, dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
-import { isPublicEventSignal, isSourceSnapshotLikeSignal, sanitizePublicSignal } from '@/lib/world/signal-quality';
-import type { WorldScene } from '@/lib/world/types';
+import { isPublicEventSignal, isSourceSnapshotLikeSignal, sanitizePublicNarrativeText, sanitizePublicSignal } from '@/lib/world/signal-quality';
+import type { LiveBenchQuestionPreview, WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -62,7 +62,30 @@ function sanitizeCachedDashboardState(state: NonNullable<CachedDashboardState>) 
     graph_signals: graphSignals,
     top_signals: topSignals,
     knowledge_signals: knowledgeSignals,
+    pending_question_previews: (state.pending_question_previews || []).map(sanitizeQuestionPreview),
+    resolved_question_previews: (state.resolved_question_previews || []).map(sanitizeQuestionPreview),
   };
+}
+
+function sanitizeQuestionPreview(preview: LiveBenchQuestionPreview): LiveBenchQuestionPreview {
+  const aggregateVoteRecord =
+    preview.aggregate_vote && typeof preview.aggregate_vote === 'object'
+      ? (preview.aggregate_vote as unknown as Record<string, unknown>)
+      : null;
+  const aggregateVote = aggregateVoteRecord
+    ? {
+        ...preview.aggregate_vote,
+        human_readable_prediction: sanitizePublicNarrativeText(aggregateVoteRecord.human_readable_prediction as string | null | undefined),
+        human_readable_why: sanitizePublicNarrativeText(aggregateVoteRecord.human_readable_why as string | null | undefined),
+        what_changes_my_mind: sanitizePublicNarrativeText(aggregateVoteRecord.what_changes_my_mind as string | null | undefined),
+      }
+    : preview.aggregate_vote;
+  return {
+    ...preview,
+    background: sanitizePublicNarrativeText(preview.background as string | null | undefined),
+    moderator_line: sanitizePublicNarrativeText(preview.moderator_line as string | null | undefined),
+    aggregate_vote: aggregateVote as LiveBenchQuestionPreview['aggregate_vote'],
+  } as LiveBenchQuestionPreview;
 }
 
 function isAiHotLikeNode(node: unknown) {
@@ -76,19 +99,19 @@ function isAiHotLikeNode(node: unknown) {
   ]
     .filter(Boolean)
     .join(' ');
-  return /(aihot|ai hot|daily:ai|source:aihot)/i.test(text);
+  return /(aihot|ai hot|ai-news-radar|daily:ai|source:aihot|source:ai-news-radar)/i.test(text);
 }
 
 function filterCachedDashboardStateForScene(state: NonNullable<CachedDashboardState>, scene: WorldScene) {
   if (scene === 'global') return sanitizeCachedDashboardState(state);
   const graphSignals = (Array.isArray(state.graph_signals) ? state.graph_signals : []).filter((signal) =>
-    dashboardSignalMatchesScene(signal, scene),
+    isPublicEventSignal(signal) && dashboardSignalMatchesScene(signal, scene),
   ).map(sanitizePublicSignal);
   const topSignals = (Array.isArray(state.top_signals) ? state.top_signals : []).filter((signal) =>
-    dashboardSignalMatchesScene(signal, scene),
+    isPublicEventSignal(signal) && dashboardSignalMatchesScene(signal, scene),
   ).map(sanitizePublicSignal);
   const knowledgeSignals = (Array.isArray(state.knowledge_signals) ? state.knowledge_signals : []).filter((signal) =>
-    dashboardSignalMatchesScene(signal, scene),
+    isPublicEventSignal(signal) && dashboardSignalMatchesScene(signal, scene),
   ).map(sanitizePublicSignal);
   const signalIds = new Set([...graphSignals, ...topSignals, ...knowledgeSignals].map((signal) => signal.id));
   const nodes = (Array.isArray(state.nodes) ? state.nodes : []).filter((node) => {
@@ -102,6 +125,8 @@ function filterCachedDashboardStateForScene(state: NonNullable<CachedDashboardSt
     graph_signals: graphSignals,
     top_signals: topSignals,
     knowledge_signals: knowledgeSignals,
+    pending_question_previews: (state.pending_question_previews || []).map(sanitizeQuestionPreview),
+    resolved_question_previews: (state.resolved_question_previews || []).map(sanitizeQuestionPreview),
   };
 }
 
@@ -190,7 +215,7 @@ export async function GET(request: Request) {
     const rebuildDashboard = url.searchParams.get('rebuild') === '1';
     const allowModelRefresh = batchRequested && heavyRefreshEnabled;
     const timeoutMs = allowModelRefresh || forceLive ? 300000 : STATE_TIMEOUT_MS;
-    const requestOrigin = resolveRequestOrigin({ headers: request.headers, requestUrl: request.url });
+    const requestOrigin = resolvePublicBaseUrl({ headers: request.headers, requestUrl: request.url });
     const bypassCachedDashboard = rebuildDashboard;
     const cachedState = bypassCachedDashboard
       ? null

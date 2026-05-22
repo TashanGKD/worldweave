@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { resolveRequestOrigin } from '@/lib/request-origin';
 import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
+import { isPublicEventSignal, sanitizePublicSignal } from '@/lib/world/signal-quality';
 import type { WorldEvidenceSignal, WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -119,22 +120,23 @@ function toTopicLabArticle(input: {
   sourceType: string;
   sourceFeedName: string;
 }): TopicLabSourceFeedArticle {
-  const title = input.signal.display_title || input.signal.title || '世界脉络信号';
-  const description = input.signal.summary || input.signal.display_summary || input.signal.urgency_reason || '';
+  const signal = sanitizePublicSignal(input.signal);
+  const title = signal.display_title || signal.title || '世界脉络信号';
+  const description = signal.display_summary || signal.summary || signal.urgency_reason || '';
   const url =
-    input.signal.source_url ||
-    (input.origin ? `${input.origin}/?scene=${encodeURIComponent(input.signal.scene || 'global')}` : '');
+    signal.source_url ||
+    (input.origin ? `${input.origin}/?scene=${encodeURIComponent(signal.scene || 'global')}` : '');
   return {
-    id: stableNumericId(input.signal.id),
+    id: stableNumericId(signal.id),
     title,
-    source_feed_name: input.signal.source_name || input.sourceFeedName,
+    source_feed_name: signal.source_name || input.sourceFeedName,
     source_type: input.sourceType,
-    category: topicLabCategory(input.signal),
+    category: topicLabCategory(signal),
     url,
     pic_url: null,
     description,
-    publish_time: input.signal.published_at,
-    created_at: input.signal.published_at,
+    publish_time: signal.published_at,
+    created_at: signal.published_at,
     linked_topic_id: null,
     linked_topic_posts_count: 0,
   };
@@ -167,7 +169,7 @@ export async function GET(request: Request) {
       ...(dashboard.top_signals || []),
       ...(dashboard.graph_signals || []),
       ...(dashboard.knowledge_signals || []),
-    ]).sort((left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime());
+    ]).filter(isPublicEventSignal).sort((left, right) => new Date(right.published_at).getTime() - new Date(left.published_at).getTime());
     const sceneSignals = scene === 'global' ? signals : signals.filter((signal) => dashboardSignalMatchesScene(signal, scene));
     const filteredSignals = sceneSignals.filter(
       (signal) => signalMatchesQuery(signal, query) && signalMatchesCategory(signal, category) && signalMatchesSource(signal, source),

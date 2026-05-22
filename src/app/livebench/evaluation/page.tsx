@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { cleanPresentationText, formatBrierScore, formatPercent, formatTime, officialOutcomeLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, worldHomeHref, worldHref } from '@/components/world-ui';
 import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { resolveRequestOrigin } from '@/lib/request-origin';
+import { sanitizePublicNarrativeText } from '@/lib/world/signal-quality';
 import type { LiveBenchEvaluation, WorldScene } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
@@ -71,17 +72,23 @@ function timeout<T>(ms: number, value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
 
+function sanitizeLiveBenchPageData<T>(value: T): T {
+  if (typeof value === 'string') return sanitizePublicNarrativeText(value) as T;
+  if (Array.isArray(value)) return value.map((item) => sanitizeLiveBenchPageData(item)) as T;
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, sanitizeLiveBenchPageData(entry)]),
+    ) as T;
+  }
+  return value;
+}
+
 export default async function LiveBenchEvaluationPage({ searchParams }: PageProps) {
   const { scene: sceneParam } = (await searchParams) || {};
   const scene = (sceneParam as WorldScene | undefined) || 'global';
   const requestOrigin = resolveRequestOrigin({ headers: await headers() });
-  const snapshot = await readWorldApiSnapshot<LiveBenchEvaluation>(
-    scene,
-    'livebench_evaluation',
-    EVALUATION_PAGE_SNAPSHOT_MAX_AGE_MS,
-  );
   const liveEvaluation =
-    snapshot || !requestOrigin
+    !requestOrigin
       ? null
       : await Promise.race([
           fetch(`${requestOrigin}/api/v1/world/livebench/evaluation?scene=${scene}`, {
@@ -92,7 +99,14 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
             .catch(() => null),
           timeout<LiveBenchEvaluation | null>(EVALUATION_PAGE_TIMEOUT_MS, null),
         ]);
-  const evaluation = snapshot || liveEvaluation;
+  const snapshot = liveEvaluation
+    ? null
+    : await readWorldApiSnapshot<LiveBenchEvaluation>(
+        scene,
+        'livebench_evaluation',
+        EVALUATION_PAGE_SNAPSHOT_MAX_AGE_MS,
+      );
+  const evaluation = sanitizeLiveBenchPageData(liveEvaluation || snapshot);
 
   if (!evaluation) {
     return (
