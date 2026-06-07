@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { resolveRequestOrigin } from '@/lib/request-origin';
 import { dashboardSignalMatchesScene } from '@/lib/world/dashboard-presentation';
+import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
 import { isPublicEventSignal, sanitizePublicSignal } from '@/lib/world/signal-quality';
-import type { WorldEvidenceSignal, WorldScene } from '@/lib/world/types';
+import type { WorldEvidenceSignal, WorldScene, WorldSourceKnowledgeState } from '@/lib/world/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -142,9 +143,51 @@ function toTopicLabArticle(input: {
   };
 }
 
+function latestSignalTimestamp(signals: WorldEvidenceSignal[]) {
+  return Math.max(
+    0,
+    ...signals
+      .map((signal) => new Date(signal.published_at).getTime())
+      .filter(Number.isFinite),
+  );
+}
+
+function dashboardLatestSignalTimestamp(
+  dashboard: Awaited<ReturnType<typeof getCachedWorldDashboardState>>,
+) {
+  if (!dashboard) return 0;
+  return latestSignalTimestamp([
+    ...(dashboard.top_signals || []),
+    ...(dashboard.graph_signals || []),
+    ...(dashboard.knowledge_signals || []),
+  ]);
+}
+
+async function sourceStatusLatestSignalTimestamp(scene: WorldScene) {
+  const status = await readWorldApiSnapshot<WorldSourceKnowledgeState>(
+    scene,
+    'source_status',
+    7 * 24 * 60 * 60 * 1000,
+  );
+  const timestamp = status?.latest_signal_published_at
+    ? new Date(status.latest_signal_published_at).getTime()
+    : 0;
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+async function isDashboardOlderThanSourceStatus(
+  dashboard: Awaited<ReturnType<typeof getCachedWorldDashboardState>>,
+  scene: WorldScene,
+) {
+  const sourceLatest = await sourceStatusLatestSignalTimestamp(scene);
+  if (!sourceLatest) return false;
+  const dashboardLatest = dashboardLatestSignalTimestamp(dashboard);
+  return sourceLatest - dashboardLatest > 60 * 60 * 1000;
+}
+
 async function readDashboardForTopicLab(scene: WorldScene, request: Request) {
   const cached = await getCachedWorldDashboardState(scene);
-  if (cached) return cached;
+  if (cached && !(await isDashboardOlderThanSourceStatus(cached, scene))) return cached;
   return getWorldDashboardState(scene, {
     requestOrigin: resolveRequestOrigin({ headers: request.headers, requestUrl: request.url }),
     allowModelRefresh: false,
