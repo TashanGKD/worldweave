@@ -563,6 +563,14 @@ async function warmWorldCaches(args) {
       batchHeader: snapshotBatchHeader,
       snapshot: { scene: 'tech-ai', key: 'source_status' },
     },
+    {
+      method: 'GET',
+      pathname: '/api/v1/world/asean?limit=80&fresh=1',
+      timeoutMs: 60000,
+      critical: false,
+      batchHeader: snapshotBatchHeader,
+      snapshot: { scene: 'asean', key: 'topic' },
+    },
   );
   const results = [];
   for (const endpoint of endpoints) {

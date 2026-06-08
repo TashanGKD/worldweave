@@ -69,6 +69,7 @@ __pycache__/
 %SystemDrive%/
 ${APPDATA}/
 research/external-repos/
+efficientnet_reference/
 
 # Generated source validation snapshots
 research/source-skill-validation/directory-candidates-*.json
