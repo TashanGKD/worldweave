@@ -7,10 +7,7 @@ const DECISION_MODEL_BASE_URL =
   process.env.WORLD_ASEAN_DECISION_MODEL_BASE_URL ||
   process.env.MINIMAX_BASE_URL ||
   'https://api.scnet.cn/api/llm/v1';
-const DECISION_MODEL_API_KEY =
-  process.env.WORLD_ASEAN_DECISION_MODEL_API_KEY ||
-  process.env.MINIMAX_API_KEY ||
-  '';
+const DECISION_MODEL_API_KEY = process.env.MINIMAX_API_KEY || '';
 const DECISION_MODEL_ID = process.env.WORLD_ASEAN_DECISION_MODEL_ID || 'DeepSeek-V4-Pro';
 const DECISION_MODEL_TIMEOUT_MS = Math.min(180_000, Math.max(10_000, Number(process.env.WORLD_ASEAN_DECISION_MODEL_TIMEOUT_MS || 120_000)));
 const DECISION_MODEL_CACHE_PATH = path.join(process.cwd(), '.cache', 'asean-decision-model.json');
