@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 import DashboardClient from '@/app/dashboard-client';
 import { resolvePublicSkillUrl, resolveRequestOrigin } from '@/lib/request-origin';
@@ -130,7 +131,7 @@ function slimInitialSignal<T extends { title?: string | null; summary?: string |
   };
 }
 
-type InitialScene = 'tech-ai' | 'geo-politics-daily';
+type InitialScene = 'tech-ai' | 'geo-politics-daily' | 'asean';
 
 function buildInitialNextSteps(state: InitialDashboardState, scene: InitialScene) {
   const publicTopSignals = (state.top_signals || []).filter(isPublicEventSignal).map(sanitizePublicSignal);
@@ -178,12 +179,16 @@ type PageProps = {
 function resolveInitialScene(searchParams?: Record<string, string | string[] | undefined>) {
   const rawScene = searchParams?.scene;
   const scene = Array.isArray(rawScene) ? rawScene[0] : rawScene;
+  if (scene === 'asean' || scene === 'southeast-asia') return 'asean';
   if (scene === 'geo-politics-daily' || scene === 'global' || scene === 'finance') return 'geo-politics-daily';
   return 'tech-ai';
 }
 
 export default async function Page({ searchParams }: PageProps) {
   const scene = resolveInitialScene(await searchParams);
+  if (scene === 'asean') {
+    redirect('/demo/asean');
+  }
   const requestHeaders = await headers();
   const requestOrigin = resolveRequestOrigin({ headers: requestHeaders });
   const [cachedState, cachedSubworlds] = await Promise.all([

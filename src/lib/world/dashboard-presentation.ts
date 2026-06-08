@@ -1,4 +1,5 @@
 import { cleanPresentationText, compactText, sceneDisplayLabel } from '@/components/world-ui';
+import { isAseanSignal } from '@/lib/world/asean-topic';
 import type { WorldScene, WorldStateNode } from '@/lib/world/types';
 
 export type DashboardSignalLike = {
@@ -507,12 +508,18 @@ export function dashboardSignalMatchesScene(signal: DashboardSignalLike, scene: 
   if (scene === 'tech-ai') {
     return isTrustedTechAiDashboardSignal(signal);
   }
+  if (scene === 'asean' || scene === 'southeast-asia') {
+    return isAseanSignal(signal);
+  }
   return true;
 }
 
 export function dashboardNodeMatchesScene(node: WorldStateNode, scene: WorldScene) {
   if (scene === 'tech-ai') {
     return isTrustedTechAiDashboardSignal(node as unknown as DashboardSignalLike);
+  }
+  if (scene === 'asean' || scene === 'southeast-asia') {
+    return isAseanSignal(node as unknown as DashboardSignalLike);
   }
   if (scene === 'geo-politics-daily' || scene === 'global') {
     const haystack = `${node.scene} ${node.title} ${node.summary} ${node.tags.join(' ')}`;

@@ -1,8 +1,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { ArrowRight, Bot, FileText, Globe2, Link2, Radio, RefreshCw } from 'lucide-react';
+import { ArrowRight, Bot, FileText, Globe2, Link2, Map as MapIcon, Radio, RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,7 +72,6 @@ function WorldGlobeShell() {
     </div>
   );
 }
-
 const WorldGlobe = dynamic(() => import('@/components/world-globe'), { ssr: false, loading: WorldGlobeShell });
 
 const AUTO_REFRESH_MS = 60 * 1000;
@@ -1562,6 +1562,15 @@ export default function DashboardClient({
         view: 'livebench' as TimelineView,
         href: DAILY_PAGE_HREFS.livebench,
       },
+      {
+        key: 'asean',
+        label: '东盟',
+        title: '东盟区域专题',
+        summary: '围绕能源电力、数据中心需求、区域产业链和公开信源，进入东盟专题地图与关联图谱。',
+        meta: '进入专题',
+        view: 'geo-politics-daily' as TimelineView,
+        href: '/demo/asean',
+      },
     ];
   }, [currentQuestions, geoDigestSignals, resolvedQuestions, techCurationSignals]);
   const geoTimelineCount = geoTimelineState?.top_signals?.length || quickGeoSignals.length || geoDigestSignals.length;
@@ -1616,10 +1625,24 @@ export default function DashboardClient({
                       世界脉络
                     </h1>
                     <p className="mt-1.5 max-w-2xl text-[13px] leading-6 text-slate-600">
-                      首页只呈现地缘和 AI 两条主线；其他来源作为补充材料参与筛选。
+                      整体页呈现地缘和 AI 两条主线；东盟专题单独进入区域视图。
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <nav className="inline-flex rounded-full border border-[#d7ded8] bg-white/92 p-1 text-xs">
+                      <Link
+                        href="/?scene=geo-politics-daily"
+                        className="rounded-full bg-[#effaf4] px-3 py-1.5 font-medium text-[#06231f]"
+                      >
+                        整体态势
+                      </Link>
+                      <Link
+                        href="/demo/asean"
+                        className="rounded-full px-3 py-1.5 font-medium text-slate-500 transition hover:bg-[#f4faf7] hover:text-[#06231f]"
+                      >
+                        东盟专题
+                      </Link>
+                    </nav>
                     <span className="rounded-full border border-[#d7ded8] bg-white/92 px-3 py-1 text-xs text-slate-500">
                       {sceneDisplayLabel(scene)}
                     </span>
@@ -1706,6 +1729,13 @@ export default function DashboardClient({
                             <span className="block text-[12px] font-semibold text-[#08201c]">全部信源</span>
                             <span className="mt-1 block text-[11px] leading-5 text-slate-500">查看已接入来源</span>
                           </a>
+                          <Link
+                            href="/demo/asean"
+                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
+                          >
+                            <span className="block text-[12px] font-semibold text-[#08201c]">东盟专题</span>
+                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">区域地图与专题图谱</span>
+                          </Link>
                           <a
                             href={aihotSkillHref}
                             target="_blank"
@@ -1733,7 +1763,7 @@ export default function DashboardClient({
                         <div className="min-w-0">
                           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">今日简报</p>
                           <p className="mt-2 text-[13px] leading-6 text-slate-900">
-                            先看三份整理好的日报。
+                            先看整理好的日报与专题入口。
                           </p>
                           <p className="mt-1 text-[12px] leading-5 text-slate-500">
                             每份只保留当前最值得读的精华线索，完整原始线索仍在下方时间线。
@@ -1744,15 +1774,15 @@ export default function DashboardClient({
                         </span>
                       </div>
 
-                      <div className="mt-3 grid flex-1 gap-2 lg:grid-cols-3">
+                      <div className="mt-3 grid flex-1 gap-2 lg:grid-cols-4">
                         {dashboardBriefCards.map((card) => {
-                          const Icon = card.key === 'world' ? Globe2 : card.key === 'ai' ? Bot : FileText;
+                          const Icon = card.key === 'world' ? Globe2 : card.key === 'ai' ? Bot : card.key === 'asean' ? MapIcon : FileText;
                           return (
                             <a
                               key={`top-daily-card-${card.key}`}
                               href={card.href}
                               className="group animate-rise-in relative flex min-h-[9.5rem] flex-col overflow-hidden rounded-[20px] border border-[#d2ddd6] bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(243,250,246,0.92))] px-3.5 py-3 text-left text-[#08201c] transition duration-300 hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_18px_32px_rgba(20,43,39,0.09)]"
-                              style={{ animationDelay: `${120 + (card.key === 'ai' ? 80 : card.key === 'livebench' ? 160 : 0)}ms` } as CSSProperties}
+                              style={{ animationDelay: `${120 + (card.key === 'ai' ? 80 : card.key === 'livebench' ? 160 : card.key === 'asean' ? 240 : 0)}ms` } as CSSProperties}
                             >
                               <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(20,184,166,0.55),rgba(217,159,72,0.35),transparent)] opacity-70 transition group-hover:opacity-100" />
                               <div className="flex items-center justify-between gap-2">
