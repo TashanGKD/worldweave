@@ -67,6 +67,7 @@ import { getWorldSourceKnowledgeState, syncWorldSourceKnowledgeState } from './s
 import { clearSourceCatalogCache, loadRuntimeCatalogSources, loadSourceCatalog } from './source-catalog';
 import { buildSignalNormalizationPromptPrefix, sanitizeSignalNormalization, type SignalNormalization } from './signal-normalization';
 import { filterLowInformationSourceRows, isSourceSnapshotLikeSignal } from './signal-quality';
+import { isAseanSignal } from './asean-topic';
 import type { RuntimeCatalogSource } from './source-catalog';
 
 type SignalRow = {
@@ -3662,6 +3663,10 @@ function signalMatchesScene(signal: Pick<WorldSignal, 'scene' | 'alignmentTags' 
 
   if (normalizedScene === 'tech-ai' || normalizedScene === 'techai' || normalizedScene === 'technology-ai' || normalizedScene === 'technologyai') {
     return techAiSceneScore(signal) >= 3;
+  }
+
+  if (normalizedScene === 'asean' || normalizedScene === 'southeast-asia' || normalizedScene === 'southeastasia') {
+    return isAseanSignal(signal);
   }
 
   if (normalizedScene === 'technology-daily' || normalizedScene === 'technologydaily') {
@@ -8898,6 +8903,12 @@ function buildWorldSubworldSummaries(
       summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。',
       matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot', 'ai-news-radar'],
     },
+    {
+      key: 'asean',
+      title: '东盟',
+      summary: '东盟、东南亚供应链、南海、区域安全、市场和公共卫生。',
+      matched_tags: ['asean', 'southeast-asia', 'south-china-sea', 'rcep', 'supply-chain'],
+    },
   ];
 
   return fixedWorlds.map((world) => ({
@@ -8967,6 +8978,7 @@ function buildSubworldSummariesFromCachedDashboardState(
   const fixedWorlds: Array<{ key: WorldScene; title: string; summary: string; matched_tags: string[] }> = [
     { key: 'geo-politics-daily', title: '地缘', summary: '冲突、外交、制裁、选举、公共安全和区域风险。', matched_tags: ['geopolitics', 'war', 'conflict', 'diplomacy'] },
     { key: 'tech-ai', title: 'AI', summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。', matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'opensource', 'aihot', 'ai-news-radar'] },
+    { key: 'asean', title: '东盟', summary: '东盟、东南亚供应链、南海、区域安全、市场和公共卫生。', matched_tags: ['asean', 'southeast-asia', 'south-china-sea', 'rcep', 'supply-chain'] },
   ];
 
   return fixedWorlds.map((world) => ({
@@ -9279,6 +9291,15 @@ export async function getCachedWorldDashboardState(scene: WorldScene = 'global')
       : snapshot?.states?.[scene] ||
         deriveCachedDashboardStateForScene(snapshot?.states?.global || null, scene);
   if (!state) return null;
+  const normalizedScene = normalizeTag(scene);
+  if (
+    (normalizedScene === 'asean' || normalizedScene === 'southeast-asia' || normalizedScene === 'southeastasia') &&
+    !(state.top_signals || []).length &&
+    !(state.graph_signals || []).length &&
+    !(state.knowledge_signals || []).length
+  ) {
+    return null;
+  }
   const livebenchScene: WorldScene = 'global';
   const normalizedState: WorldDashboardStatePayload = {
     ...state,

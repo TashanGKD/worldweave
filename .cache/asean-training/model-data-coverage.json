@@ -1,0 +1,305 @@
+{
+  "generated_at": "2026-06-08T08:21:21.916Z",
+  "source_state": {
+    "refreshed_at": "2026-06-06T23:45:25.599Z",
+    "source_count": 25,
+    "fetched_count": 20,
+    "metric_count": 216,
+    "failed_count": 5
+  },
+  "models": [
+    {
+      "id": "fuel-cost",
+      "name": "能源成本扰动预测",
+      "status": "weekly_time_series_ready",
+      "sample_count": 345,
+      "countries": [
+        "马来西亚"
+      ],
+      "date_range": {
+        "min": "2024-02-29",
+        "max": "2026-06-04"
+      },
+      "sources": [
+        {
+          "name": "马来西亚公开燃油价格",
+          "url": "https://api.data.gov.my/data-catalogue?id=fuelprice&limit=500&sort=-date"
+        }
+      ],
+      "public_metrics": {
+        "review_points": 48,
+        "average_error": "0.27011174339257793",
+        "trend_correlation": "按产品回看"
+      },
+      "limitations": [
+        "只作为能源成本扰动线索，不直接代表电价或供电缺口。"
+      ]
+    },
+    {
+      "status": "proxy_trained",
+      "sample_count": 77,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "date_range": {
+        "min": "2017",
+        "max": "2024"
+      },
+      "sources": [
+        {
+          "name": "World Bank ASEAN GDP",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Internet Users",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Secure Internet Servers",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN FDI Net Inflows",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Trade Openness",
+          "country_count": 9
+        }
+      ],
+      "public_metrics": {
+        "review_points": 17,
+        "average_error": "2.57分",
+        "trend_correlation": "99.7%"
+      },
+      "limitations": [
+        "该模型预测公开指标构造的代理分，不代表真实项目收益或行动结果。",
+        "缺少项目级标签时，只能用于排序、趋势和补数优先级判断。"
+      ],
+      "id": "market-heat",
+      "name": "市场吸引力"
+    },
+    {
+      "id": "power-risk",
+      "name": "电力瓶颈",
+      "status": "annual_panel_ready",
+      "sample_count": 149,
+      "countries": [
+        "柬埔寨",
+        "马来西亚",
+        "泰国",
+        "新加坡",
+        "越南",
+        "老挝"
+      ],
+      "date_range": {
+        "min": "2000",
+        "max": "2025"
+      },
+      "sources": [
+        {
+          "name": "Our World in Data Energy Dataset"
+        },
+        {
+          "name": "World Bank annual indicators"
+        }
+      ],
+      "public_metrics": {
+        "review_points": 23,
+        "average_error": "2.1%",
+        "trend_correlation": "89%回看拟合"
+      },
+      "limitations": [
+        "年度国家面板适合供需压力线索，不代表园区或项目级缺电概率。"
+      ]
+    },
+    {
+      "status": "proxy_trained",
+      "sample_count": 43,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "date_range": {
+        "min": "2017",
+        "max": "2025"
+      },
+      "sources": [
+        {
+          "name": "World Bank ASEAN Renewable Electricity Output",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Renewable Energy Consumption",
+          "country_count": 11
+        },
+        {
+          "name": "Singapore Data.gov Electricity Generation And Consumption",
+          "country_count": 1
+        },
+        {
+          "name": "Our World in Data Energy Dataset",
+          "country_count": 6
+        }
+      ],
+      "public_metrics": {
+        "review_points": 9,
+        "average_error": "1.58分",
+        "trend_correlation": "99.5%"
+      },
+      "limitations": [
+        "该模型预测公开指标构造的代理分，不代表真实项目收益或行动结果。",
+        "缺少项目级标签时，只能用于排序、趋势和补数优先级判断。"
+      ],
+      "id": "green-parity",
+      "name": "绿电平价"
+    },
+    {
+      "status": "proxy_trained",
+      "sample_count": 77,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "date_range": {
+        "min": "2017",
+        "max": "2024"
+      },
+      "sources": [
+        {
+          "name": "World Bank ASEAN Internet Users",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Secure Internet Servers",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN High-Technology Exports",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN FDI Net Inflows",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Trade Openness",
+          "country_count": 9
+        }
+      ],
+      "public_metrics": {
+        "review_points": 17,
+        "average_error": "2.87分",
+        "trend_correlation": "99.6%"
+      },
+      "limitations": [
+        "该模型预测公开指标构造的代理分，不代表真实项目收益或行动结果。",
+        "缺少项目级标签时，只能用于排序、趋势和补数优先级判断。"
+      ],
+      "id": "compute-roi",
+      "name": "算力需求"
+    },
+    {
+      "status": "proxy_trained",
+      "sample_count": 81,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "date_range": {
+        "min": "2017",
+        "max": "2025"
+      },
+      "sources": [
+        {
+          "name": "World Bank ASEAN GDP",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Internet Users",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Electricity Access",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Electric Power Consumption",
+          "country_count": 10
+        },
+        {
+          "name": "World Bank ASEAN Secure Internet Servers",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN FDI Net Inflows",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Trade Openness",
+          "country_count": 9
+        },
+        {
+          "name": "World Bank ASEAN Renewable Energy Consumption",
+          "country_count": 11
+        },
+        {
+          "name": "Singapore Data.gov Electricity Generation And Consumption",
+          "country_count": 1
+        },
+        {
+          "name": "Our World in Data Energy Dataset",
+          "country_count": 6
+        }
+      ],
+      "public_metrics": {
+        "review_points": 18,
+        "average_error": "10.9分",
+        "trend_correlation": "50.3%"
+      },
+      "limitations": [
+        "该模型预测公开指标构造的代理分，不代表真实项目收益或行动结果。",
+        "缺少项目级标签时，只能用于排序、趋势和补数优先级判断。"
+      ],
+      "id": "go-priority",
+      "name": "出海优先级"
+    }
+  ]
+}

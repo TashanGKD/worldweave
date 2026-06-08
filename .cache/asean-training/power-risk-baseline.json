@@ -1,0 +1,420 @@
+{
+  "generated_at": "2026-06-08T08:21:10.463Z",
+  "model_id": "asean-power-risk-ridge-baseline",
+  "target": "next_year_supply_gap_ratio = max(0, electricity_demand - electricity_generation) / electricity_demand",
+  "source_urls": [
+    "https://owid-public.owid.io/data/energy/owid-energy-data.csv",
+    "https://raw.githubusercontent.com/owid/energy-data/master/owid-energy-data.csv",
+    "https://api.worldbank.org/v2/"
+  ],
+  "scope": [
+    "马来西亚",
+    "越南",
+    "新加坡",
+    "泰国",
+    "老挝",
+    "柬埔寨"
+  ],
+  "feature_names": [
+    "current_supply_gap_ratio",
+    "current_surplus_ratio",
+    "generation_twh",
+    "demand_twh",
+    "net_import_share",
+    "renewables_share_elec",
+    "fossil_share_elec",
+    "demand_yoy",
+    "generation_yoy",
+    "access_pct",
+    "log_gdp_usd",
+    "internet_pct",
+    "log_secure_servers",
+    "fdi_share_gdp",
+    "trade_open_pct",
+    "per_capita_electricity_kwh"
+  ],
+  "sample_count": 149,
+  "year_range": {
+    "min": 2000,
+    "max": 2025
+  },
+  "split": {
+    "train_target_year_max": 2021,
+    "test_target_year_min": 2022
+  },
+  "metrics": {
+    "train": {
+      "count": 126,
+      "mae": 0.015803588530344758,
+      "rmse": 0.03369627163622282,
+      "r2": 0.9267108845721452
+    },
+    "test": {
+      "count": 23,
+      "mae": 0.021176739110951078,
+      "rmse": 0.03269564455861758,
+      "r2": 0.8858464576626452
+    }
+  },
+  "latest_predictions": [
+    {
+      "country": "柬埔寨",
+      "base_year": 2025,
+      "forecast_year": 2026,
+      "predicted_supply_gap_ratio": 0.1926,
+      "predicted_band": "高约束",
+      "points": [
+        {
+          "date": "2019",
+          "value": 26.09,
+          "kind": "observed"
+        },
+        {
+          "date": "2020",
+          "value": 33.69,
+          "kind": "observed"
+        },
+        {
+          "date": "2021",
+          "value": 25.88,
+          "kind": "observed"
+        },
+        {
+          "date": "2022",
+          "value": 32.21,
+          "kind": "observed"
+        },
+        {
+          "date": "2023",
+          "value": 19.86,
+          "kind": "observed"
+        },
+        {
+          "date": "2024",
+          "value": 22.6,
+          "kind": "observed"
+        },
+        {
+          "date": "2025",
+          "value": 20.68,
+          "kind": "observed"
+        },
+        {
+          "date": "2026",
+          "value": 19.26,
+          "kind": "forecast"
+        }
+      ],
+      "latest_observed_gap_ratio": null,
+      "observed_year": null,
+      "observed_band": null,
+      "evidence": {
+        "demand_twh": 22.389999389648438,
+        "generation_twh": 17.760000228881836,
+        "renewables_share_elec": 40.878379821777344,
+        "fossil_share_elec": 59.121620178222656,
+        "access_pct": null
+      }
+    },
+    {
+      "country": "马来西亚",
+      "base_year": 2025,
+      "forecast_year": 2026,
+      "predicted_supply_gap_ratio": 0,
+      "predicted_band": "供给宽松",
+      "points": [
+        {
+          "date": "2019",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2020",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2021",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2022",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2023",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2024",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2025",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2026",
+          "value": 0,
+          "kind": "forecast"
+        }
+      ],
+      "latest_observed_gap_ratio": null,
+      "observed_year": null,
+      "observed_band": null,
+      "evidence": {
+        "demand_twh": 199.91000366210938,
+        "generation_twh": 201.08999633789062,
+        "renewables_share_elec": 20.65244483947754,
+        "fossil_share_elec": 79.3475570678711,
+        "access_pct": null
+      }
+    },
+    {
+      "country": "泰国",
+      "base_year": 2025,
+      "forecast_year": 2026,
+      "predicted_supply_gap_ratio": 0.1419,
+      "predicted_band": "高约束",
+      "points": [
+        {
+          "date": "2019",
+          "value": 10.83,
+          "kind": "observed"
+        },
+        {
+          "date": "2020",
+          "value": 13.24,
+          "kind": "observed"
+        },
+        {
+          "date": "2021",
+          "value": 15.11,
+          "kind": "observed"
+        },
+        {
+          "date": "2022",
+          "value": 15.63,
+          "kind": "observed"
+        },
+        {
+          "date": "2023",
+          "value": 13.82,
+          "kind": "observed"
+        },
+        {
+          "date": "2024",
+          "value": 13.97,
+          "kind": "observed"
+        },
+        {
+          "date": "2025",
+          "value": 16.37,
+          "kind": "observed"
+        },
+        {
+          "date": "2026",
+          "value": 14.19,
+          "kind": "forecast"
+        }
+      ],
+      "latest_observed_gap_ratio": null,
+      "observed_year": null,
+      "observed_band": null,
+      "evidence": {
+        "demand_twh": 225.10000610351562,
+        "generation_twh": 188.24000549316406,
+        "renewables_share_elec": 16.5745849609375,
+        "fossil_share_elec": 83.42540740966797,
+        "access_pct": null
+      }
+    },
+    {
+      "country": "新加坡",
+      "base_year": 2025,
+      "forecast_year": 2026,
+      "predicted_supply_gap_ratio": 0.0254,
+      "predicted_band": "低约束",
+      "points": [
+        {
+          "date": "2019",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2020",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2021",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2022",
+          "value": 0.32,
+          "kind": "observed"
+        },
+        {
+          "date": "2023",
+          "value": 0.14,
+          "kind": "observed"
+        },
+        {
+          "date": "2024",
+          "value": 0.03,
+          "kind": "observed"
+        },
+        {
+          "date": "2025",
+          "value": 0.48,
+          "kind": "observed"
+        },
+        {
+          "date": "2026",
+          "value": 2.54,
+          "kind": "forecast"
+        }
+      ],
+      "latest_observed_gap_ratio": null,
+      "observed_year": null,
+      "observed_band": null,
+      "evidence": {
+        "demand_twh": 60.439998626708984,
+        "generation_twh": 60.150001525878906,
+        "renewables_share_elec": 5.486284255981445,
+        "fossil_share_elec": 94.51371002197266,
+        "access_pct": null
+      }
+    },
+    {
+      "country": "越南",
+      "base_year": 2025,
+      "forecast_year": 2026,
+      "predicted_supply_gap_ratio": 0,
+      "predicted_band": "供给宽松",
+      "points": [
+        {
+          "date": "2019",
+          "value": 0.52,
+          "kind": "observed"
+        },
+        {
+          "date": "2020",
+          "value": 0.62,
+          "kind": "observed"
+        },
+        {
+          "date": "2021",
+          "value": 0.32,
+          "kind": "observed"
+        },
+        {
+          "date": "2022",
+          "value": 0.87,
+          "kind": "observed"
+        },
+        {
+          "date": "2023",
+          "value": 1.24,
+          "kind": "observed"
+        },
+        {
+          "date": "2024",
+          "value": 1.17,
+          "kind": "observed"
+        },
+        {
+          "date": "2025",
+          "value": 1.15,
+          "kind": "observed"
+        },
+        {
+          "date": "2026",
+          "value": 0,
+          "kind": "forecast"
+        }
+      ],
+      "latest_observed_gap_ratio": null,
+      "observed_year": null,
+      "observed_band": null,
+      "evidence": {
+        "demand_twh": 313.5899963378906,
+        "generation_twh": 309.989990234375,
+        "renewables_share_elec": 45.41759490966797,
+        "fossil_share_elec": 54.58240509033203,
+        "access_pct": null
+      }
+    },
+    {
+      "country": "老挝",
+      "base_year": 2024,
+      "forecast_year": 2025,
+      "predicted_supply_gap_ratio": 0,
+      "predicted_band": "供给宽松",
+      "points": [
+        {
+          "date": "2018",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2019",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2020",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2021",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2022",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2023",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2024",
+          "value": 0,
+          "kind": "observed"
+        },
+        {
+          "date": "2025",
+          "value": 0,
+          "kind": "forecast"
+        }
+      ],
+      "latest_observed_gap_ratio": null,
+      "observed_year": null,
+      "observed_band": null,
+      "evidence": {
+        "demand_twh": 15.609999656677246,
+        "generation_twh": 52.310001373291016,
+        "renewables_share_elec": 76.71573638916016,
+        "fossil_share_elec": 23.28426742553711,
+        "access_pct": null
+      }
+    }
+  ],
+  "limitations": [
+    "该模型预测的是电力供需压力代理标签，不等同于数据中心实际供电缺口。",
+    "当前训练以年度公开数据为主，无法替代月度电价、项目用电量和电网节点约束。",
+    "样本量较小，结果应作为策略测算基线和补数方向，不作为单独决策依据。"
+  ]
+}

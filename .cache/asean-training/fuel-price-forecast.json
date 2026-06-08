@@ -1,0 +1,537 @@
+{
+  "generated_at": "2026-06-08T08:18:15.371392+00:00",
+  "model_id": "malaysia-fuel-price-weekly-forecast",
+  "model_type": "XGBRegressor",
+  "target": "next_observed_fuel_price_delta_added_to_current_price",
+  "forecast_horizon": "one-step weekly model, recursively rolled forward for 8 weeks",
+  "source": {
+    "name": "马来西亚公开燃油价格",
+    "url": "https://api.data.gov.my/data-catalogue?id=fuelprice&limit=500&sort=-date",
+    "country": "马来西亚"
+  },
+  "series": [
+    {
+      "product": "ron95",
+      "label": "燃油价格 ron95",
+      "country": "马来西亚",
+      "source_name": "马来西亚公开燃油价格",
+      "source_url": "https://api.data.gov.my/data-catalogue?id=fuelprice&limit=500&sort=-date",
+      "start": "2024-02-29",
+      "end": "2026-06-04",
+      "point_count": 120
+    },
+    {
+      "product": "ron97",
+      "label": "燃油价格 ron97",
+      "country": "马来西亚",
+      "source_name": "马来西亚公开燃油价格",
+      "source_url": "https://api.data.gov.my/data-catalogue?id=fuelprice&limit=500&sort=-date",
+      "start": "2024-02-29",
+      "end": "2026-06-04",
+      "point_count": 120
+    },
+    {
+      "product": "diesel",
+      "label": "燃油价格 diesel",
+      "country": "马来西亚",
+      "source_name": "马来西亚公开燃油价格",
+      "source_url": "https://api.data.gov.my/data-catalogue?id=fuelprice&limit=500&sort=-date",
+      "start": "2024-02-29",
+      "end": "2026-06-04",
+      "point_count": 120
+    }
+  ],
+  "sample_count": 345,
+  "split": {
+    "method": "last 16 usable rows per fuel product held out",
+    "train_count": 297,
+    "test_count": 48
+  },
+  "feature_names": [
+    "current",
+    "lag_1",
+    "lag_2",
+    "lag_3",
+    "lag_4",
+    "lag_8",
+    "lag_12",
+    "rolling_mean_4",
+    "rolling_mean_8",
+    "rolling_std_4",
+    "diff_1",
+    "diff_4",
+    "pct_change_1",
+    "ron97_lag_1",
+    "spread_vs_ron97",
+    "diesel_lag_1",
+    "spread_vs_diesel",
+    "week_sin",
+    "week_cos",
+    "month",
+    "days_since_start",
+    "ron95_lag_1",
+    "spread_vs_ron95",
+    "product_diesel",
+    "product_ron95",
+    "product_ron97"
+  ],
+  "metrics": {
+    "train": {
+      "count": 297,
+      "mae": 0.017576520250975367,
+      "rmse": 0.03798848028123624,
+      "mape": 0.006173789789035594,
+      "r2": 0.9946262239157638
+    },
+    "test": {
+      "count": 48,
+      "mae": 0.27011174339257793,
+      "rmse": 0.37420505069850274,
+      "mape": 0.05910605003493056,
+      "r2": 0.8415275119830732
+    }
+  },
+  "metrics_by_product": [
+    {
+      "product": "diesel",
+      "count": 16,
+      "start": "2026-02-12",
+      "end": "2026-05-28",
+      "mae": 0.3761491557696717,
+      "rmse": 0.49813696635167004,
+      "latest_validation_rows": [
+        {
+          "date": "2026-04-30",
+          "current": 5.12,
+          "actual_next": 5.17,
+          "predicted_next": 5.0782,
+          "error": -0.0918
+        },
+        {
+          "date": "2026-05-07",
+          "current": 5.17,
+          "actual_next": 4.87,
+          "predicted_next": 5.144,
+          "error": 0.274
+        },
+        {
+          "date": "2026-05-14",
+          "current": 4.87,
+          "actual_next": 4.97,
+          "predicted_next": 4.8273,
+          "error": -0.1427
+        },
+        {
+          "date": "2026-05-21",
+          "current": 4.97,
+          "actual_next": 4.87,
+          "predicted_next": 4.9474,
+          "error": 0.0774
+        },
+        {
+          "date": "2026-05-28",
+          "current": 4.87,
+          "actual_next": 4.67,
+          "predicted_next": 4.8157,
+          "error": 0.1457
+        }
+      ]
+    },
+    {
+      "product": "ron95",
+      "count": 16,
+      "start": "2026-02-12",
+      "end": "2026-05-28",
+      "mae": 0.18558952512947133,
+      "rmse": 0.2610968579562618,
+      "latest_validation_rows": [
+        {
+          "date": "2026-04-30",
+          "current": 3.97,
+          "actual_next": 4.02,
+          "predicted_next": 3.9672,
+          "error": -0.0528
+        },
+        {
+          "date": "2026-05-07",
+          "current": 4.02,
+          "actual_next": 3.87,
+          "predicted_next": 3.9982,
+          "error": 0.1282
+        },
+        {
+          "date": "2026-05-14",
+          "current": 3.87,
+          "actual_next": 4.07,
+          "predicted_next": 3.834,
+          "error": -0.236
+        },
+        {
+          "date": "2026-05-21",
+          "current": 4.07,
+          "actual_next": 3.92,
+          "predicted_next": 4.0687,
+          "error": 0.1487
+        },
+        {
+          "date": "2026-05-28",
+          "current": 3.92,
+          "actual_next": 3.72,
+          "predicted_next": 3.8702,
+          "error": 0.1502
+        }
+      ]
+    },
+    {
+      "product": "ron97",
+      "count": 16,
+      "start": "2026-02-12",
+      "end": "2026-05-28",
+      "mae": 0.24859654927859084,
+      "rmse": 0.32214321880823416,
+      "latest_validation_rows": [
+        {
+          "date": "2026-04-30",
+          "current": 4.9,
+          "actual_next": 4.9,
+          "predicted_next": 4.8821,
+          "error": -0.0179
+        },
+        {
+          "date": "2026-05-07",
+          "current": 4.9,
+          "actual_next": 4.7,
+          "predicted_next": 4.8699,
+          "error": 0.1699
+        },
+        {
+          "date": "2026-05-14",
+          "current": 4.7,
+          "actual_next": 4.85,
+          "predicted_next": 4.6677,
+          "error": -0.1823
+        },
+        {
+          "date": "2026-05-21",
+          "current": 4.85,
+          "actual_next": 4.65,
+          "predicted_next": 4.846,
+          "error": 0.196
+        },
+        {
+          "date": "2026-05-28",
+          "current": 4.65,
+          "actual_next": 4.35,
+          "predicted_next": 4.5903,
+          "error": 0.2403
+        }
+      ]
+    }
+  ],
+  "feature_importance": [
+    {
+      "feature": "month",
+      "importance": 0.1999920904636383
+    },
+    {
+      "feature": "lag_1",
+      "importance": 0.17676110565662384
+    },
+    {
+      "feature": "lag_12",
+      "importance": 0.08672066032886505
+    },
+    {
+      "feature": "days_since_start",
+      "importance": 0.07741314172744751
+    },
+    {
+      "feature": "spread_vs_ron95",
+      "importance": 0.07024397701025009
+    },
+    {
+      "feature": "week_sin",
+      "importance": 0.06360813975334167
+    },
+    {
+      "feature": "spread_vs_diesel",
+      "importance": 0.0459754541516304
+    },
+    {
+      "feature": "diesel_lag_1",
+      "importance": 0.038912758231163025
+    },
+    {
+      "feature": "current",
+      "importance": 0.03868386894464493
+    },
+    {
+      "feature": "week_cos",
+      "importance": 0.036223672330379486
+    },
+    {
+      "feature": "ron97_lag_1",
+      "importance": 0.024706469848752022
+    },
+    {
+      "feature": "rolling_mean_8",
+      "importance": 0.020380565896630287
+    },
+    {
+      "feature": "spread_vs_ron97",
+      "importance": 0.01799619197845459
+    },
+    {
+      "feature": "diff_1",
+      "importance": 0.016851969063282013
+    },
+    {
+      "feature": "diff_4",
+      "importance": 0.01634097285568714
+    },
+    {
+      "feature": "lag_8",
+      "importance": 0.011404752731323242
+    },
+    {
+      "feature": "lag_3",
+      "importance": 0.01084541529417038
+    },
+    {
+      "feature": "pct_change_1",
+      "importance": 0.010566934011876583
+    },
+    {
+      "feature": "rolling_std_4",
+      "importance": 0.00807146541774273
+    },
+    {
+      "feature": "product_diesel",
+      "importance": 0.007325245998799801
+    }
+  ],
+  "forecast_8_weeks": [
+    {
+      "date": "2026-06-11",
+      "step": 1,
+      "product": "diesel",
+      "predicted_price": 4.644,
+      "previous_observed_or_predicted": 4.67,
+      "change": -0.026,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-06-11",
+      "step": 1,
+      "product": "ron95",
+      "predicted_price": 3.6982,
+      "previous_observed_or_predicted": 3.72,
+      "change": -0.0218,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-06-11",
+      "step": 1,
+      "product": "ron97",
+      "predicted_price": 4.4273,
+      "previous_observed_or_predicted": 4.35,
+      "change": 0.0773,
+      "direction": "上行"
+    },
+    {
+      "date": "2026-06-18",
+      "step": 2,
+      "product": "diesel",
+      "predicted_price": 4.6084,
+      "previous_observed_or_predicted": 4.644,
+      "change": -0.0356,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-06-18",
+      "step": 2,
+      "product": "ron95",
+      "predicted_price": 3.6619,
+      "previous_observed_or_predicted": 3.6982,
+      "change": -0.0363,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-06-18",
+      "step": 2,
+      "product": "ron97",
+      "predicted_price": 4.434,
+      "previous_observed_or_predicted": 4.4273,
+      "change": 0.0067,
+      "direction": "上行"
+    },
+    {
+      "date": "2026-06-25",
+      "step": 3,
+      "product": "diesel",
+      "predicted_price": 4.5713,
+      "previous_observed_or_predicted": 4.6084,
+      "change": -0.0371,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-06-25",
+      "step": 3,
+      "product": "ron95",
+      "predicted_price": 3.6265,
+      "previous_observed_or_predicted": 3.6619,
+      "change": -0.0355,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-06-25",
+      "step": 3,
+      "product": "ron97",
+      "predicted_price": 4.4301,
+      "previous_observed_or_predicted": 4.434,
+      "change": -0.004,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-02",
+      "step": 4,
+      "product": "diesel",
+      "predicted_price": 4.5365,
+      "previous_observed_or_predicted": 4.5713,
+      "change": -0.0349,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-02",
+      "step": 4,
+      "product": "ron95",
+      "predicted_price": 3.5936,
+      "previous_observed_or_predicted": 3.6265,
+      "change": -0.0328,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-02",
+      "step": 4,
+      "product": "ron97",
+      "predicted_price": 4.4224,
+      "previous_observed_or_predicted": 4.4301,
+      "change": -0.0076,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-09",
+      "step": 5,
+      "product": "diesel",
+      "predicted_price": 4.5013,
+      "previous_observed_or_predicted": 4.5365,
+      "change": -0.0352,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-09",
+      "step": 5,
+      "product": "ron95",
+      "predicted_price": 3.5581,
+      "previous_observed_or_predicted": 3.5936,
+      "change": -0.0355,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-09",
+      "step": 5,
+      "product": "ron97",
+      "predicted_price": 4.3961,
+      "previous_observed_or_predicted": 4.4224,
+      "change": -0.0264,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-16",
+      "step": 6,
+      "product": "diesel",
+      "predicted_price": 4.4719,
+      "previous_observed_or_predicted": 4.5013,
+      "change": -0.0294,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-16",
+      "step": 6,
+      "product": "ron95",
+      "predicted_price": 3.5246,
+      "previous_observed_or_predicted": 3.5581,
+      "change": -0.0335,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-16",
+      "step": 6,
+      "product": "ron97",
+      "predicted_price": 4.363,
+      "previous_observed_or_predicted": 4.3961,
+      "change": -0.0331,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-23",
+      "step": 7,
+      "product": "diesel",
+      "predicted_price": 4.4158,
+      "previous_observed_or_predicted": 4.4719,
+      "change": -0.0561,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-23",
+      "step": 7,
+      "product": "ron95",
+      "predicted_price": 3.4786,
+      "previous_observed_or_predicted": 3.5246,
+      "change": -0.046,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-23",
+      "step": 7,
+      "product": "ron97",
+      "predicted_price": 4.3195,
+      "previous_observed_or_predicted": 4.363,
+      "change": -0.0435,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-30",
+      "step": 8,
+      "product": "diesel",
+      "predicted_price": 4.3635,
+      "previous_observed_or_predicted": 4.4158,
+      "change": -0.0523,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-30",
+      "step": 8,
+      "product": "ron95",
+      "predicted_price": 3.4267,
+      "previous_observed_or_predicted": 3.4786,
+      "change": -0.0519,
+      "direction": "下行"
+    },
+    {
+      "date": "2026-07-30",
+      "step": 8,
+      "product": "ron97",
+      "predicted_price": 4.2778,
+      "previous_observed_or_predicted": 4.3195,
+      "change": -0.0417,
+      "direction": "下行"
+    }
+  ],
+  "limitations": [
+    "燃油价格用于观察能源成本扰动，需要结合电力供需和园区价格复核。",
+    "当前样本来自马来西亚公开燃油价格序列，不能外推到其他东盟国家。",
+    "RON95 长期受政策价格约束，模型会学习到阶跃变化前后的模式；结果应作为成本压力线索，不作为能源价格决策依据。",
+    "8周预测采用递推方式，越往后误差会累积。"
+  ]
+}

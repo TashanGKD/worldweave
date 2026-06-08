@@ -1,0 +1,327 @@
+{
+  "generated_at": "2026-06-08T08:21:22.069Z",
+  "source_state": {
+    "refreshed_at": "2026-06-06T23:45:25.599Z",
+    "source_count": 25,
+    "fetched_count": 20,
+    "metric_count": 216,
+    "failed_count": 5
+  },
+  "power_training": {
+    "sample_count": 149,
+    "year_range": {
+      "min": 2000,
+      "max": 2025
+    },
+    "feature_count": 16,
+    "train_count": 126,
+    "test_count": 23,
+    "test_mae": 0.021176739110951078,
+    "test_r2": 0.8858464576626452
+  },
+  "proxy_training": {
+    "generated_at": "2026-06-08T08:18:28.471Z",
+    "model_count": 4,
+    "trained_count": 4
+  },
+  "models": [
+    {
+      "id": "market_attractiveness",
+      "name": "市场吸引力",
+      "business_question": "哪些东盟国家具备优先承接绿色算力服务和出海投资的市场条件。",
+      "readiness": "index_ready",
+      "training_decision": "not_supervised",
+      "landing_method": "规则指数 + 专家权重校准",
+      "proxy_training": {
+        "status": "proxy_trained",
+        "sample_count": 77,
+        "country_count": 11,
+        "date_range": {
+          "min": "2017",
+          "max": "2024"
+        },
+        "test_points": 17,
+        "average_error": 2.5728483118044885,
+        "trend_correlation": 0.9973267703064372
+      },
+      "evidence_reading_contract": [
+        "先读取地图点位的国家、议题和紧急度。",
+        "再读取指标走势、来源校验和近期线索。",
+        "最后输出国家排序、风险解释、可行动建议和需补数据。"
+      ],
+      "available_metric_count": 57,
+      "available_series_count": 53,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "sources": [
+        "PeeringDB Facilities Malaysia",
+        "PeeringDB Facilities Singapore",
+        "PeeringDB Facilities Thailand",
+        "PeeringDB Facilities Vietnam",
+        "World Bank ASEAN FDI Net Inflows",
+        "World Bank ASEAN GDP",
+        "World Bank ASEAN Internet Users",
+        "World Bank ASEAN Secure Internet Servers",
+        "World Bank ASEAN Trade Openness"
+      ],
+      "required_fields": [
+        "GDP",
+        "FDI净流入",
+        "贸易开放度",
+        "互联网使用率",
+        "安全互联网服务器密度",
+        "网络设施数量"
+      ],
+      "missing_or_limits": [
+        "缺少历史进入结果或投资成败标签，无法直接监督训练。"
+      ],
+      "visualization": "国家排名、指标雷达、权重敏感性条带"
+    },
+    {
+      "id": "power_gap_forecast",
+      "name": "供电缺口与电力预测",
+      "business_question": "未来一年哪些国家可能出现电力供需压力，广西绿电和智算中心如何辅助缓释。",
+      "readiness": "quant_hint_ready",
+      "training_decision": "quantitative_hint",
+      "landing_method": "年度面板基线只作量化线索，主判断读取地图、趋势、指标和事件证据",
+      "proxy_training": null,
+      "evidence_reading_contract": [
+        "先读取地图点位的国家、议题和紧急度。",
+        "再读取指标走势、来源校验和近期线索。",
+        "最后输出国家排序、风险解释、可行动建议和需补数据。"
+      ],
+      "available_metric_count": 52,
+      "available_series_count": 50,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "sources": [
+        "Our World in Data Energy Dataset",
+        "Singapore Data.gov Electricity Generation And Consumption",
+        "World Bank ASEAN Electric Power Consumption",
+        "World Bank ASEAN GDP"
+      ],
+      "required_fields": [
+        "年度发电量",
+        "年度电力需求",
+        "净电力进口",
+        "可再生电力占比",
+        "化石电力占比",
+        "人均用电量",
+        "GDP"
+      ],
+      "missing_or_limits": [
+        "样本量不足以支撑独立预测模型；缺少数据中心项目级用电曲线和电网节点约束。"
+      ],
+      "visualization": "供需压力地图、趋势证据、国家分解条形图、研判依据列表"
+    },
+    {
+      "id": "green_parity_energy",
+      "name": "绿电平价与能源约束",
+      "business_question": "绿色电力是否具备成本优势，哪些国家存在绿电比例、燃料价格和电价约束。",
+      "readiness": "index_ready",
+      "training_decision": "scenario_index",
+      "landing_method": "能源约束指数 + 趋势图读取 + 情景敏感性分析",
+      "proxy_training": {
+        "status": "proxy_trained",
+        "sample_count": 43,
+        "country_count": 11,
+        "date_range": {
+          "min": "2017",
+          "max": "2025"
+        },
+        "test_points": 9,
+        "average_error": 1.5766574049284479,
+        "trend_correlation": 0.994933132899379
+      },
+      "evidence_reading_contract": [
+        "先读取地图点位的国家、议题和紧急度。",
+        "再读取指标走势、来源校验和近期线索。",
+        "最后输出国家排序、风险解释、可行动建议和需补数据。"
+      ],
+      "available_metric_count": 40,
+      "available_series_count": 39,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "sources": [
+        "Our World in Data Energy Dataset",
+        "Singapore Data.gov Monthly Electricity Tariffs",
+        "World Bank ASEAN Renewable Electricity Output",
+        "World Bank ASEAN Renewable Energy Consumption",
+        "马来西亚公开燃油价格",
+        "马来西亚公开用电数据",
+        "马来西亚公开电力供应数据"
+      ],
+      "required_fields": [
+        "可再生电力占比",
+        "可再生电力输出占比",
+        "可再生能源消费占比",
+        "化石电力占比",
+        "月度电价",
+        "燃油价格",
+        "电力供给",
+        "电力消费"
+      ],
+      "missing_or_limits": [
+        "缺少六国统一口径月度电价和绿电PPA价格，暂不适合训练跨国预测模型。"
+      ],
+      "visualization": "绿电约束热力图、价格走势、情景开关"
+    },
+    {
+      "id": "compute_demand_roi",
+      "name": "算力需求与投资回报",
+      "business_question": "哪些国家存在算力需求缺口，进入后投资回收和资源约束是否可接受。",
+      "readiness": "needs_project_labels",
+      "training_decision": "not_ready_for_training",
+      "landing_method": "需求代理评分 + 设施承载图读取 + 项目级补数",
+      "proxy_training": {
+        "status": "proxy_trained",
+        "sample_count": 77,
+        "country_count": 11,
+        "date_range": {
+          "min": "2017",
+          "max": "2024"
+        },
+        "test_points": 17,
+        "average_error": 2.8666953718415598,
+        "trend_correlation": 0.9961068402046616
+      },
+      "evidence_reading_contract": [
+        "先读取地图点位的国家、议题和紧急度。",
+        "再读取指标走势、来源校验和近期线索。",
+        "最后输出国家排序、风险解释、可行动建议和需补数据。"
+      ],
+      "available_metric_count": 49,
+      "available_series_count": 33,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "sources": [
+        "PeeringDB Facilities Malaysia",
+        "PeeringDB Facilities Singapore",
+        "PeeringDB Facilities Thailand",
+        "PeeringDB Facilities Vietnam",
+        "World Bank ASEAN FDI Net Inflows",
+        "World Bank ASEAN High-Technology Exports",
+        "World Bank ASEAN Internet Users"
+      ],
+      "required_fields": [
+        "网络设施数量",
+        "设施网络连接数",
+        "设施IX连接数",
+        "设施运营商连接数",
+        "高技术出口额",
+        "互联网使用率",
+        "FDI净流入"
+      ],
+      "missing_or_limits": [
+        "缺少数据中心项目投资额、机架数、MW容量、客户需求和收入标签。"
+      ],
+      "visualization": "设施承载矩阵、需求代理指数、补数缺口表"
+    },
+    {
+      "id": "overseas_priority",
+      "name": "出海优先级与行动路径",
+      "business_question": "广西企业应优先进入哪些国家，以及采用何种能源、电力、市场和政策路径。",
+      "readiness": "synthesis_ready",
+      "training_decision": "decision_synthesis",
+      "landing_method": "多指标排序 + 研判结果校准 + 行动路径生成",
+      "proxy_training": {
+        "status": "proxy_trained",
+        "sample_count": 81,
+        "country_count": 11,
+        "date_range": {
+          "min": "2017",
+          "max": "2025"
+        },
+        "test_points": 18,
+        "average_error": 10.881195939722808,
+        "trend_correlation": 0.5028674594128004
+      },
+      "evidence_reading_contract": [
+        "先读取地图点位的国家、议题和紧急度。",
+        "再读取指标走势、来源校验和近期线索。",
+        "最后输出国家排序、风险解释、可行动建议和需补数据。"
+      ],
+      "available_metric_count": 100,
+      "available_series_count": 99,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "sources": [
+        "Our World in Data Energy Dataset",
+        "Singapore Data.gov Electricity Generation And Consumption",
+        "World Bank ASEAN FDI Net Inflows",
+        "World Bank ASEAN GDP",
+        "World Bank ASEAN High-Technology Exports",
+        "World Bank ASEAN Internet Users",
+        "World Bank ASEAN Renewable Energy Consumption",
+        "World Bank ASEAN Secure Internet Servers",
+        "World Bank ASEAN Trade Openness"
+      ],
+      "required_fields": [
+        "市场吸引力",
+        "供电缺口预测",
+        "绿电约束",
+        "算力需求代理",
+        "风险事件"
+      ],
+      "missing_or_limits": [
+        "缺少历史行动路径与结果标签，不能做端到端监督训练。"
+      ],
+      "visualization": "国家优先级、路径卡片、风险与机会并列展示"
+    }
+  ]
+}

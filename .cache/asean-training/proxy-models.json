@@ -1,0 +1,2002 @@
+{
+  "generated_at": "2026-06-08T08:18:28.471Z",
+  "source_state": {
+    "refreshed_at": "2026-06-06T23:45:25.599Z",
+    "source_count": 25,
+    "fetched_count": 20,
+    "metric_count": 216,
+    "failed_count": 5
+  },
+  "models": [
+    {
+      "id": "market_attractiveness",
+      "ui_id": "market-heat",
+      "name": "市场进入吸引力研判",
+      "public_kind": "代理回看",
+      "public_summary": "用宏观、资本流入、贸易开放和数字基础指标估计下一期市场进入热度。",
+      "target": "下一期市场吸引力代理分",
+      "status": "proxy_trained",
+      "quality_label": "稳健",
+      "sample_count": 77,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "date_range": {
+        "min": "2017",
+        "max": "2024"
+      },
+      "feature_labels": [
+        "GDP",
+        "FDI净流入",
+        "贸易开放度",
+        "互联网使用率",
+        "安全互联网服务器密度"
+      ],
+      "sources": [
+        {
+          "name": "World Bank ASEAN GDP",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Internet Users",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Secure Internet Servers",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN FDI Net Inflows",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Trade Openness",
+          "country_count": 9
+        }
+      ],
+      "metrics": {
+        "train": {
+          "count": 60,
+          "average_error": 1.718209834130348,
+          "relative_error": 0.01718209834130348,
+          "trend_correlation": 0.9897455746168778
+        },
+        "test": {
+          "count": 17,
+          "average_error": 2.5728483118044885,
+          "relative_error": 0.025728483118044886,
+          "trend_correlation": 0.9973267703064372
+        }
+      },
+      "latest_forecasts": [
+        {
+          "country": "新加坡",
+          "latest_date": "2024",
+          "current_score": 81.86,
+          "estimated_next_score": 92.08,
+          "direction": "上行"
+        },
+        {
+          "country": "印尼",
+          "latest_date": "2024",
+          "current_score": 39.37,
+          "estimated_next_score": 42.46,
+          "direction": "上行"
+        },
+        {
+          "country": "越南",
+          "latest_date": "2024",
+          "current_score": 35.54,
+          "estimated_next_score": 37.47,
+          "direction": "上行"
+        },
+        {
+          "country": "马来西亚",
+          "latest_date": "2024",
+          "current_score": 35.79,
+          "estimated_next_score": 36.95,
+          "direction": "上行"
+        },
+        {
+          "country": "泰国",
+          "latest_date": "2024",
+          "current_score": 34.93,
+          "estimated_next_score": 36.54,
+          "direction": "上行"
+        },
+        {
+          "country": "文莱",
+          "latest_date": "2024",
+          "current_score": 27.57,
+          "estimated_next_score": 29.41,
+          "direction": "上行"
+        },
+        {
+          "country": "菲律宾",
+          "latest_date": "2024",
+          "current_score": 22.49,
+          "estimated_next_score": 23.5,
+          "direction": "上行"
+        },
+        {
+          "country": "柬埔寨",
+          "latest_date": "2024",
+          "current_score": 20.39,
+          "estimated_next_score": 21.67,
+          "direction": "上行"
+        }
+      ],
+      "forecast_series": [
+        {
+          "country": "新加坡",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 59.82,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 65.95,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 64.11,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 78.91,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 83.66,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 82.08,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 81.86,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 92.08,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "印尼",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 24.28,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 28.01,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 27.7,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 32.64,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 36.67,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 37.6,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 39.37,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 42.46,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "越南",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 27.62,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 27.85,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 28.4,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 31.21,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 33.26,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 32.47,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 35.54,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 37.47,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "马来西亚",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 28.83,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 29.47,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 29.54,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 35.1,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 35.96,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 34.19,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 35.79,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 36.95,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "泰国",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 24.34,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 25.91,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 26.34,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 31.98,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 33.1,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 33.43,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 34.93,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 36.54,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "文莱",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 23.57,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 25.25,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 26.18,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 28.6,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 29.61,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 27.82,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 27.57,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 29.41,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "菲律宾",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 14.97,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 14.81,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 16.56,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 21.5,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 24.1,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 24.97,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 22.49,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 23.5,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "柬埔寨",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 17.54,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 14.12,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 15.56,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 18.18,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 19.48,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 19.78,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 20.39,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 21.67,
+              "kind": "forecast"
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "该模型预测公开指标构造的代理分，不代表真实项目收益或行动结果。",
+        "缺少项目级标签时，只能用于排序、趋势和补数优先级判断。"
+      ]
+    },
+    {
+      "id": "green_parity_energy",
+      "ui_id": "green-parity",
+      "name": "绿电支撑能力研判",
+      "public_kind": "代理回看",
+      "public_summary": "用绿电占比、能源结构和价格线索估计下一期绿电支撑条件。",
+      "target": "下一期绿电支撑代理分",
+      "status": "proxy_trained",
+      "quality_label": "稳健",
+      "sample_count": 43,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "date_range": {
+        "min": "2017",
+        "max": "2025"
+      },
+      "feature_labels": [
+        "可再生电力占比",
+        "可再生电力输出占比",
+        "可再生能源消费占比",
+        "可再生发电量",
+        "化石电力占比",
+        "年度发电量",
+        "净电力进口"
+      ],
+      "sources": [
+        {
+          "name": "World Bank ASEAN Renewable Electricity Output",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Renewable Energy Consumption",
+          "country_count": 11
+        },
+        {
+          "name": "Singapore Data.gov Electricity Generation And Consumption",
+          "country_count": 1
+        },
+        {
+          "name": "Our World in Data Energy Dataset",
+          "country_count": 6
+        }
+      ],
+      "metrics": {
+        "train": {
+          "count": 34,
+          "average_error": 2.6780357615083825,
+          "relative_error": 0.026780357615083825,
+          "trend_correlation": 0.9855401389754411
+        },
+        "test": {
+          "count": 9,
+          "average_error": 1.5766574049284479,
+          "relative_error": 0.015766574049284478,
+          "trend_correlation": 0.994933132899379
+        }
+      },
+      "latest_forecasts": [
+        {
+          "country": "老挝",
+          "latest_date": "2024",
+          "current_score": 72.37,
+          "estimated_next_score": 72.84,
+          "direction": "平稳"
+        },
+        {
+          "country": "越南",
+          "latest_date": "2025",
+          "current_score": 58.87,
+          "estimated_next_score": 61.07,
+          "direction": "上行"
+        },
+        {
+          "country": "马来西亚",
+          "latest_date": "2025",
+          "current_score": 23.82,
+          "estimated_next_score": 25.69,
+          "direction": "上行"
+        },
+        {
+          "country": "柬埔寨",
+          "latest_date": "2025",
+          "current_score": 25.92,
+          "estimated_next_score": 23.76,
+          "direction": "下行"
+        },
+        {
+          "country": "泰国",
+          "latest_date": "2025",
+          "current_score": 15.86,
+          "estimated_next_score": 14.32,
+          "direction": "下行"
+        },
+        {
+          "country": "新加坡",
+          "latest_date": "2025",
+          "current_score": 5.42,
+          "estimated_next_score": 7.35,
+          "direction": "上行"
+        }
+      ],
+      "forecast_series": [
+        {
+          "country": "老挝",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "平稳",
+          "points": [
+            {
+              "date": "2018",
+              "value": 64.79,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 68.67,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 70.08,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 71.43,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 73.13,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 72.24,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 72.37,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 72.84,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "越南",
+          "latest_date": "2025",
+          "estimated_date": "2026",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2019",
+              "value": 35.55,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 39.86,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 49.05,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 60.81,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 53.49,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 54.41,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 58.87,
+              "kind": "observed"
+            },
+            {
+              "date": "2026",
+              "value": 61.07,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "马来西亚",
+          "latest_date": "2025",
+          "estimated_date": "2026",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2019",
+              "value": 16.83,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 18.41,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 19.6,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 21.98,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 21.74,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 23.39,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 23.82,
+              "kind": "observed"
+            },
+            {
+              "date": "2026",
+              "value": 25.69,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "柬埔寨",
+          "latest_date": "2025",
+          "estimated_date": "2026",
+          "direction": "下行",
+          "points": [
+            {
+              "date": "2019",
+              "value": 47.35,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 49.06,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 53.44,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 41.59,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 26.36,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 22.14,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 25.92,
+              "kind": "observed"
+            },
+            {
+              "date": "2026",
+              "value": 23.76,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "泰国",
+          "latest_date": "2025",
+          "estimated_date": "2026",
+          "direction": "下行",
+          "points": [
+            {
+              "date": "2019",
+              "value": 21.27,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 18.32,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 18.41,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 15.08,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 15.37,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 14.56,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 15.86,
+              "kind": "observed"
+            },
+            {
+              "date": "2026",
+              "value": 14.32,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "新加坡",
+          "latest_date": "2025",
+          "estimated_date": "2026",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2019",
+              "value": 3.04,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 3.03,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 3.14,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 4.13,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 4.55,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 4.93,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 5.42,
+              "kind": "observed"
+            },
+            {
+              "date": "2026",
+              "value": 7.35,
+              "kind": "forecast"
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "该模型预测公开指标构造的代理分，不代表真实项目收益或行动结果。",
+        "缺少项目级标签时，只能用于排序、趋势和补数优先级判断。"
+      ]
+    },
+    {
+      "id": "compute_demand_proxy",
+      "ui_id": "compute-roi",
+      "name": "算力需求承载研判",
+      "public_kind": "代理回看",
+      "public_summary": "用服务器密度、互联网使用、高技术出口和资本流入估计算力需求承载强弱。",
+      "target": "下一期算力需求代理分",
+      "status": "proxy_trained",
+      "quality_label": "稳健",
+      "sample_count": 77,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "date_range": {
+        "min": "2017",
+        "max": "2024"
+      },
+      "feature_labels": [
+        "安全互联网服务器密度",
+        "互联网使用率",
+        "高技术出口额",
+        "FDI净流入",
+        "贸易开放度"
+      ],
+      "sources": [
+        {
+          "name": "World Bank ASEAN Internet Users",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Secure Internet Servers",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN High-Technology Exports",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN FDI Net Inflows",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Trade Openness",
+          "country_count": 9
+        }
+      ],
+      "metrics": {
+        "train": {
+          "count": 60,
+          "average_error": 1.6979956209295066,
+          "relative_error": 0.016979956209295065,
+          "trend_correlation": 0.9921632056077303
+        },
+        "test": {
+          "count": 17,
+          "average_error": 2.8666953718415598,
+          "relative_error": 0.028666953718415596,
+          "trend_correlation": 0.9961068402046616
+        }
+      },
+      "latest_forecasts": [
+        {
+          "country": "新加坡",
+          "latest_date": "2024",
+          "current_score": 95.08,
+          "estimated_next_score": 100,
+          "direction": "上行"
+        },
+        {
+          "country": "马来西亚",
+          "latest_date": "2024",
+          "current_score": 43.16,
+          "estimated_next_score": 46.1,
+          "direction": "上行"
+        },
+        {
+          "country": "越南",
+          "latest_date": "2024",
+          "current_score": 34.64,
+          "estimated_next_score": 36.58,
+          "direction": "上行"
+        },
+        {
+          "country": "泰国",
+          "latest_date": "2024",
+          "current_score": 32.52,
+          "estimated_next_score": 34.04,
+          "direction": "上行"
+        },
+        {
+          "country": "文莱",
+          "latest_date": "2024",
+          "current_score": 27.6,
+          "estimated_next_score": 29.33,
+          "direction": "上行"
+        },
+        {
+          "country": "老挝",
+          "latest_date": "2024",
+          "current_score": 19.98,
+          "estimated_next_score": 21.73,
+          "direction": "上行"
+        },
+        {
+          "country": "菲律宾",
+          "latest_date": "2024",
+          "current_score": 19.06,
+          "estimated_next_score": 20.54,
+          "direction": "上行"
+        },
+        {
+          "country": "柬埔寨",
+          "latest_date": "2024",
+          "current_score": 18.56,
+          "estimated_next_score": 20.01,
+          "direction": "上行"
+        }
+      ],
+      "forecast_series": [
+        {
+          "country": "新加坡",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 66.14,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 72.28,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 72.73,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 89.37,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 96.11,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 93.82,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 95.08,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 100,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "马来西亚",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 32.29,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 32.68,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 34.16,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 40.36,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 43.63,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 41.4,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 43.16,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 46.1,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "越南",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 29.72,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 30.38,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 32.02,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 36.21,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 39.33,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 38.23,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 34.64,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 36.58,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "泰国",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 19.83,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 21.45,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 23.57,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 28.86,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 30.42,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 30.64,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 32.52,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 34.04,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "文莱",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 23.97,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 25.6,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 26.67,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 28.34,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 29.53,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 27.64,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 27.6,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 29.33,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "老挝",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 4.86,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 8.34,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 10.68,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 13.33,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 14.18,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 14.24,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 19.98,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 21.73,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "菲律宾",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 12.54,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 12.18,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 14.62,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 19.51,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 22.43,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 22.48,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 19.06,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 20.54,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "柬埔寨",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 16.24,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 12.48,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 13.94,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 16.18,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 17.65,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 18.34,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 18.56,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 20.01,
+              "kind": "forecast"
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "该模型预测公开指标构造的代理分，不代表真实项目收益或行动结果。",
+        "缺少项目级标签时，只能用于排序、趋势和补数优先级判断。"
+      ]
+    },
+    {
+      "id": "overseas_priority_synthesis",
+      "ui_id": "go-priority",
+      "name": "出海优先级排序研判",
+      "public_kind": "综合回看",
+      "public_summary": "汇总市场、数字基础、电力和绿电线索，形成可复核的国家进入排序。",
+      "target": "下一期综合优先级代理分",
+      "status": "proxy_trained",
+      "quality_label": "观察",
+      "sample_count": 81,
+      "countries": [
+        "东帝汶",
+        "印尼",
+        "文莱",
+        "新加坡",
+        "柬埔寨",
+        "泰国",
+        "缅甸",
+        "老挝",
+        "菲律宾",
+        "越南",
+        "马来西亚"
+      ],
+      "date_range": {
+        "min": "2017",
+        "max": "2025"
+      },
+      "feature_labels": [
+        "GDP",
+        "FDI净流入",
+        "贸易开放度",
+        "互联网使用率",
+        "安全互联网服务器密度",
+        "电力可及率",
+        "人均用电量",
+        "年度发电量",
+        "可再生电力占比",
+        "可再生能源消费占比",
+        "化石电力占比"
+      ],
+      "sources": [
+        {
+          "name": "World Bank ASEAN GDP",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Internet Users",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Electricity Access",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Electric Power Consumption",
+          "country_count": 10
+        },
+        {
+          "name": "World Bank ASEAN Secure Internet Servers",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN FDI Net Inflows",
+          "country_count": 11
+        },
+        {
+          "name": "World Bank ASEAN Trade Openness",
+          "country_count": 9
+        },
+        {
+          "name": "World Bank ASEAN Renewable Energy Consumption",
+          "country_count": 11
+        },
+        {
+          "name": "Singapore Data.gov Electricity Generation And Consumption",
+          "country_count": 1
+        },
+        {
+          "name": "Our World in Data Energy Dataset",
+          "country_count": 6
+        }
+      ],
+      "metrics": {
+        "train": {
+          "count": 63,
+          "average_error": 1.7378404207286104,
+          "relative_error": 0.017378404207286105,
+          "trend_correlation": 0.9857823897799
+        },
+        "test": {
+          "count": 18,
+          "average_error": 10.881195939722808,
+          "relative_error": 0.10881195939722808,
+          "trend_correlation": 0.5028674594128004
+        }
+      },
+      "latest_forecasts": [
+        {
+          "country": "越南",
+          "latest_date": "2025",
+          "current_score": 34.8,
+          "estimated_next_score": 41.78,
+          "direction": "上行"
+        },
+        {
+          "country": "印尼",
+          "latest_date": "2024",
+          "current_score": 38.37,
+          "estimated_next_score": 37.57,
+          "direction": "平稳"
+        },
+        {
+          "country": "老挝",
+          "latest_date": "2024",
+          "current_score": 28.22,
+          "estimated_next_score": 30.16,
+          "direction": "上行"
+        },
+        {
+          "country": "文莱",
+          "latest_date": "2024",
+          "current_score": 28.1,
+          "estimated_next_score": 28.51,
+          "direction": "平稳"
+        },
+        {
+          "country": "柬埔寨",
+          "latest_date": "2024",
+          "current_score": 20.17,
+          "estimated_next_score": 21.31,
+          "direction": "上行"
+        },
+        {
+          "country": "菲律宾",
+          "latest_date": "2024",
+          "current_score": 22.31,
+          "estimated_next_score": 20.92,
+          "direction": "下行"
+        },
+        {
+          "country": "马来西亚",
+          "latest_date": "2025",
+          "current_score": 14.63,
+          "estimated_next_score": 18.11,
+          "direction": "上行"
+        },
+        {
+          "country": "泰国",
+          "latest_date": "2025",
+          "current_score": 11.31,
+          "estimated_next_score": 14.22,
+          "direction": "上行"
+        }
+      ],
+      "forecast_series": [
+        {
+          "country": "越南",
+          "latest_date": "2025",
+          "estimated_date": "2026",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2019",
+              "value": 32.98,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 34.06,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 37.43,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 39.92,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 38.26,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 34.46,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 34.8,
+              "kind": "observed"
+            },
+            {
+              "date": "2026",
+              "value": 41.78,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "印尼",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "平稳",
+          "points": [
+            {
+              "date": "2018",
+              "value": 31.27,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 33.97,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 33.33,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 37.62,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 41.32,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 41.9,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 38.37,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 37.57,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "老挝",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 26.81,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 30.28,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 33.25,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 35.44,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 36.33,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 33.68,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 28.22,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 30.16,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "文莱",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "平稳",
+          "points": [
+            {
+              "date": "2018",
+              "value": 37.22,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 39.61,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 41.9,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 43.28,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 46.13,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 44.21,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 28.1,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 28.51,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "柬埔寨",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 24.43,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 22.12,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 24.27,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 25.04,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 27.2,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 26.3,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 20.17,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 21.31,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "菲律宾",
+          "latest_date": "2024",
+          "estimated_date": "2025",
+          "direction": "下行",
+          "points": [
+            {
+              "date": "2018",
+              "value": 23.65,
+              "kind": "observed"
+            },
+            {
+              "date": "2019",
+              "value": 23.89,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 25.81,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 29.77,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 30.01,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 31.96,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 22.31,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 20.92,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "马来西亚",
+          "latest_date": "2025",
+          "estimated_date": "2026",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2019",
+              "value": 32.83,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 33.14,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 36.7,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 38.55,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 37.36,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 30.3,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 14.63,
+              "kind": "observed"
+            },
+            {
+              "date": "2026",
+              "value": 18.11,
+              "kind": "forecast"
+            }
+          ]
+        },
+        {
+          "country": "泰国",
+          "latest_date": "2025",
+          "estimated_date": "2026",
+          "direction": "上行",
+          "points": [
+            {
+              "date": "2019",
+              "value": 30.02,
+              "kind": "observed"
+            },
+            {
+              "date": "2020",
+              "value": 30.06,
+              "kind": "observed"
+            },
+            {
+              "date": "2021",
+              "value": 33.32,
+              "kind": "observed"
+            },
+            {
+              "date": "2022",
+              "value": 34.32,
+              "kind": "observed"
+            },
+            {
+              "date": "2023",
+              "value": 34.63,
+              "kind": "observed"
+            },
+            {
+              "date": "2024",
+              "value": 28.36,
+              "kind": "observed"
+            },
+            {
+              "date": "2025",
+              "value": 11.31,
+              "kind": "observed"
+            },
+            {
+              "date": "2026",
+              "value": 14.22,
+              "kind": "forecast"
+            }
+          ]
+        }
+      ],
+      "limitations": [
+        "该模型预测公开指标构造的代理分，不代表真实项目收益或行动结果。",
+        "缺少项目级标签时，只能用于排序、趋势和补数优先级判断。"
+      ]
+    }
+  ]
+}
