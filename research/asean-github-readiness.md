@@ -93,7 +93,7 @@ Suggested commit:
 feat(world): add asean decision model readout
 ```
 
-Review note: the Python fuel-price script uses local scientific packages and should remain an optional offline tool. Do not make the runtime depend on Python, xgboost, or generated `.cache/asean-training/*` files.
+Review note: the Python fuel-price script uses local scientific packages and should remain an optional offline tool. Runtime may read the committed `.cache/asean-training/*` JSON model artifacts, but do not commit source download caches such as OWID CSV or World Bank raw JSON files.
 
 ### 5. Refresh and verification tooling
 
@@ -112,6 +112,23 @@ Suggested commit:
 
 ```text
 test(world): cover asean public contracts
+```
+
+### 6. ASEAN committed model artifacts
+
+Purpose: keep the runtime-ready ASEAN model readout available after deployment without committing raw source-download caches.
+
+Files:
+- `.cache/asean-training/fuel-price-forecast.json`
+- `.cache/asean-training/model-data-coverage.json`
+- `.cache/asean-training/model-readiness.json`
+- `.cache/asean-training/power-risk-baseline.json`
+- `.cache/asean-training/proxy-models.json`
+
+Suggested commit:
+
+```text
+chore(world): add asean model artifacts
 ```
 
 ## Pre-push checks
@@ -139,5 +156,5 @@ pnpm smoke:asean -- --base-url http://127.0.0.1:<port>
 - The worktree still has a large untracked ASEAN surface; stage by the groups above rather than with `git add .`.
 - Use `pnpm asean:readiness -- --group <group-id>` before each commit and stage only the command's `suggested_git_add` files.
 - Confirm whether optional research notes belong in the first PR or should be a follow-up documentation commit.
-- Confirm generated cache files remain ignored and no `.cache/asean-*` artifacts are staged.
+- Confirm only the allowlisted ASEAN model JSON artifacts are staged under `.cache/asean-training`; source download caches remain ignored.
 - Do not update the TopicLab `worldweave` submodule pointer until the WorldWeave source PR is ready and the target commit is stable.

@@ -72,7 +72,26 @@ const GROUPS = [
       'research/asean-github-readiness.md',
     ],
   },
+  {
+    id: 'model-artifacts',
+    title: 'ASEAN committed model artifacts',
+    files: [
+      '.cache/asean-training/fuel-price-forecast.json',
+      '.cache/asean-training/model-data-coverage.json',
+      '.cache/asean-training/model-readiness.json',
+      '.cache/asean-training/power-risk-baseline.json',
+      '.cache/asean-training/proxy-models.json',
+    ],
+  },
 ];
+
+const ALLOWED_MODEL_ARTIFACTS = new Set([
+  '.cache/asean-training/fuel-price-forecast.json',
+  '.cache/asean-training/model-data-coverage.json',
+  '.cache/asean-training/model-readiness.json',
+  '.cache/asean-training/power-risk-baseline.json',
+  '.cache/asean-training/proxy-models.json',
+]);
 
 function git(args) {
   return execFileSync('git', args, { encoding: 'utf8' }).replace(/\r?\n$/u, '');
@@ -122,11 +141,14 @@ function findStagedGeneratedArtifacts() {
     .split(/\r?\n/u)
     .map((line) => line.trim())
     .filter(Boolean);
-  return staged.filter((path) => (
-    path.startsWith('.cache/') ||
-    path.startsWith('efficientnet_reference/') ||
-    /\.cache\//u.test(path)
-  ));
+  return staged.filter((path) => {
+    if (ALLOWED_MODEL_ARTIFACTS.has(path)) return false;
+    return (
+      path.startsWith('.cache/') ||
+      path.startsWith('efficientnet_reference/') ||
+      /\.cache\//u.test(path)
+    );
+  });
 }
 
 function quotePath(path) {
