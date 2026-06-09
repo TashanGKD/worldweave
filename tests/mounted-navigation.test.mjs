@@ -45,6 +45,15 @@ test('secondary WorldWeave pages return through worldHomeHref instead of the hos
   }
 });
 
+test('ASEAN demo navigation keeps the overall view under the mounted WorldWeave route', () => {
+  const source = readSource('src/app/demo/asean/asean-demo-client.tsx');
+
+  assert.match(source, /import \{ worldHomeHref \} from '@\/components\/world-ui';/);
+  assert.match(source, /<a href=\{worldHomeHref\('geo-politics-daily'\)\}>整体态势<\/a>/);
+  assert.match(source, /<a href="\/demo\/asean" aria-current="page">东盟专题<\/a>/);
+  assert.doesNotMatch(source, /window\.location\.assign\('\/\?scene=geo-politics-daily'\)/);
+});
+
 test('/worldweave compatibility route preserves query parameters before redirecting home', () => {
   const source = readSource('src/app/worldweave/page.tsx');
 

@@ -14,6 +14,7 @@ import countriesTopologyJson from 'world-atlas/countries-50m.json';
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Polygon, Position } from 'geojson';
 import { feature } from 'topojson-client';
 
+import { worldHomeHref } from '@/components/world-ui';
 import type { AseanTopicKey, AseanTopicPayload } from '@/lib/world/asean-topic';
 import { pickDailyAseanResearchQuestions } from '@/lib/world/asean-research-suggestions';
 
@@ -3165,8 +3166,8 @@ export default function AseanDemoClient({ topic }: { topic: AseanDemoTopic }) {
           <p>{activeSourceCount} 个专题来源、{datasetMetricCount} 项结构化指标、{topic.signal_count} 条线索，覆盖能源电力、数据中心需求和产业链协同等重点议题。</p>
         </div>
         <nav className={styles.viewSwitch} aria-label="世界脉络视图切换">
-          <button type="button" onClick={() => window.location.assign('/?scene=geo-politics-daily')}>整体态势</button>
-          <button type="button" aria-current="page" onClick={() => window.location.assign('/demo/asean')}>东盟专题</button>
+          <a href={worldHomeHref('geo-politics-daily')}>整体态势</a>
+          <a href="/demo/asean" aria-current="page">东盟专题</a>
         </nav>
       </header>
 
