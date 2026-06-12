@@ -278,6 +278,14 @@ export function worldHref(href: string, scene: WorldScene = 'global') {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+export function worldMountedHref(href: string, scene: WorldScene = 'global') {
+  const normalized = worldHref(href, scene);
+  if (!normalized || normalized.startsWith('#') || /^https?:\/\//.test(normalized)) return normalized;
+  return normalized === '/worldweave' || normalized.startsWith('/worldweave/')
+    ? normalized
+    : `/worldweave${normalized}`;
+}
+
 export function worldHomeHref(scene: WorldScene = 'global', hash = '') {
   const normalizedHash = hash && !hash.startsWith('#') ? `#${hash}` : hash;
   return worldHref(`/worldweave/${normalizedHash}`, scene);

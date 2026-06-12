@@ -9,10 +9,12 @@ function readSource(path) {
   return readFileSync(join(root, path), 'utf8');
 }
 
-test('worldHref preserves hash fragments and worldHomeHref targets the mounted route', () => {
+test('worldHref preserves hash fragments and mounted route helpers target the TopicLab mount', () => {
   const source = readSource('src/components/world-ui.tsx');
 
   assert.match(source, /return `\$\{url\.pathname\}\$\{url\.search\}\$\{url\.hash\}`;/);
+  assert.match(source, /export function worldMountedHref\(href: string, scene: WorldScene = 'global'\)/);
+  assert.match(source, /normalized === '\/worldweave' \|\| normalized\.startsWith\('\/worldweave\/'\)/);
   assert.match(source, /export function worldHomeHref\(scene: WorldScene = 'global', hash = ''\)/);
   assert.match(source, /return worldHref\(`\/worldweave\/\$\{normalizedHash\}`, scene\);/);
 });
@@ -45,19 +47,40 @@ test('secondary WorldWeave pages return through worldHomeHref instead of the hos
   }
 });
 
-test('ASEAN demo navigation keeps the overall view under the mounted WorldWeave route', () => {
+test('ASEAN demo navigation keeps all view links under the mounted WorldWeave route', () => {
   const source = readSource('src/app/demo/asean/asean-demo-client.tsx');
 
-  assert.match(source, /import \{ worldHomeHref \} from '@\/components\/world-ui';/);
+  assert.match(source, /import \{ worldHomeHref, worldMountedHref \} from '@\/components\/world-ui';/);
   assert.match(source, /<a href=\{worldHomeHref\('geo-politics-daily'\)\}>整体态势<\/a>/);
-  assert.match(source, /<a href="\/demo\/asean" aria-current="page">东盟专题<\/a>/);
+  assert.match(source, /<a href=\{worldMountedHref\('\/demo\/asean'\)\} aria-current="page">东盟专题<\/a>/);
+  assert.doesNotMatch(source, /href="\/demo\/asean"/);
   assert.doesNotMatch(source, /window\.location\.assign\('\/\?scene=geo-politics-daily'\)/);
+});
+
+test('ASEAN entry redirects and dashboard cards use the mounted WorldWeave route', () => {
+  const homePageSource = readSource('src/app/page.tsx');
+  const dashboardSource = readSource('src/app/dashboard-client.tsx');
+
+  assert.match(homePageSource, /redirect\('\/worldweave\/demo\/asean'\);/);
+  assert.match(dashboardSource, /const aseanTopicHref = worldMountedHref\('\/demo\/asean'\);/);
+  assert.match(dashboardSource, /href: aseanTopicHref,/);
+  assert.match(dashboardSource, /href=\{aseanTopicHref\}/);
+  assert.doesNotMatch(dashboardSource, /href="\/demo\/asean"/);
 });
 
 test('/worldweave compatibility route preserves query parameters before redirecting home', () => {
   const source = readSource('src/app/worldweave/page.tsx');
 
   assert.match(source, /redirect\(query \? `\/\?\$\{query\}` : '\/'\);/);
+  assert.match(source, /search\.append\(key, item\);/);
+  assert.match(source, /search\.set\(key, value\);/);
+});
+
+test('/worldweave nested compatibility route preserves path and query parameters', () => {
+  const source = readSource('src/app/worldweave/[...path]/page.tsx');
+
+  assert.match(source, /const pathname = `\/\$\{path\.map\(\(item\) => encodeURIComponent\(item\)\)\.join\('\/'\)\}`;/);
+  assert.match(source, /redirect\(query \? `\$\{pathname\}\?\$\{query\}` : pathname\);/);
   assert.match(source, /search\.append\(key, item\);/);
   assert.match(source, /search\.set\(key, value\);/);
 });

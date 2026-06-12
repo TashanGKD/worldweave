@@ -14,7 +14,7 @@ import countriesTopologyJson from 'world-atlas/countries-50m.json';
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Polygon, Position } from 'geojson';
 import { feature } from 'topojson-client';
 
-import { worldHomeHref } from '@/components/world-ui';
+import { worldHomeHref, worldMountedHref } from '@/components/world-ui';
 import type { AseanTopicKey, AseanTopicPayload } from '@/lib/world/asean-topic';
 import { pickDailyAseanResearchQuestions } from '@/lib/world/asean-research-suggestions';
 
@@ -3167,7 +3167,7 @@ export default function AseanDemoClient({ topic }: { topic: AseanDemoTopic }) {
         </div>
         <nav className={styles.viewSwitch} aria-label="世界脉络视图切换">
           <a href={worldHomeHref('geo-politics-daily')}>整体态势</a>
-          <a href="/demo/asean" aria-current="page">东盟专题</a>
+          <a href={worldMountedHref('/demo/asean')} aria-current="page">东盟专题</a>
         </nav>
       </header>
 

@@ -187,7 +187,7 @@ function resolveInitialScene(searchParams?: Record<string, string | string[] | u
 export default async function Page({ searchParams }: PageProps) {
   const scene = resolveInitialScene(await searchParams);
   if (scene === 'asean') {
-    redirect('/demo/asean');
+    redirect('/worldweave/demo/asean');
   }
   const requestHeaders = await headers();
   const requestOrigin = resolveRequestOrigin({ headers: requestHeaders });
