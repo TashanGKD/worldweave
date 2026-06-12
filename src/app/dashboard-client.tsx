@@ -1569,7 +1569,7 @@ export default function DashboardClient({
         summary: '围绕能源电力、数据中心需求、区域产业链和公开信源，进入东盟专题地图与关联图谱。',
         meta: '进入专题',
         view: 'geo-politics-daily' as TimelineView,
-        href: '/demo/asean',
+        href: mountedHomeHref('/demo/asean', scene),
       },
     ];
   }, [currentQuestions, geoDigestSignals, resolvedQuestions, techCurationSignals]);
@@ -1637,7 +1637,7 @@ export default function DashboardClient({
                         整体态势
                       </Link>
                       <Link
-                        href="/demo/asean"
+                        href={mountedHomeHref('/demo/asean', scene)}
                         className="rounded-full px-3 py-1.5 font-medium text-slate-500 transition hover:bg-[#f4faf7] hover:text-[#06231f]"
                       >
                         东盟专题
@@ -1730,7 +1730,7 @@ export default function DashboardClient({
                             <span className="mt-1 block text-[11px] leading-5 text-slate-500">查看已接入来源</span>
                           </a>
                           <Link
-                            href="/demo/asean"
+                            href={mountedHomeHref('/demo/asean', scene)}
                             className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
                           >
                             <span className="block text-[12px] font-semibold text-[#08201c]">东盟专题</span>

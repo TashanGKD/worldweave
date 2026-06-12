@@ -53,6 +53,20 @@ test('/worldweave compatibility route preserves query parameters before redirect
   assert.match(source, /search\.set\(key, value\);/);
 });
 
+test('ASEAN mounted links stay inside the WorldWeave proxy prefix', () => {
+  const dashboardSource = readSource('src/app/dashboard-client.tsx');
+  const aseanDemoClientSource = readSource('src/app/demo/asean/asean-demo-client.tsx');
+
+  assert.match(dashboardSource, /href: mountedHomeHref\('\/demo\/asean', scene\)/);
+  assert.match(dashboardSource, /href=\{mountedHomeHref\('\/demo\/asean', scene\)\}/);
+  assert.doesNotMatch(dashboardSource, /href="\/demo\/asean"/);
+  assert.match(aseanDemoClientSource, /function mountedWorldWeavePath\(path: string\)/);
+  assert.match(aseanDemoClientSource, /window\.location\.pathname\.startsWith\('\/worldweave\/'\)/);
+  assert.match(aseanDemoClientSource, /window\.location\.assign\(mountedWorldWeavePath\('\/\?scene=geo-politics-daily'\)\)/);
+  assert.match(aseanDemoClientSource, /window\.location\.assign\(mountedWorldWeavePath\('\/demo\/asean'\)\)/);
+  assert.doesNotMatch(aseanDemoClientSource, /window\.location\.assign\('\/demo\/asean'\)/);
+});
+
 test('public skill URLs preserve mounted API prefixes and public HTTPS', () => {
   const originSource = readSource('src/lib/request-origin.ts');
 

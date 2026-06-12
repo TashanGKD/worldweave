@@ -118,6 +118,12 @@ type ResearchChatMessage = {
   error?: string;
 };
 
+function mountedWorldWeavePath(path: string) {
+  if (typeof window === 'undefined') return path;
+  const prefix = window.location.pathname.startsWith('/worldweave/') ? '/worldweave' : '';
+  return `${prefix}${path}`;
+}
+
 type AseanDecisionModelResult = {
   generated_at: string;
   scope: string[];
@@ -3165,8 +3171,8 @@ export default function AseanDemoClient({ topic }: { topic: AseanDemoTopic }) {
           <p>{activeSourceCount} 个专题来源、{datasetMetricCount} 项结构化指标、{topic.signal_count} 条线索，覆盖能源电力、数据中心需求和产业链协同等重点议题。</p>
         </div>
         <nav className={styles.viewSwitch} aria-label="世界脉络视图切换">
-          <button type="button" onClick={() => window.location.assign('/?scene=geo-politics-daily')}>整体态势</button>
-          <button type="button" aria-current="page" onClick={() => window.location.assign('/demo/asean')}>东盟专题</button>
+          <button type="button" onClick={() => window.location.assign(mountedWorldWeavePath('/?scene=geo-politics-daily'))}>整体态势</button>
+          <button type="button" aria-current="page" onClick={() => window.location.assign(mountedWorldWeavePath('/demo/asean'))}>东盟专题</button>
         </nav>
       </header>
 
