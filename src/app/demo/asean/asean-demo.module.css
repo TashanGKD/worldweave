@@ -7643,6 +7643,24 @@
   max-height: min(780px, calc(100vh - 160px));
 }
 
+/* Keep the right-column model and research panels on the same grid edge. */
+.stage .sideStack,
+.sideStack .sideModelPanel,
+.sideStack .questionPanel,
+.sideStack .researchBox,
+.sideStack .researchDialog,
+.sideStack .savedResearchPanel,
+.sideStack .researchSuggestionBlock {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
+.sideStack .sideModelPanel,
+.sideStack .questionPanel {
+  align-self: stretch;
+}
+
 .researchRefs .researchSourceLink strong,
 .sourceGrid strong {
   display: -webkit-box;
