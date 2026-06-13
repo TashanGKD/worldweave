@@ -1,4 +1,5 @@
 import http from 'node:http';
+import https from 'node:https';
 
 import dotenv from 'dotenv';
 import Anthropic from '@anthropic-ai/sdk';
@@ -13,6 +14,13 @@ const embeddingModel = process.env.WORLD_ARENA_EMBEDDING_MODEL || 'Qwen3-Embeddi
 const minimaxApiStyle = (process.env.MINIMAX_API_STYLE || process.env.MINIMAX_API || 'openai-completions').trim().toLowerCase();
 const databaseConfigured = Boolean(process.env.WORLDWEAVE_DATABASE_URL || process.env.DATABASE_URL);
 const appRequestTimeoutMs = Number(process.env.WORLD_HEALTH_APP_TIMEOUT_MS || 45000);
+const sceneFreshnessChecks = String(process.env.WORLD_HEALTH_CHECK_SCENES || 'tech-ai,geo-politics-daily')
+  .split(',')
+  .map((scene) => scene.trim())
+  .filter(Boolean);
+const maxStateAgeHours = Number(process.env.WORLD_HEALTH_MAX_STATE_AGE_HOURS || 24);
+const maxSignalAgeHours = Number(process.env.WORLD_HEALTH_MAX_SIGNAL_AGE_HOURS || 36);
+const failOnRefreshDegraded = process.env.WORLD_HEALTH_FAIL_ON_REFRESH_DEGRADED !== '0';
 
 function classifyRemoteError(status, message) {
   const text = String(message || '');
@@ -24,7 +32,9 @@ function classifyRemoteError(status, message) {
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {
-    const req = http.get(url, (res) => {
+    const parsedUrl = new URL(url);
+    const transport = parsedUrl.protocol === 'https:' ? https : http;
+    const req = transport.get(parsedUrl, (res) => {
       let data = '';
       res.on('data', (chunk) => {
         data += chunk;
@@ -42,6 +52,94 @@ function fetchText(url) {
     });
     req.on('error', reject);
   });
+}
+
+function parseDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function hoursSince(date, now = Date.now()) {
+  return date ? (now - date.getTime()) / 36e5 : null;
+}
+
+function collectStateSignals(stateJson) {
+  return [
+    ...(Array.isArray(stateJson.top_signals) ? stateJson.top_signals : []),
+    ...(Array.isArray(stateJson.nodes) ? stateJson.nodes : []),
+    ...(Array.isArray(stateJson.graph_signals) ? stateJson.graph_signals : []),
+    ...(Array.isArray(stateJson.knowledge_signals) ? stateJson.knowledge_signals : []),
+  ];
+}
+
+function signalDateCandidates(signal) {
+  return [
+    signal?.published_at,
+    signal?.updated_at,
+    signal?.last_report_at,
+    signal?.created_at,
+    signal?.timestamp,
+    signal?.event_time,
+    signal?.observed_at,
+  ]
+    .map(parseDate)
+    .filter(Boolean);
+}
+
+function latestSignalDate(stateJson) {
+  return collectStateSignals(stateJson)
+    .flatMap(signalDateCandidates)
+    .sort((left, right) => right.getTime() - left.getTime())[0] || null;
+}
+
+async function checkWorldStateScene(scene) {
+  const response = await fetchText(`${appBaseUrl}/api/v1/world/state?scene=${encodeURIComponent(scene)}`);
+  const payload = parseJsonPayload(`world/state ${scene}`, response);
+  const json = payload.json || {};
+  const generatedAt = parseDate(json.generated_at);
+  const latestVisibleSignalAt = payload.ok ? latestSignalDate(json) : null;
+  const refreshJob = json.source_refresh_summary?.refresh_job || {};
+  const stateAgeHours = hoursSince(generatedAt);
+  const latestVisibleSignalAgeHours = hoursSince(latestVisibleSignalAt);
+  const staleState = stateAgeHours == null || stateAgeHours > maxStateAgeHours;
+  const staleVisibleSignals =
+    latestVisibleSignalAgeHours == null || latestVisibleSignalAgeHours > maxSignalAgeHours;
+  const refreshDegraded =
+    refreshJob.ok === false ||
+    refreshJob.world_cache_degraded === true ||
+    refreshJob.self_healing_ok === false;
+
+  return {
+    scene,
+    status: response.status,
+    jsonOk: payload.ok,
+    jsonError: payload.error,
+    generatedAt: generatedAt ? generatedAt.toISOString() : null,
+    stateAgeHours: stateAgeHours == null ? null : Number(stateAgeHours.toFixed(2)),
+    maxStateAgeHours,
+    latestVisibleSignalAt: latestVisibleSignalAt ? latestVisibleSignalAt.toISOString() : null,
+    latestVisibleSignalAgeHours:
+      latestVisibleSignalAgeHours == null ? null : Number(latestVisibleSignalAgeHours.toFixed(2)),
+    maxSignalAgeHours,
+    topSignalCount: Array.isArray(json.top_signals) ? json.top_signals.length : 0,
+    nodeCount: Array.isArray(json.nodes) ? json.nodes.length : 0,
+    staleState,
+    staleVisibleSignals,
+    refreshJobOk: refreshJob.ok ?? null,
+    refreshWorldCacheDegraded: refreshJob.world_cache_degraded ?? null,
+    refreshSelfHealingOk: refreshJob.self_healing_ok ?? null,
+    refreshFinishedAt: refreshJob.finished_at || null,
+    refreshDegraded,
+    ok:
+      response.status === 200 &&
+      payload.ok &&
+      Array.isArray(json.top_signals) &&
+      json.top_signals.length > 0 &&
+      !staleState &&
+      !staleVisibleSignals &&
+      !(failOnRefreshDegraded && refreshDegraded),
+  };
 }
 
 function parseJsonPayload(label, response) {
@@ -67,6 +165,7 @@ async function checkApp() {
   const mainSkill = await fetchText(`${appBaseUrl}/api/v1/openclaw/skill.md`);
   const aiHotSkill = await fetchText(`${appBaseUrl}/api/v1/openclaw/ai.skill.md`);
   const techAiState = await fetchText(`${appBaseUrl}/api/v1/world/state?scene=tech-ai`);
+  const sceneChecks = await Promise.all(sceneFreshnessChecks.map((scene) => checkWorldStateScene(scene)));
   const marketPayload = parseJsonPayload('market-snapshot', market);
   const sourceStatusPayload = parseJsonPayload('source-knowledge/status', sourceStatus);
   const techAiStatePayload = parseJsonPayload('world/state tech-ai', techAiState);
@@ -99,6 +198,7 @@ async function checkApp() {
     techAiStateJsonError: techAiStatePayload.error,
     techAiStateError: techAiStateJson.error || null,
     techAiTopSignalCount: Array.isArray(techAiStateJson.top_signals) ? techAiStateJson.top_signals.length : 0,
+    sceneFreshnessChecks: sceneChecks,
   };
 }
 
@@ -294,6 +394,7 @@ async function main() {
     summary.app.techAiStateStatus !== 200 ||
     !summary.app.techAiStateJsonOk ||
     summary.app.techAiTopSignalCount <= 0 ||
+    summary.app.sceneFreshnessChecks.some((sceneCheck) => !sceneCheck.ok) ||
     (databaseConfigured && summary.app.databaseConnected === false) ||
     (databaseConfigured && summary.app.databaseSnapshotTableReady === false) ||
     (summary.minimax.ok === false && !summary.minimax.degraded)
