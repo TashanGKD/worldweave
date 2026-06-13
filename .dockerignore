@@ -4,7 +4,15 @@
 
 node_modules
 .next
-.cache
+.cache/*
+!.cache/
+!.cache/asean-training/
+.cache/asean-training/*
+!.cache/asean-training/fuel-price-forecast.json
+!.cache/asean-training/power-risk-baseline.json
+!.cache/asean-training/proxy-models.json
+!.cache/asean-training/model-data-coverage.json
+!.cache/asean-training/model-readiness.json
 
 .env
 .env.*
