@@ -68,6 +68,25 @@ test('ASEAN entry redirects and dashboard cards use the mounted WorldWeave route
   assert.doesNotMatch(dashboardSource, /href="\/demo\/asean"/);
 });
 
+test('ASEAN right-column model and research panels share the same width contract', () => {
+  const styles = readSource('src/app/demo/asean/asean-demo.module.css');
+
+  assert.match(styles, /Keep the right-column model and research panels on the same grid edge/);
+  assert.match(styles, /\.sideStack \.sideModelPanel,\n\.sideStack \.questionPanel \{\n  align-self: stretch;\n\}/);
+
+  for (const selector of [
+    '.stage .sideStack',
+    '.sideStack .sideModelPanel',
+    '.sideStack .questionPanel',
+    '.sideStack .researchBox',
+    '.sideStack .researchDialog',
+    '.sideStack .savedResearchPanel',
+    '.sideStack .researchSuggestionBlock',
+  ]) {
+    assert.ok(styles.includes(selector), `${selector} should share the right-column width guard`);
+  }
+});
+
 test('/worldweave compatibility route preserves query parameters before redirecting home', () => {
   const source = readSource('src/app/worldweave/page.tsx');
 
