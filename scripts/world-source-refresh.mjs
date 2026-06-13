@@ -522,14 +522,14 @@ async function warmWorldCaches(args) {
       },
       {
         method: 'GET',
-        pathname: '/api/v1/world/state?scene=tech-ai&fresh=1',
+        pathname: '/api/v1/world/state?scene=tech-ai&fresh=1&rebuild=1',
         timeoutMs: 30000,
         critical: false,
         batchHeader: false,
       },
       {
         method: 'GET',
-        pathname: '/api/v1/world/state?scene=geo-politics-daily&fresh=1',
+        pathname: '/api/v1/world/state?scene=geo-politics-daily&fresh=1&rebuild=1',
         timeoutMs: 60000,
         critical: false,
         batchHeader: false,
