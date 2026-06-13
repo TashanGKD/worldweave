@@ -72,7 +72,7 @@ test('ASEAN right-column model and research panels share the same width contract
   const styles = readSource('src/app/demo/asean/asean-demo.module.css');
 
   assert.match(styles, /Keep the right-column model and research panels on the same grid edge/);
-  assert.match(styles, /\.sideStack \.sideModelPanel,\n\.sideStack \.questionPanel \{\n  align-self: stretch;\n\}/);
+  assert.match(styles, /\.sideStack \.sideModelPanel,\r?\n\.sideStack \.questionPanel \{\r?\n  align-self: stretch;\r?\n\}/);
 
   for (const selector of [
     '.stage .sideStack',
