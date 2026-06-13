@@ -527,6 +527,13 @@ async function warmWorldCaches(args) {
         critical: false,
         batchHeader: false,
       },
+      {
+        method: 'GET',
+        pathname: '/api/v1/world/state?scene=geo-politics-daily&fresh=1',
+        timeoutMs: 60000,
+        critical: false,
+        batchHeader: false,
+      },
     );
   }
   const snapshotBatchHeader = args.includeHeavyWorldSync;
