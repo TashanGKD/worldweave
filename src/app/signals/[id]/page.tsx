@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { worldHomeHref } from '@/components/world-ui';
+import { shellCardClass, worldHomeHref, worldPageClass } from '@/components/world-ui';
 import { isLowValueTechAiProductUpdate, readableSignalTags } from '@/lib/world/dashboard-presentation';
 import { getCachedWorldDashboardState, getWorldDashboardState } from '@/lib/world/runtime';
 import { isPublicEventSignal, sanitizePublicSignal } from '@/lib/world/signal-quality';
@@ -144,7 +144,7 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
   ].slice(0, 4);
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
+    <main className={worldPageClass('py-8')}>
       <div className="mx-auto max-w-4xl">
         <div className="mb-4">
           <Link href={worldHomeHref(scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
@@ -152,7 +152,7 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
           </Link>
         </div>
 
-        <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/92 shadow-[0_18px_40px_rgba(15,23,42,0.06)]">
+        <section className={shellCardClass()}>
           <div className="border-b border-slate-100 px-6 py-5">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">{signalSceneLabel(publicSignal?.scene || publicNode?.scene || 'global')}</span>
@@ -170,7 +170,7 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
 
           <div className="grid gap-5 px-6 py-5 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-4">
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-medium text-slate-900">信号信息</p>
                 <div className="mt-3 space-y-2 text-sm text-slate-600">
                   <p>地点：{location}</p>
@@ -190,7 +190,7 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
                 </div>
               </div>
 
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-medium text-slate-900">标签</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {displayTags.map((tag) => (
@@ -201,12 +201,12 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
                 </div>
               </div>
 
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-medium text-slate-900">相关题目</p>
                 {relatedQuestions.length > 0 ? (
                   <div className="mt-3 space-y-3">
                     {relatedQuestions.map((snapshot) => (
-                      <article key={snapshot.question_id} className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                      <article key={snapshot.question_id} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                         <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
                             {snapshot.topic_label || 'world'}
@@ -246,7 +246,7 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-medium text-slate-900">信源状态</p>
                 {reliability ? (
                   <div className="mt-3 space-y-2 text-sm text-slate-600">
@@ -259,7 +259,7 @@ export default async function SignalDetailPage({ params, searchParams }: PagePro
                 )}
               </div>
 
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-medium text-slate-900">说明</p>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
                   这里保留单条线索的摘要、来源和可读标签；后续复盘会优先引用这类已经整理过的线索。

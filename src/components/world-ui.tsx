@@ -331,8 +331,35 @@ export function aggregateSideSummary(aggregate: LiveBenchAggregateVote) {
   return '当前仍在汇票';
 }
 
-export function shellCardClass() {
-  return 'overflow-hidden rounded-[34px] border border-white/80 bg-white/86 shadow-[0_18px_46px_rgba(15,23,42,0.055)] backdrop-blur';
+export function worldPageClass(extra = '') {
+  return [
+    'min-h-screen bg-[var(--bg-page)] px-4 py-5 text-[var(--text-primary)] sm:px-6',
+    extra,
+  ].filter(Boolean).join(' ');
+}
+
+export function shellCardClass(extra = '') {
+  return [
+    'overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] shadow-[var(--shadow-md)]',
+    extra,
+  ].filter(Boolean).join(' ');
+}
+
+export function worldPanelClass(extra = '') {
+  return [
+    'rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)]',
+    extra,
+  ].filter(Boolean).join(' ');
+}
+
+export function worldChipClass(active = false, extra = '') {
+  return [
+    'rounded-[var(--radius-md)] border px-3 py-1 text-xs transition',
+    active
+      ? 'border-slate-900 bg-slate-900 text-white'
+      : 'border-[var(--border-default)] bg-[var(--bg-container)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]',
+    extra,
+  ].filter(Boolean).join(' ');
 }
 
 export function markIcon() {

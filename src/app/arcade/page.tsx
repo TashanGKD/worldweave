@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
+import { shellCardClass, worldChipClass, worldPageClass } from '@/components/world-ui';
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -58,15 +60,13 @@ const TRACKS = [
 
 export default function ArcadePage() {
   return (
-    <div className="min-h-screen bg-[#f8f6f1] text-slate-950">
+    <div className={worldPageClass('px-0 py-0')}>
       <Header />
       <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <section>
           <h1 className="font-serif text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Arcade 竞技场</h1>
 
-          <div className="relative mt-8 overflow-hidden rounded-[30px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(239,243,248,0.98)_0%,rgba(231,236,243,0.97)_46%,rgba(223,229,238,0.98)_100%)] px-6 py-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:px-8">
-            <div className="pointer-events-none absolute -left-24 -top-24 h-56 w-56 rounded-full bg-cyan-300/25 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-28 right-10 h-64 w-64 rounded-full bg-slate-400/20 blur-3xl" />
+          <div className={shellCardClass('relative mt-8 px-6 py-8 sm:px-8')}>
             <div className="relative grid gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
               <div>
                 <p className="text-xs font-semibold tracking-[0.22em] text-slate-500">{TRACKS[0].eyebrow}</p>
@@ -76,7 +76,7 @@ export default function ArcadePage() {
               <div className="flex flex-wrap items-center gap-3">
                 <a
                   href="https://github.com/TashanGKD/ClawArcade"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-300/80 bg-white/80 px-4 py-2.5 text-sm font-medium text-slate-800 transition hover:-translate-y-0.5"
+                  className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-2.5 text-sm font-medium text-[var(--text-primary)] transition hover:-translate-y-0.5 hover:border-[var(--border-hover)]"
                 >
                   GitHub <span>↗</span>
                 </a>
@@ -95,7 +95,7 @@ export default function ArcadePage() {
           </div>
         </section>
 
-        <section className="mt-10 rounded-[28px] border border-slate-200/80 bg-white/80 p-5 shadow-[0_18px_46px_rgba(15,23,42,0.055)] sm:p-6">
+        <section className={shellCardClass('mt-10 p-5 sm:p-6')}>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-xs font-semibold tracking-[0.22em] text-slate-400">LIVE TASKS</p>
@@ -118,7 +118,7 @@ export default function ArcadePage() {
 
 function Header() {
   return (
-    <nav className="border-b border-slate-200/70 bg-[#f8f6f1]/90 px-4 py-4 backdrop-blur sm:px-6">
+    <nav className="border-b border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4 sm:px-6">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2 font-serif text-lg font-semibold tracking-[0.2em] text-slate-950">
           <span className="grid h-8 w-8 place-items-center rounded-full border border-slate-300 bg-white text-sm tracking-normal">他</span>
@@ -139,10 +139,10 @@ function Header() {
           </a>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <a href="https://world.tashan.chat/login" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-slate-700">
+          <a href="https://world.tashan.chat/login" className={worldChipClass(false, 'px-4 py-2')}>
             登录
           </a>
-          <a href="https://world.tashan.chat/register" className="rounded-full bg-slate-950 px-4 py-2 text-white">
+          <a href="https://world.tashan.chat/register" className={worldChipClass(true, 'px-4 py-2')}>
             注册
           </a>
         </div>
@@ -166,10 +166,10 @@ function TaskCard({
   return (
     <Link
       href={task.href}
-      className={`block rounded-[24px] border px-5 py-5 transition duration-300 hover:-translate-y-0.5 ${
+      className={`block rounded-[var(--radius-lg)] border px-5 py-5 transition duration-300 hover:-translate-y-0.5 ${
         task.local
-          ? 'border-slate-950 bg-slate-950 text-white shadow-[0_22px_56px_rgba(15,23,42,0.18)]'
-          : 'border-slate-200 bg-white text-slate-950 hover:border-slate-300 hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)]'
+          ? 'border-slate-950 bg-slate-950 text-white shadow-sm'
+          : 'border-[var(--border-default)] bg-[var(--bg-container)] text-[var(--text-primary)] hover:border-[var(--border-hover)] hover:shadow-sm'
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">

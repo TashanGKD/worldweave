@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { compactText, formatTime, sceneDisplayLabel, shellCardClass, worldHomeHref } from '@/components/world-ui';
+import { compactText, formatTime, sceneDisplayLabel, shellCardClass, worldHomeHref, worldPageClass } from '@/components/world-ui';
 import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { getWorldSourceKnowledge } from '@/lib/world/runtime';
 import { loadRuntimeCatalogSources, type RuntimeCatalogSource } from '@/lib/world/source-catalog';
@@ -102,7 +102,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
 
   if (!detail) {
     return (
-      <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
+      <main className={worldPageClass('py-8')}>
         <div className="mx-auto flex max-w-3xl flex-col gap-5">
           <div className="flex flex-wrap items-center gap-3">
             <Link href={worldHomeHref(scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
@@ -127,7 +127,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
   const tierCounts = countBy(runtimeSources, (source) => source.admission_tier);
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
+    <main className={worldPageClass('py-8')}>
       <div className="mx-auto flex max-w-6xl flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link href={worldHomeHref(scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
@@ -149,29 +149,29 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
           <div className="grid gap-5 px-6 py-6 lg:grid-cols-[minmax(0,1.1fr)_340px]">
             <div className="space-y-5">
               <section className="grid gap-3 sm:grid-cols-4">
-                <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">运行源</p>
                   <p className="mt-1 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">{runtimeSources.length}</p>
                   <p className="mt-1 text-[12px] leading-6 text-slate-500">实际进入采集链路</p>
                 </div>
-                <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">知识库信号</p>
                   <p className="mt-1 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">{detail.signal_count}</p>
                   <p className="mt-1 text-[12px] leading-6 text-slate-500">最新 {formatTime(detail.latest_signal_published_at)}</p>
                 </div>
-                <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">召回分块</p>
                   <p className="mt-1 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">{detail.chunk_count}</p>
                   <p className="mt-1 text-[12px] leading-6 text-slate-500">向量分组 {detail.zvec_group_count}</p>
                 </div>
-                <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">最近同步</p>
                   <p className="mt-1 text-lg font-semibold text-slate-950">{formatTime(detail.last_synced_at)}</p>
                   <p className="mt-1 text-[12px] leading-6 text-slate-500">{detail.source_health?.freshness_status || 'unknown'}</p>
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">实际采集清单</p>
@@ -183,7 +183,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   {runtimeSources.map((source) => (
-                    <article key={sourceKey(source)} className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
+                    <article key={sourceKey(source)} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-medium text-slate-900">{compactText(source.source_name, 46)}</p>
                         <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
@@ -202,13 +202,13 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">索引状态</p>
                 <p className="mt-2 text-[13px] leading-7 text-slate-700">{readableSourceText(detail.source_status.embeddings, 180)}</p>
                 {detail.embedding_groups.length > 0 ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     {detail.embedding_groups.map((group) => (
-                      <article key={`${group.backend}-${group.model}-${group.dimension}`} className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
+                      <article key={`${group.backend}-${group.model}-${group.dimension}`} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4">
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-sm font-medium text-slate-900">{embeddingModelLabel(group.model)}</p>
                           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
@@ -226,11 +226,11 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
             </div>
 
             <aside className="space-y-5">
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">按类型</p>
                 <div className="mt-4 space-y-2">
                   {typeCounts.map(([type, count]) => (
-                    <div key={type} className="flex items-center justify-between rounded-[16px] border border-slate-200 bg-white px-3 py-2 text-sm">
+                    <div key={type} className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-2 text-sm">
                       <span className="text-slate-600">{sourceTypeLabel(type)}</span>
                       <span className="font-semibold text-slate-900">{count}</span>
                     </div>
@@ -238,11 +238,11 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">按业务线</p>
                 <div className="mt-4 space-y-2">
                   {sceneCounts.map(([sourceScene, count]) => (
-                    <div key={sourceScene} className="flex items-center justify-between rounded-[16px] border border-slate-200 bg-white px-3 py-2 text-sm">
+                    <div key={sourceScene} className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-2 text-sm">
                       <span className="text-slate-600">{sourceSceneLabel(sourceScene)}</span>
                       <span className="font-semibold text-slate-900">{count}</span>
                     </div>
@@ -250,11 +250,11 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">按角色</p>
                 <div className="mt-4 space-y-2">
                   {tierCounts.map(([tier, count]) => (
-                    <div key={tier} className="flex items-center justify-between rounded-[16px] border border-slate-200 bg-white px-3 py-2 text-sm">
+                    <div key={tier} className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-2 text-sm">
                       <span className="text-slate-600">{admissionTierLabel(tier)}</span>
                       <span className="font-semibold text-slate-900">{count}</span>
                     </div>
@@ -262,7 +262,7 @@ export default async function SourceKnowledgePage({ searchParams }: PageProps) {
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">当前原则</p>
                 <p className="mt-3 text-[13px] leading-7 text-slate-600">
                   先把这批源的采集、去噪、入库、日报组织做好。未验证目录不进入日报，也不在这里作为增长指标展示。

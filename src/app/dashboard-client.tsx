@@ -59,21 +59,30 @@ import type {
 
 function WorldGlobeShell() {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_50%_42%,rgba(18,78,96,0.42)_0%,rgba(3,16,24,0.2)_54%,rgba(2,6,23,0.96)_100%)]">
-      <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(rgba(33,199,168,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(33,199,168,0.08)_1px,transparent_1px)] [background-size:40px_40px]" />
-      <div className="absolute left-1/2 top-1/2 aspect-square w-[72%] max-w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-300/24 bg-[radial-gradient(circle_at_44%_34%,rgba(45,212,191,0.18)_0%,rgba(8,47,73,0.24)_34%,rgba(2,6,23,0.96)_74%)] shadow-[0_0_80px_rgba(45,212,191,0.18)]">
-        <div className="absolute inset-[8%] rounded-full border border-emerald-200/10" />
-        <div className="absolute inset-[20%] rounded-full border border-emerald-200/10" />
-        <div className="absolute left-1/2 top-[7%] h-[86%] w-px -translate-x-1/2 bg-emerald-200/12" />
-        <div className="absolute left-[11%] top-1/2 h-px w-[78%] -translate-y-1/2 bg-emerald-200/12" />
+    <div className="relative h-full w-full overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(124,196,184,0.08)_0%,rgba(248,250,252,0)_28%),linear-gradient(180deg,var(--bg-page)_0%,var(--bg-secondary)_100%)]">
+      <div className="absolute inset-0 opacity-80 [background-image:linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] [background-size:40px_40px]" />
+      <div className="absolute left-1/2 top-1/2 aspect-square w-[72%] max-w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--border-hover)] bg-[radial-gradient(circle_at_44%_34%,rgba(255,255,255,0.76)_0%,rgba(232,237,242,0.9)_42%,rgba(203,213,225,0.62)_100%)] shadow-[0_18px_60px_rgba(15,23,42,0.10)]">
+        <div className="absolute inset-[8%] rounded-full border border-[var(--border-default)]" />
+        <div className="absolute inset-[20%] rounded-full border border-[var(--border-default)]" />
+        <div className="absolute left-1/2 top-[7%] h-[86%] w-px -translate-x-1/2 bg-[var(--border-hover)]" />
+        <div className="absolute left-[11%] top-1/2 h-px w-[78%] -translate-y-1/2 bg-[var(--border-hover)]" />
       </div>
-      <div className="absolute bottom-4 left-4 rounded-full border border-emerald-400/20 bg-slate-950/72 px-3.5 py-2 text-xs text-slate-200 shadow-[0_16px_36px_rgba(2,6,23,0.45)] backdrop-blur">
+      <div className="absolute bottom-4 left-4 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)]/85 px-3.5 py-2 text-xs text-[var(--text-secondary)] shadow-sm backdrop-blur">
         地图加载中
       </div>
     </div>
   );
 }
 const WorldGlobe = dynamic(() => import('@/components/world-globe'), { ssr: false, loading: WorldGlobeShell });
+
+const dashboardPanelClass =
+  'gap-0 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] !py-0 shadow-[var(--shadow-md)]';
+const dashboardHeaderClass = '!flex h-11 !items-center border-b border-[var(--border-default)] bg-[var(--bg-container)] !px-4 !py-0';
+const timelineTabButtonClass =
+  'h-7 whitespace-nowrap rounded-[var(--radius-md)] border px-3 text-[12px] font-semibold leading-none transition';
+const dashboardInsetPanelClass = 'rounded-[var(--radius-lg)] bg-transparent px-1 py-1';
+const dashboardTileClass =
+  'group rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-3 text-left transition hover:-translate-y-0.5 hover:border-[var(--border-hover)] hover:bg-[var(--bg-container)] hover:shadow-sm';
 
 const AUTO_REFRESH_MS = 60 * 1000;
 const INITIAL_BACKGROUND_REFRESH_DELAY_MS = 1800;
@@ -720,7 +729,7 @@ function questionCardAccentClass(preview: LiveBenchQuestionPreview) {
   if (preview.status === 'resolved') return 'border-emerald-200/90';
   if (preview.aggregate_vote.side === 'yes') return 'border-emerald-200/90';
   if (preview.aggregate_vote.side === 'no') return 'border-rose-200/90';
-  return 'border-slate-200';
+  return 'border-[var(--border-default)]';
 }
 
 function questionTimingLabel(preview: LiveBenchQuestionPreview) {
@@ -765,9 +774,9 @@ function livebenchQuestionTime(preview: LiveBenchQuestionPreview) {
 }
 
 function markerDotClass(level: 'high' | 'elevated' | 'monitoring') {
-  if (level === 'high') return 'bg-[#ff5c73] shadow-[0_0_12px_rgba(255,92,115,0.65)]';
-  if (level === 'elevated') return 'bg-[#28d7ff] shadow-[0_0_12px_rgba(40,215,255,0.6)]';
-  return 'bg-[#86ffd8] shadow-[0_0_12px_rgba(134,255,216,0.65)]';
+  if (level === 'high') return 'bg-[#e8475f] shadow-[0_0_12px_rgba(232,71,95,0.42)]';
+  if (level === 'elevated') return 'bg-[#1aafdb] shadow-[0_0_12px_rgba(26,175,219,0.38)]';
+  return 'bg-[#34c79a] shadow-[0_0_12px_rgba(52,199,154,0.38)]';
 }
 
 function signalDisplayLevel(signal: Pick<DashboardSignal, 'display_level' | 'severity'>): 'high' | 'elevated' | 'monitoring' {
@@ -781,8 +790,8 @@ function signalDisplayLevel(signal: Pick<DashboardSignal, 'display_level' | 'sev
 
 function timelineTabClass(active: boolean) {
   return active
-    ? 'border-slate-300 bg-white text-[#08201c] shadow-[0_10px_22px_rgba(20,43,39,0.07)]'
-    : 'border-[#d3ddd7] bg-white/82 text-slate-600 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-[#08201c]';
+    ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+    : 'border-[var(--border-default)] bg-[var(--bg-container)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]';
 }
 
 function performanceSummaryHeadline(summary: LiveBenchPlatformModelSummary | null | undefined) {
@@ -948,7 +957,11 @@ export default function DashboardClient({
     if (!panel) return;
 
     const updatePanelHeight = () => {
-      setWorldMapPanelHeight(Math.ceil(panel.getBoundingClientRect().height));
+      if (!window.matchMedia('(min-width: 1280px)').matches) {
+        setWorldMapPanelHeight(null);
+        return;
+      }
+      setWorldMapPanelHeight(Math.ceil(panel.offsetHeight || panel.getBoundingClientRect().height));
     };
 
     updatePanelHeight();
@@ -1373,18 +1386,6 @@ export default function DashboardClient({
     };
   }, [alertNodes.length, globeTimeMode, loading, markers.length, scene, state]);
 
-  const markerLevelCounts = useMemo(
-    () =>
-      markers.reduce(
-        (counts, marker) => {
-          counts[marker.displayLevel] += 1;
-          return counts;
-        },
-        { high: 0, elevated: 0, monitoring: 0 },
-      ),
-    [markers],
-  );
-
   const activeSignalNode = useMemo(() => {
     if (!activeSignalId) return null;
     return (mapState?.nodes || []).find((node) => node.node_id === activeSignalId) || null;
@@ -1609,217 +1610,151 @@ export default function DashboardClient({
     window.setTimeout(() => setSkillEntryCopied(false), 1600);
   };
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#f5f7f4_0%,#fbfcf8_42%,#eef5f1_100%)] text-slate-900">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(20,184,166,0.58),rgba(217,159,72,0.45),transparent)]" />
-      <div className="relative mx-auto flex w-full max-w-none flex-col gap-4 px-4 py-4 sm:px-6 2xl:px-8">
-        <section className="animate-fade-in-soft rounded-[28px] border border-[#cfd8d2]/80 bg-white/82 p-4 shadow-[0_18px_44px_rgba(20,43,39,0.065)] backdrop-blur-sm">
-          <div className="relative overflow-hidden rounded-[24px] bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(247,250,247,0.96)_58%,rgba(241,248,244,0.94))] p-3 sm:p-4">
-            <div
-              className="pointer-events-none absolute inset-x-6 top-0 h-px animate-tashan-scan"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(20,184,166,0.62), rgba(217,159,72,0.52), transparent)' }}
-            />
-            <div className="relative z-10 flex flex-col gap-3">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">世界脉络</p>
-                    <h1 className="mt-1 font-serif text-[1.9rem] font-semibold text-[#08201c] sm:text-[2.35rem]">
-                      世界脉络
-                    </h1>
-                    <p className="mt-1.5 max-w-2xl text-[13px] leading-6 text-slate-600">
-                      整体页呈现地缘和 AI 两条主线；东盟专题单独进入区域视图。
-                    </p>
+    <main className="relative min-h-screen overflow-x-hidden bg-[var(--bg-page)] text-[var(--text-primary)]">
+      <div className="relative mx-auto flex w-full max-w-none flex-col gap-4 px-4 py-3 sm:px-6 2xl:px-8">
+        <section className="flex min-h-[58px] w-full min-w-0 flex-wrap items-center justify-between gap-3 border-b border-[var(--border-default)] pb-3">
+          <div className="min-w-0">
+            <h1 className="min-w-0 text-[1.65rem] font-bold leading-tight text-[var(--text-primary)]">世界脉络</h1>
+          </div>
+          <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-2 text-sm sm:ml-auto sm:w-auto sm:justify-end">
+            <nav className="inline-flex min-w-0 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-1">
+              <Link
+                href="/?scene=geo-politics-daily"
+                className="rounded-[var(--radius-md)] bg-[var(--bg-container)] px-4 py-2 font-semibold text-[var(--text-primary)] shadow-sm"
+              >
+                整体态势
+              </Link>
+              <Link
+                href={aseanTopicHref}
+                className="rounded-[var(--radius-md)] px-4 py-2 font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-container)] hover:text-[var(--text-primary)]"
+              >
+                东盟专题
+              </Link>
+            </nav>
+            <span className="px-3 py-2 font-medium text-[var(--text-tertiary)]">AI</span>
+            <span className="px-3 py-2 font-medium text-[var(--text-tertiary)]">
+              {state ? formatTime(state.generated_at) : '--'}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 shrink-0 rounded-[var(--radius-md)] border-[var(--border-default)] bg-[var(--bg-container)] px-3 text-sm font-semibold text-[var(--text-primary)] shadow-sm transition hover:border-[var(--border-hover)] hover:bg-[var(--bg-hover)] sm:px-4"
+              onClick={() => void loadDashboard(scene, { manual: true })}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              刷新
+            </Button>
+          </div>
+        </section>
+
+        <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,0.72fr)_minmax(720px,1.28fr)] xl:items-stretch">
+          {skillEntry ? (
+            <div className={`${dashboardInsetPanelClass} h-full`}>
+              <div className="flex h-full flex-col gap-3">
+                <div className="flex h-8 items-center justify-between gap-3">
+                  <span className="inline-flex h-8 items-center gap-2 text-[13px] font-bold uppercase leading-none tracking-[0.12em] text-[var(--text-primary)]">
+                    <Link2 className="h-4 w-4" />
+                    Skill 接入
+                  </span>
+                  <div className="flex h-8 shrink-0 items-center gap-5 text-[12px] font-medium leading-none text-[var(--text-secondary)]">
+                    <a href={skillEntryHref} target="_blank" rel="noreferrer" className="inline-flex h-8 items-center transition hover:text-[#08201c]">
+                      打开
+                    </a>
+                    <button type="button" onClick={() => void handleCopySkillEntry()} className="inline-flex h-8 items-center transition hover:text-[#08201c]">
+                      {skillEntryCopied ? '已复制' : '复制'}
+                    </button>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <nav className="inline-flex rounded-full border border-[#d7ded8] bg-white/92 p-1 text-xs">
-                      <Link
-                        href="/?scene=geo-politics-daily"
-                        className="rounded-full bg-[#effaf4] px-3 py-1.5 font-medium text-[#06231f]"
-                      >
-                        整体态势
-                      </Link>
-                      <Link
-                        href={aseanTopicHref}
-                        className="rounded-full px-3 py-1.5 font-medium text-slate-500 transition hover:bg-[#f4faf7] hover:text-[#06231f]"
-                      >
-                        东盟专题
-                      </Link>
-                    </nav>
-                    <span className="rounded-full border border-[#d7ded8] bg-white/92 px-3 py-1 text-xs text-slate-500">
-                      {sceneDisplayLabel(scene)}
+                </div>
+                <a
+                  href={skillEntryHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block min-h-[58px] rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3 font-mono text-[12px] leading-6 text-[var(--text-secondary)] shadow-sm transition hover:border-[var(--border-hover)] sm:min-h-[64px] sm:px-4 sm:text-[13px]"
+                  title={skillEntryDisplayUrl}
+                >
+                  <span className="line-clamp-2 break-all">{skillEntryDisplayUrl}</span>
+                </a>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <a href={DAILY_PAGE_HREFS['geo-politics-daily']} className={dashboardTileClass}>
+                    <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#0f766e]">
+                      <Globe2 className="h-4 w-4" />
+                      主世界
                     </span>
-                    <span className="rounded-full border border-[#d7ded8] bg-white/92 px-3 py-1 text-xs text-slate-500">
-                      最近更新 {state ? formatTime(state.generated_at) : '--'}
+                  </a>
+                  <a href={DAILY_PAGE_HREFS['tech-ai']} className={dashboardTileClass}>
+                    <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#2563eb]">
+                      <Bot className="h-4 w-4" />
+                      AI
                     </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 rounded-full border-[#cbd8d1] bg-white/85 px-3 text-xs text-[#143d35] transition hover:border-teal-300 hover:bg-[#f1faf5]"
-                      onClick={() => void loadDashboard(scene, { manual: true })}
-                      disabled={refreshing}
+                  </a>
+                  <a href={sourceKnowledgeHref} className={`${dashboardTileClass} hover:border-amber-300`}>
+                    <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#d97706]">
+                      <FileText className="h-4 w-4" />
+                      全部信源
+                    </span>
+                  </a>
+                  <Link href={aseanTopicHref} className={dashboardTileClass}>
+                    <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#0f766e]">
+                      <MapIcon className="h-4 w-4" />
+                      东盟专题
+                    </span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4 text-sm leading-7 text-[var(--text-secondary)]">
+              当前还没有可公开展示的 skills 地址。
+            </div>
+          )}
+
+          <div className={dashboardInsetPanelClass}>
+            <div className="flex h-full flex-col gap-3">
+              <div className="flex h-8 items-center justify-between gap-3">
+                <p className="inline-flex h-8 items-center text-[13px] font-bold leading-none tracking-[0.08em] text-[var(--text-primary)]">今日简报</p>
+                <span className="inline-flex h-8 shrink-0 items-center rounded-[var(--radius-md)] border border-teal-200 bg-teal-50 px-3 text-[12px] font-medium leading-none text-[#087265]">
+                  精华版
+                </span>
+              </div>
+              <div className="grid flex-1 gap-3 lg:grid-cols-4">
+                {dashboardBriefCards.map((card) => {
+                  const Icon = card.key === 'world' ? Globe2 : card.key === 'ai' ? Bot : card.key === 'asean' ? MapIcon : FileText;
+                  return (
+                    <a
+                      key={`top-daily-card-${card.key}`}
+                      href={card.href}
+                      className="group animate-rise-in relative flex min-h-[104px] flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-3 text-left text-[var(--text-primary)] transition duration-300 hover:-translate-y-0.5 hover:border-[var(--border-hover)] hover:bg-[var(--bg-container)] hover:shadow-sm sm:min-h-[112px]"
+                      style={{ animationDelay: `${120 + (card.key === 'ai' ? 80 : card.key === 'livebench' ? 160 : card.key === 'asean' ? 240 : 0)}ms` } as CSSProperties}
                     >
-                      <RefreshCw className={`mr-2 h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-                      刷新
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(440px,1.1fr)] xl:items-stretch">
-                  {skillEntry ? (
-                    <div className="h-full rounded-[22px] border border-[#cfd8d2]/80 bg-white/88 px-4 py-3 shadow-[0_12px_30px_rgba(20,43,39,0.045)]">
-                      <div className="flex h-full flex-col gap-2.5">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <span className="inline-flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">
-                              <Link2 className="h-3.5 w-3.5" />
-                              Skill 接入
-                            </span>
-                            <p className="mt-2 text-[13px] leading-6 text-slate-900">
-                              {skillEntry.description || '把这个地址交给虾，主口径是过去 30 天信源查询与整理。'}
-                            </p>
-                            <a
-                              href={skillEntryHref}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-2 block truncate rounded-2xl border border-[#d6ded8] bg-[#f6faf7] px-3 py-2 font-mono text-[11px] leading-5 text-slate-600 transition hover:border-teal-300 hover:bg-white hover:text-[#08201c]"
-                              title={skillEntryDisplayUrl}
-                            >
-                              {skillEntryDisplayUrl}
-                            </a>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <a
-                              href={skillEntryHref}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-full border border-[#d3ddd7] bg-white px-3 py-1.5 text-[11px] text-slate-500 transition hover:border-teal-300 hover:text-[#08201c]"
-                            >
-                              打开 Skill
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => void handleCopySkillEntry()}
-                              className="rounded-full border border-[#d3ddd7] bg-white px-3 py-1.5 text-[11px] text-slate-500 transition hover:border-teal-300 hover:text-[#08201c]"
-                            >
-                              {skillEntryCopied ? '已复制' : '复制地址'}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="rounded-full border border-teal-200/80 bg-[#effaf4] px-4 py-2 text-[12px] font-medium text-[#087265]">
-                          Skill 地址可直接接入
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <a
-                            href={DAILY_PAGE_HREFS['geo-politics-daily']}
-                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
-                          >
-                            <span className="block text-[12px] font-semibold text-[#08201c]">主世界</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">地缘与公共风险</span>
-                          </a>
-                          <a
-                            href={DAILY_PAGE_HREFS['tech-ai']}
-                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
-                          >
-                            <span className="block text-[12px] font-semibold text-[#08201c]">AI</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">AI 前沿与模型线索</span>
-                          </a>
-                          <a
-                            href={sourceKnowledgeHref}
-                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-amber-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(217,159,72,0.08)]"
-                          >
-                            <span className="block text-[12px] font-semibold text-[#08201c]">全部信源</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">查看已接入来源</span>
-                          </a>
-                          <Link
-                            href={aseanTopicHref}
-                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
-                          >
-                            <span className="block text-[12px] font-semibold text-[#08201c]">东盟专题</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">区域地图与专题图谱</span>
-                          </Link>
-                          <a
-                            href={aihotSkillHref}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="group rounded-[18px] border border-[#d3ddd7] bg-[#f8fbf8] px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-white hover:shadow-[0_10px_22px_rgba(20,184,166,0.08)]"
-                          >
-                            <span className="block text-[12px] font-semibold text-[#08201c]">AI 日报 Skill</span>
-                            <span className="mt-1 block text-[11px] leading-5 text-slate-500">读取 AI 精选源</span>
-                          </a>
-                        </div>
-                        <p className="text-[12px] leading-5 text-slate-500">
-                          {skillEntry.copy_hint || '日常回答优先用当前精选线索；需要深挖时再进入全部信源。'}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-[22px] border border-dashed border-slate-200 bg-white/80 px-4 py-4 text-sm leading-7 text-slate-500">
-                      当前还没有可公开展示的 skills 地址。
-                    </div>
-                  )}
-
-                  <div className="rounded-[22px] border border-[#cfd8d2]/80 bg-white/88 px-4 py-3 shadow-[0_12px_30px_rgba(20,43,39,0.045)]">
-                    <div className="flex h-full flex-col">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-400">今日简报</p>
-                          <p className="mt-2 text-[13px] leading-6 text-slate-900">
-                            先看整理好的日报与专题入口。
-                          </p>
-                          <p className="mt-1 text-[12px] leading-5 text-slate-500">
-                            每份只保留当前最值得读的精华线索，完整原始线索仍在下方时间线。
-                          </p>
-                        </div>
-                        <span className="shrink-0 rounded-full border border-teal-200 bg-[#effaf4] px-3 py-1 text-[11px] text-[#087265]">
-                          精华版
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#087265]">
+                          <Icon className="h-4 w-4" />
+                          {card.label}
                         </span>
+                        <span className="text-[12px] font-medium text-[#b25c18]">{card.meta}</span>
                       </div>
-
-                      <div className="mt-3 grid flex-1 gap-2 lg:grid-cols-4">
-                        {dashboardBriefCards.map((card) => {
-                          const Icon = card.key === 'world' ? Globe2 : card.key === 'ai' ? Bot : card.key === 'asean' ? MapIcon : FileText;
-                          return (
-                            <a
-                              key={`top-daily-card-${card.key}`}
-                              href={card.href}
-                              className="group animate-rise-in relative flex min-h-[9.5rem] flex-col overflow-hidden rounded-[20px] border border-[#d2ddd6] bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(243,250,246,0.92))] px-3.5 py-3 text-left text-[#08201c] transition duration-300 hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_18px_32px_rgba(20,43,39,0.09)]"
-                              style={{ animationDelay: `${120 + (card.key === 'ai' ? 80 : card.key === 'livebench' ? 160 : card.key === 'asean' ? 240 : 0)}ms` } as CSSProperties}
-                            >
-                              <span className="pointer-events-none absolute inset-x-3 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(20,184,166,0.55),rgba(217,159,72,0.35),transparent)] opacity-70 transition group-hover:opacity-100" />
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-white/86 px-2 py-1 text-[11px] font-semibold text-[#087265]">
-                                  <Icon className="h-3.5 w-3.5" />
-                                  {card.label}
-                                </span>
-                                <span className="rounded-full border border-amber-200 bg-amber-50/60 px-2 py-1 text-[11px] text-[#8a5a12]">{card.meta}</span>
-                              </div>
-                              <h3 className="mt-3 line-clamp-2 text-[14px] font-semibold leading-6 text-slate-950">{card.title}</h3>
-                              <p className="mt-2 line-clamp-4 text-[12px] leading-6 text-slate-600">{card.summary}</p>
-                              <span className="mt-auto inline-flex items-center gap-1 pt-3 text-[12px] font-medium text-[#087265]">
-                                阅读精华
-                                <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-                              </span>
-                            </a>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                      <h3 className="mt-2 line-clamp-2 text-[14px] font-bold leading-6 text-[var(--text-primary)]">{card.title}</h3>
+                      <span className="mt-auto inline-flex items-center gap-1 pt-3 text-[12px] font-medium text-[#087265]">
+                        阅读精华
+                        <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                      </span>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           </div>
         </section>
 
         {error ? (
-          <Card className="rounded-[24px] border-red-200 bg-red-50/90 shadow-[0_14px_30px_rgba(239,68,68,0.08)]">
+          <Card className="rounded-[var(--radius-lg)] border-red-200 bg-red-50 shadow-none">
             <CardContent className="p-4 text-sm text-red-700">{error}</CardContent>
           </Card>
         ) : null}
 
         {emptySignalCheck ? (
-          <Card className="rounded-[24px] border-amber-200 bg-amber-50/90 shadow-[0_14px_30px_rgba(245,158,11,0.08)]">
+          <Card className="rounded-[var(--radius-lg)] border-amber-200 bg-amber-50 shadow-none">
             <CardContent className="flex flex-col gap-2 p-4 text-sm leading-6 text-amber-900 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="font-semibold">
@@ -1833,45 +1768,43 @@ export default function DashboardClient({
                     : ''}
                 </p>
               </div>
-              <div className="shrink-0 rounded-full border border-amber-200 bg-white/70 px-3 py-1 text-xs text-amber-700">
+              <div className="shrink-0 rounded-[var(--radius-md)] border border-amber-200 bg-white px-3 py-1 text-xs text-amber-700">
                 {emptySignalCheck.status === 'checking' ? '检查中' : '等待更新'}
               </div>
             </CardContent>
           </Card>
         ) : null}
         {isTimelineScene ? (
-        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(520px,1fr)_minmax(520px,1fr)] xl:items-start 2xl:grid-cols-[minmax(640px,1fr)_minmax(640px,1fr)]">
-          <Card id="world-map-panel" ref={worldMapPanelRef} className={`${shellCardClass()} xl:order-2`}>
-            <CardContent className="flex h-full min-h-0 flex-col p-3">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
+        <section className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(520px,1fr)_minmax(520px,1fr)] xl:items-start 2xl:grid-cols-[minmax(660px,1fr)_minmax(660px,1fr)]">
+          <Card id="world-map-panel" ref={worldMapPanelRef} className={`${dashboardPanelClass} min-w-0 xl:order-1`}>
+            <CardContent className="flex h-full min-h-0 flex-col p-0">
+              <div className={`${dashboardHeaderClass} flex items-center justify-between gap-3`}>
                 <div>
-                  <h2 className="font-serif text-xl font-semibold text-[#08201c]">
+                  <h2 className="text-[16px] font-bold text-[var(--text-primary)]">
                     3D 地球时间地图
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    把焦点放回地图，正在发生的事会先落到这颗地球上。
-                  </p>
                 </div>
-                <div className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-xs text-slate-500">
+                <div className="rounded-[var(--radius-md)] bg-[var(--bg-container)] px-2.5 py-0.5 text-[12px] text-[var(--text-tertiary)]">
                   最近更新 {mapState ? formatTime(mapState.generated_at) : '--'}
                 </div>
               </div>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col p-3 sm:p-4">
 
               {focusCard ? (
-                <div className="mb-3 animate-rise-in rounded-[28px] border border-teal-200/70 bg-[linear-gradient(135deg,rgba(240,250,244,0.96),rgba(252,250,241,0.92))] px-4 py-3 shadow-[0_10px_22px_rgba(20,43,39,0.06)]">
+                <div className="mb-3 animate-rise-in rounded-[var(--radius-lg)] border border-teal-200 bg-teal-50/60 px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                    <span className="rounded-full border border-teal-200 bg-white/85 px-2.5 py-1 font-semibold text-[#087265]">
+                    <span className="rounded-[var(--radius-md)] border border-teal-200 bg-[var(--bg-container)] px-2.5 py-1 font-semibold text-[#087265]">
                       {focusCard.label}
                     </span>
                     <span className="text-[#8a5a12]">{formatTime(focusCard.updatedAt)}</span>
                   </div>
                   <div className="mt-2 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[14px] font-semibold leading-6 text-[#08201c]">{focusCard.title}</p>
-                      <p className="mt-1 text-[12px] leading-6 text-slate-700">{compactText(focusCard.summary, 110)}</p>
+                      <p className="text-[14px] font-semibold leading-6 text-[var(--text-primary)]">{focusCard.title}</p>
+                      <p className="mt-1 text-[12px] leading-6 text-[var(--text-secondary)]">{compactText(focusCard.summary, 110)}</p>
                     </div>
                     {focusCard.watchNext ? (
-                      <div className="rounded-full border border-teal-200/90 bg-white/85 px-3 py-1.5 text-[11px] leading-5 text-slate-700 lg:max-w-[22rem]">
+                      <div className="rounded-[var(--radius-md)] border border-teal-200 bg-[var(--bg-container)] px-3 py-1.5 text-[11px] leading-5 text-[var(--text-secondary)] lg:max-w-[22rem]">
                         <span className="font-semibold text-[#087265]">线索：</span>
                         {compactText(focusCard.watchNext, 64)}
                       </div>
@@ -1880,7 +1813,7 @@ export default function DashboardClient({
                 </div>
               ) : null}
 
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-default)] px-1 pb-3">
                 <div className="flex flex-wrap items-center gap-2">
                   {[
                     { key: 'memory30', label: '近 30 天' },
@@ -1890,23 +1823,23 @@ export default function DashboardClient({
                       key={item.key}
                       type="button"
                       onClick={() => setGlobeTimeMode(item.key as 'today' | 'memory30')}
-                      className={`rounded-full border px-3 py-1 text-xs transition ${
+                      className={`rounded-[var(--radius-md)] border px-3 py-1.5 text-[13px] font-medium transition ${
                         globeTimeMode === item.key
                           ? 'border-slate-900 bg-slate-900 text-white'
-                          : 'border-slate-200 bg-white/80 text-slate-500'
+                          : 'border-[var(--border-default)] bg-[var(--bg-container)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]'
                       }`}
                     >
                       {item.label}
                     </button>
                   ))}
                 </div>
-                <span className="text-xs text-slate-400">{markers.length} 个地图落点</span>
+                <span className="text-[13px] text-[var(--text-tertiary)]">{markers.length} 个地图落点</span>
               </div>
 
               <div
                 id="world-globe-shell"
-                className="mx-auto w-full shrink-0 overflow-hidden rounded-[30px] border border-slate-200/70"
-                style={{ height: 'clamp(400px, 42vw, 680px)', maxWidth: 'clamp(400px, 42vw, 680px)' }}
+                className="w-full max-w-full shrink-0 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-default)]"
+                style={{ height: 'clamp(380px, 100vw, 760px)' }}
               >
                 {/* 中间栏固定保留 3D 地球，左右信息都围绕它组织。 */}
                 <WorldGlobe
@@ -1920,172 +1853,77 @@ export default function DashboardClient({
                 />
               </div>
 
-              <div className="mt-3 grid gap-2 rounded-[24px] border border-slate-200/70 bg-slate-50/65 px-3 py-3 text-xs text-slate-600 sm:grid-cols-3">
-                <div className="flex items-center justify-between gap-2 rounded-full border border-red-100 bg-white px-3 py-2 text-red-700">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#ff5c73] shadow-[0_0_12px_rgba(255,92,115,0.75)]" />
-                    高热点
-                  </span>
-                  <span>{markerLevelCounts.high}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2 rounded-full border border-sky-100 bg-white px-3 py-2 text-sky-700">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#28d7ff] shadow-[0_0_12px_rgba(40,215,255,0.7)]" />
-                    升温
-                  </span>
-                  <span>{markerLevelCounts.elevated}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2 rounded-full border border-emerald-100 bg-white px-3 py-2 text-emerald-700">
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-[#86ffd8] shadow-[0_0_12px_rgba(134,255,216,0.75)]" />
-                    监测
-                  </span>
-                  <span>{markerLevelCounts.monitoring}</span>
-                </div>
-              </div>
-              <div className="mt-2 rounded-[24px] border border-slate-200/70 bg-white/80 px-3 py-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-medium tracking-[0.08em] text-slate-400">
-                    {sceneDisplayLabel(mapScene)}信号
-                  </p>
-                  <span className="text-[11px] text-slate-400">{markers.length} 条</span>
-                </div>
-                <div className="max-h-[132px] space-y-1.5 overflow-y-auto pr-1 2xl:max-h-[150px]">
-                  {markers.length > 0 ? (
-                    markers.map((signal, index) => (
-                      <button
-                        key={`map-signal-${signal.id}-${index}`}
-                        type="button"
-                        onClick={() => {
-                          setActiveSignalId(signal.id);
-                          setGlobeAutoPauseUntil(Date.now() + 15000);
-                        }}
-                        className={`flex w-full items-start gap-2 rounded-2xl border px-3 py-2 text-left transition ${
-                          activeSignalId === signal.id
-                            ? 'border-teal-200 bg-[#eefaf4]'
-                            : 'border-slate-100 bg-slate-50/80 hover:border-slate-200 hover:bg-white'
-                        }`}
-                      >
-                        <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${markerDotClass(signal.displayLevel)}`} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[12px] font-medium text-slate-800">
-                            {signal.title}
-                          </span>
-                          <span className="mt-1 block line-clamp-2 text-[11px] leading-5 text-slate-500">
-                            {signal.summary}
-                          </span>
-                          <span className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-                            <span>{signal.locationLabel || signal.sourceName || signal.scene}</span>
-                            <span>{formatTime(signal.timestamp)}</span>
-                          </span>
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-[12px] text-slate-500">
-                      当前没有可展示的地图信号。
-                    </p>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>
 
           {isTimelineScene ? (
-          <Card ref={timelinePanelRef} className={`${shellCardClass()} xl:order-1 xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
-            <CardHeader className="border-b border-[#dce5df] bg-[linear-gradient(180deg,rgba(249,252,249,0.98),rgba(255,255,255,0.86))] py-4">
-              <div className="flex flex-col gap-3">
+          <Card ref={timelinePanelRef} className={`${dashboardPanelClass} xl:order-2 xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
+            <CardHeader className={dashboardHeaderClass}>
+              <div className="flex h-full w-full items-center justify-between gap-3">
                 <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[#08201c]">
-                    <Radio className="h-4 w-4 text-[#087265]" />
+                  <CardTitle className="flex items-center gap-2 text-[16px] font-bold text-[var(--text-primary)]">
                     线索时间线
                   </CardTitle>
-                  <p className="text-xs text-slate-500">这里只保留原始线索流；日报精华从上方今日简报进入。</p>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setTimelineScene('geo-politics-daily')}
-                    className={`group rounded-[18px] border px-3 py-2.5 text-left transition duration-300 ${timelineTabClass(timelineScene === 'geo-politics-daily')}`}
+                    className={`${timelineTabButtonClass} ${timelineTabClass(timelineScene === 'geo-politics-daily')}`}
                   >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="text-[12px] font-semibold">地缘线索</span>
-                      <span className="rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[10px] text-slate-500">
-                        {geoTimelineCount > 0 ? `${geoTimelineCount} 条` : '打开'}
-                      </span>
-                    </span>
-                    <span className="mt-1 block text-[11px] leading-5 opacity-70">冲突、外交、公共风险</span>
+                    地缘 {geoTimelineCount > 0 ? geoTimelineCount : ''}
                   </button>
                   <button
                     type="button"
                     onClick={() => setTimelineScene('tech-ai')}
-                    className={`group rounded-[18px] border px-3 py-2.5 text-left transition duration-300 ${timelineTabClass(timelineScene === 'tech-ai')}`}
+                    className={`${timelineTabButtonClass} ${timelineTabClass(timelineScene === 'tech-ai')}`}
                   >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="text-[12px] font-semibold">AI 线索</span>
-                      <span className="rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[10px] text-slate-500">
-                        {techTimelineCount > 0 ? `${techTimelineCount} 条` : '打开'}
-                      </span>
-                    </span>
-                    <span className="mt-1 block text-[11px] leading-5 opacity-70">模型、Agent、开源</span>
+                    AI {techTimelineCount > 0 ? techTimelineCount : ''}
                   </button>
                   <button
                     type="button"
                     onClick={() => setTimelineScene('livebench')}
-                    className={`group rounded-[18px] border px-3 py-2.5 text-left transition duration-300 ${timelineTabClass(timelineScene === 'livebench')}`}
+                    className={`${timelineTabButtonClass} ${timelineTabClass(timelineScene === 'livebench')}`}
                   >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="text-[12px] font-semibold">演绎题池</span>
-                      <span className="rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[10px] text-slate-500">
-                        {livebenchTimelineCount > 0 ? `${livebenchTimelineCount} 道` : '打开'}
-                      </span>
-                    </span>
-                    <span className="mt-1 block text-[11px] leading-5 opacity-70">题池与结果</span>
+                    演绎
                   </button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="flex h-full min-h-0 flex-col gap-3 p-3">
-              <p className="rounded-[18px] border border-[#d8e3dd] bg-[#f7fbf8] px-3 py-2 text-[12px] leading-6 text-slate-500">
-                {timelineScene === 'livebench'
-                  ? `下方按到期和结算时间保留演绎题池，当前跟踪 ${currentQuestions.length} 道。`
-                  : `下方按发布时间保留${timelineViewLabel(timelineScene)}原始流。`}
-              </p>
-
+            <CardContent className="flex h-full min-h-0 flex-col p-4">
               <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
                 {timelineScene === 'livebench' ? (
                   livebenchTimelineGroups.length > 0 ? (
                     livebenchTimelineGroups.map((group) => (
-                      <div key={`livebench-timeline-group-${group.day}`} className="grid gap-3 sm:grid-cols-[64px_minmax(0,1fr)]">
-                        <div className="pt-3 text-sm font-semibold text-slate-500">{group.day}</div>
-                        <div className="relative space-y-3 border-l border-slate-200 pl-4">
+                      <div key={`livebench-timeline-group-${group.day}`} className="grid gap-4 sm:grid-cols-[72px_minmax(0,1fr)]">
+                        <div className="pt-4 text-[14px] font-bold text-[var(--text-secondary)]">{group.day}</div>
+                        <div className="relative border-l border-[var(--border-default)] pl-5">
                           {group.items.map((preview) => {
                             const aggregate = preview.aggregate_vote;
                             return (
                               <a
                                 key={`livebench-timeline-${preview.question_id}`}
                                 href={mountedHomeHref(preview.href, scene)}
-                                className={`group relative block rounded-[28px] border bg-white/92 p-4 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)] ${questionCardAccentClass(preview)}`}
+                                className="group relative block border-b border-[var(--border-default)] bg-[var(--bg-container)] py-4 pr-4 transition hover:bg-[var(--bg-hover)]"
                               >
-                                <span className="absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full bg-[#28d7ff] shadow-[0_0_12px_rgba(40,215,255,0.6)]" />
+                                <span className="absolute -left-[25px] top-6 h-2.5 w-2.5 rounded-full bg-[#1aafdb] shadow-[0_0_12px_rgba(26,175,219,0.38)]" />
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className={`rounded-full border px-2.5 py-1 text-[11px] ${liveQuestionStatusTone(preview.status)}`}>
+                                  <span className={`rounded-[6px] border px-2.5 py-1 text-[12px] ${liveQuestionStatusTone(preview.status)}`}>
                                     {preview.settlement_status === 'pending_official' ? '待核票' : liveQuestionStatusLabel(preview.status)}
                                   </span>
-                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
+                                  <span className="text-[13px] text-[var(--text-tertiary)]">
                                     {preview.topic_label}
                                   </span>
-                                  <span className="ml-auto text-[11px] text-slate-400">{techAiTimeLabel(livebenchQuestionTime(preview))}</span>
+                                  <span className="ml-auto text-[13px] text-[var(--text-tertiary)]">{techAiTimeLabel(livebenchQuestionTime(preview))}</span>
                                 </div>
-                                <p className="mt-3 text-[15px] font-semibold leading-7 text-slate-950">{livebenchDailyTopicLabel(preview)}</p>
-                                <p className="mt-2 text-[13px] leading-7 text-slate-600">{questionModeratorLabel(preview)}</p>
-                                <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                                  <span className={`rounded-full border px-2.5 py-1 ${voteSideTone(aggregate.side)}`}>
+                                <p className="mt-3 text-[17px] font-bold leading-7 text-[var(--text-primary)]">{livebenchDailyTopicLabel(preview)}</p>
+                                <p className="mt-2 line-clamp-3 text-[14px] leading-7 text-[var(--text-secondary)]">{questionModeratorLabel(preview)}</p>
+                                <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-[var(--text-secondary)]">
+                                  <span className={`${voteSideTone(aggregate.side)} rounded-[6px] border px-2 py-0.5`}>
                                     {questionAggregateLabel(preview)}
                                   </span>
-                                  <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
-                                    {questionTimingLabel(preview)}
-                                  </span>
+                                  <span>{questionTimingLabel(preview)}</span>
                                 </div>
                               </a>
                             );
@@ -2094,40 +1932,38 @@ export default function DashboardClient({
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-500">
+                    <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-secondary)]">
                       当前还没有可展示的演绎题目。
                     </div>
                   )
                 ) : mainWorldSignalGroups.length > 0 ? (
                   mainWorldSignalGroups.map((group) => (
-                    <div key={`main-world-group-${group.day}`} className="grid gap-3 sm:grid-cols-[64px_minmax(0,1fr)]">
-                      <div className="pt-3 text-sm font-semibold text-slate-500">{group.day}</div>
-                      <div className="relative space-y-3 border-l border-slate-200 pl-4">
+                    <div key={`main-world-group-${group.day}`} className="grid gap-4 sm:grid-cols-[72px_minmax(0,1fr)]">
+                      <div className="pt-4 text-[14px] font-bold text-[var(--text-secondary)]">{group.day}</div>
+                      <div className="relative border-l border-[var(--border-default)] pl-5">
                         {group.items.map((signal) => (
                           <a
                             key={signal.id}
                             href={mountedHomeHref(signalDetailHref(signal.id), timelineScene)}
-                            className="group relative block rounded-[28px] border border-[#d4ded8] bg-white/92 p-4 transition duration-300 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)]"
+                            className="group relative block border-b border-[var(--border-default)] bg-[var(--bg-container)] py-4 pr-4 transition hover:bg-[var(--bg-hover)]"
                           >
-                            <span className={`absolute -left-[21px] top-5 h-2.5 w-2.5 rounded-full ${markerDotClass(signalDisplayLevel(signal))}`} />
+                            <span className={`absolute -left-[25px] top-6 h-2.5 w-2.5 rounded-full ${markerDotClass(signalDisplayLevel(signal))}`} />
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className={`rounded-full border px-2.5 py-1 text-[11px] ${severitySoftTone(signal.severity)}`}>
+                              <span className={`rounded-[6px] border px-2.5 py-1 text-[12px] ${severitySoftTone(signal.severity)}`}>
                                 {severityLabel(signal.severity)}
                               </span>
-                              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
+                              <span className="text-[13px] text-[var(--text-tertiary)]">
                                 {readableSignalSourceLine(signal)}
                               </span>
-                              <span className="ml-auto text-[11px] text-slate-400">{techAiTimeLabel(signal.published_at)}</span>
+                              <span className="ml-auto text-[13px] text-[var(--text-tertiary)]">{techAiTimeLabel(signal.published_at)}</span>
                             </div>
-                            <p className="mt-3 text-[15px] font-semibold leading-7 text-slate-950">{readableSignalTitle(signal)}</p>
-                            <p className="mt-2 text-[13px] leading-7 text-slate-600">
+                            <p className="mt-3 text-[17px] font-bold leading-7 text-[var(--text-primary)]">{readableSignalTitle(signal)}</p>
+                            <p className="mt-2 line-clamp-3 text-[14px] leading-7 text-[var(--text-secondary)]">
                               {readableSignalSummary(signal, 190)}
                             </p>
-                            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                            <div className="mt-3 flex flex-wrap items-center gap-3 text-[12px] text-[var(--text-secondary)]">
                               {readableSignalTags(signal.tags, 3).map((tag) => (
-                                <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5">
-                                  {tag}
-                                </span>
+                                <span key={tag}>{tag}</span>
                               ))}
                             </div>
                           </a>
@@ -2136,7 +1972,7 @@ export default function DashboardClient({
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-500">
+                  <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-secondary)]">
                     {timelineScene === 'tech-ai' && !techAiTimelineState
                       ? '正在加载 AI 时间线。'
                       : `当前还没有可展示的${timelineViewLabel(timelineScene)}。`}
@@ -2146,17 +1982,17 @@ export default function DashboardClient({
             </CardContent>
           </Card>
           ) : (
-          <Card id="arena-panel" className={`${shellCardClass()} xl:order-1 xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
-            <CardHeader className="border-b border-slate-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(255,255,255,0.82))] py-4">
+          <Card id="arena-panel" className={`${dashboardPanelClass} xl:order-1 xl:h-[var(--world-map-panel-height)]`} style={sidePanelStyle}>
+            <CardHeader className={dashboardHeaderClass}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                     <Radio className="h-4 w-4" />
                     当前新评测问题
                   </CardTitle>
-                  <p className="text-xs text-slate-500">题池摘要、主持人简报和结算状态集中展示。</p>
-                  <p className="text-[12px] leading-6 text-slate-700">{livebenchPoolHeadline(livebenchSummary)}</p>
-                  <p className="text-[11px] leading-6 text-slate-400">
+                  <p className="text-xs text-[var(--text-secondary)]">题池摘要、主持人简报和结算状态集中展示。</p>
+                  <p className="text-[12px] leading-6 text-[var(--text-secondary)]">{livebenchPoolHeadline(livebenchSummary)}</p>
+                  <p className="text-[11px] leading-6 text-[var(--text-tertiary)]">
                     {livebenchSummary
                       ? `${livebenchSummary.window_days} 天窗口 · ${livebenchSummary.current_question_count} 道跟踪 · ${livebenchSummary.resolved_question_count} 道已核票`
                       : displayScoredQuestionCount(evaluationSummary) > 0
@@ -2167,32 +2003,32 @@ export default function DashboardClient({
               </div>
             </CardHeader>
             <CardContent className="flex h-full min-h-0 flex-col gap-3 p-3">
-              <div className="rounded-[22px] border border-slate-200/90 bg-[linear-gradient(135deg,rgba(248,250,252,0.96),rgba(241,245,249,0.94))] px-4 py-4">
-                <p className="text-[11px] font-medium tracking-[0.08em] text-slate-400">模型表现概括</p>
-                <p className="mt-1 text-[13px] leading-7 text-slate-900">{performanceSummaryHeadline(evaluationSummary)}</p>
-                <p className="mt-1 text-[12px] leading-6 text-slate-500">{performanceSummarySupport(evaluationSummary)}</p>
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
+                <p className="text-[11px] font-medium tracking-[0.08em] text-[var(--text-tertiary)]">模型表现概括</p>
+                <p className="mt-1 text-[13px] leading-7 text-[var(--text-primary)]">{performanceSummaryHeadline(evaluationSummary)}</p>
+                <p className="mt-1 text-[12px] leading-6 text-[var(--text-secondary)]">{performanceSummarySupport(evaluationSummary)}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <div className="rounded-[16px] border border-white/90 bg-white/90 px-3 py-2">
-                    <p className="text-[11px] text-slate-400">平均误差</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">{formatBrierScore(evaluationSummary?.avg_brier)}</p>
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-2">
+                    <p className="text-[11px] text-[var(--text-tertiary)]">平均误差</p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{formatBrierScore(evaluationSummary?.avg_brier)}</p>
                   </div>
-                  <div className="rounded-[16px] border border-white/90 bg-white/90 px-3 py-2">
-                    <p className="text-[11px] text-slate-400">预测命中</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-2">
+                    <p className="text-[11px] text-[var(--text-tertiary)]">预测命中</p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
                       {evaluationSummary ? formatPercent(evaluationSummary.hit_rate) : '--'}
                     </p>
                   </div>
-                  <div className="rounded-[16px] border border-white/90 bg-white/90 px-3 py-2">
-                    <p className="text-[11px] text-slate-400">计分题数</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-2">
+                    <p className="text-[11px] text-[var(--text-tertiary)]">计分题数</p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
                       {evaluationSummary
                         ? `${evaluationSummary.scored_question_count} / ${evaluationSummary.resolved_question_count}`
                         : '--'}
                     </p>
                   </div>
-                  <div className="rounded-[16px] border border-white/90 bg-white/90 px-3 py-2">
-                    <p className="text-[11px] text-slate-400">已结算 / 活跃</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                  <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-2">
+                    <p className="text-[11px] text-[var(--text-tertiary)]">已结算 / 活跃</p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
                       {evaluationSummary
                         ? `${evaluationSummary.resolved_question_count} / ${evaluationSummary.active_question_count}`
                         : '--'}
@@ -2201,14 +2037,14 @@ export default function DashboardClient({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-[18px] border border-slate-200 bg-white/90 px-3 py-2 text-xs text-slate-500">
+              <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-2 text-xs text-[var(--text-secondary)]">
                 <span>全部题目 {questionList.length}</span>
                 <span>待结算 {currentQuestions.length} · 已结算 {resolvedQuestions.length}</span>
               </div>
 
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
                 {loading && !state && questionList.length === 0 ? (
-                  <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm leading-7 text-slate-500">
+                  <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 text-sm leading-7 text-[var(--text-secondary)]">
                     正在同步题池和评分数据。
                   </div>
                 ) : questionList.length > 0 ? (
@@ -2219,43 +2055,43 @@ export default function DashboardClient({
                       <a
                         key={preview.question_id}
                         href={href}
-                        className={`group block rounded-[24px] border bg-white/94 p-4 transition hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] ${questionCardAccentClass(preview)}`}
+                        className={`group block rounded-[var(--radius-lg)] border bg-[var(--bg-container)] p-4 transition hover:-translate-y-0.5 hover:shadow-sm ${questionCardAccentClass(preview)}`}
                       >
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className={`rounded-full border px-2.5 py-1 text-[11px] ${liveQuestionStatusTone(preview.status)}`}>
+                          <span className={`rounded-[var(--radius-md)] border px-2.5 py-1 text-[11px] ${liveQuestionStatusTone(preview.status)}`}>
                             {preview.settlement_status === 'pending_official'
                               ? '待核票'
                               : liveQuestionStatusLabel(preview.status)}
                           </span>
-                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">
+                          <span className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-2.5 py-1 text-[11px] text-[var(--text-secondary)]">
                             {preview.topic_label}
                           </span>
-                          <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700">
+                          <span className="rounded-[var(--radius-md)] border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700">
                             {regionDisplayLabel(preview.region_label)}
                           </span>
                         </div>
-                        <p className="mt-3 text-[15px] font-semibold leading-7 text-slate-950">{questionTitleLabel(preview)}</p>
-                        <div className="mt-3 rounded-[18px] border border-slate-100 bg-slate-50/90 px-3 py-3">
-                          <p className="text-[11px] font-medium tracking-[0.08em] text-slate-400">主持人简报</p>
-                          <p className="mt-1 text-[13px] leading-7 text-slate-700">{questionModeratorLabel(preview)}</p>
+                        <p className="mt-3 text-[15px] font-semibold leading-7 text-[var(--text-primary)]">{questionTitleLabel(preview)}</p>
+                        <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-3">
+                          <p className="text-[11px] font-medium tracking-[0.08em] text-[var(--text-tertiary)]">主持人简报</p>
+                          <p className="mt-1 text-[13px] leading-7 text-[var(--text-secondary)]">{questionModeratorLabel(preview)}</p>
                         </div>
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-500">
-                          <span className={`rounded-full border px-2.5 py-1 ${voteSideTone(aggregate.side)}`}>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-[var(--text-secondary)]">
+                          <span className={`rounded-[var(--radius-md)] border px-2.5 py-1 ${voteSideTone(aggregate.side)}`}>
                             {questionAggregateLabel(preview)}
                           </span>
-                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                          <span className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-2.5 py-1">
                             {questionTimingLabel(preview)}
                           </span>
-                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                          <span className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-2.5 py-1">
                             {questionParticipationLabel(preview)}
                           </span>
-                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                          <span className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-2.5 py-1">
                             {questionCompletionLabel(preview)}
                           </span>
                         </div>
-                        <p className="mt-3 text-[12px] leading-6 text-slate-500">{previewStatsLabel(preview)}</p>
+                        <p className="mt-3 text-[12px] leading-6 text-[var(--text-secondary)]">{previewStatsLabel(preview)}</p>
                         <div className="mt-4 flex items-center justify-end gap-3">
-                          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-slate-900">
+                          <span className="inline-flex items-center gap-1 text-[12px] font-medium text-[var(--text-primary)]">
                             查看详情
                             <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
                           </span>
@@ -2264,7 +2100,7 @@ export default function DashboardClient({
                     );
                   })
                 ) : (
-                  <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-500">
+                  <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-default)] bg-[var(--bg-secondary)] p-4 text-sm text-[var(--text-secondary)]">
                     当前这条场景下还没有可展示的问题摘要。
                   </div>
                 )}

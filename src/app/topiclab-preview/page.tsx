@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import Link from 'next/link';
 
-import { compactText, formatTime, shellCardClass, worldHomeHref } from '@/components/world-ui';
+import { compactText, formatTime, shellCardClass, worldHomeHref, worldPageClass } from '@/components/world-ui';
 import { resolveRequestOrigin } from '@/lib/request-origin';
 
 export const dynamic = 'force-dynamic';
@@ -131,7 +131,7 @@ export default async function TopicLabPreviewPage({ searchParams }: PageProps) {
   const articles = data?.list || [];
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_42%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
+    <main className={worldPageClass('py-8')}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link href={worldHomeHref(scene)} className="text-sm text-slate-500 transition hover:text-slate-900">
@@ -142,7 +142,7 @@ export default async function TopicLabPreviewPage({ searchParams }: PageProps) {
           </span>
         </div>
 
-        <section className={`${shellCardClass()} px-6 py-7 sm:px-8`}>
+        <section className={shellCardClass('px-6 py-7 sm:px-8')}>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(360px,0.55fr)] lg:items-end">
             <div>
               <p className="text-xs tracking-[0.18em] text-slate-400">WORLDWEAVE SOURCE FEED</p>
@@ -152,7 +152,7 @@ export default async function TopicLabPreviewPage({ searchParams }: PageProps) {
               </p>
             </div>
 
-            <form action="/topiclab-preview" className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-white p-1.5 shadow-[0_14px_34px_rgba(15,23,42,0.06)]">
+            <form action="/topiclab-preview" className="flex min-w-0 items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] p-1.5 shadow-sm">
               <input type="hidden" name="category" value={category === 'all' ? '' : category} />
               <input type="hidden" name="scene" value={scene} />
               <input
@@ -214,14 +214,14 @@ export default async function TopicLabPreviewPage({ searchParams }: PageProps) {
         </section>
 
         {error ? (
-          <section className="rounded-[28px] border border-rose-200 bg-rose-50 px-5 py-5 text-sm text-rose-700">{error}</section>
+          <section className="rounded-[var(--radius-lg)] border border-rose-200 bg-rose-50 px-5 py-5 text-sm text-rose-700">{error}</section>
         ) : null}
 
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {articles.map((article, index) => (
             <article
               key={article.id}
-              className="group flex min-h-[360px] flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-white p-5 shadow-[0_18px_46px_rgba(15,23,42,0.06)] transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_24px_60px_rgba(15,23,42,0.09)]"
+              className="group flex min-h-[360px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] p-5 shadow-[var(--shadow-md)] transition duration-300 hover:-translate-y-0.5 hover:border-[var(--border-hover)] hover:shadow-sm"
               style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
             >
               <div className="flex items-center justify-between gap-3">
@@ -273,7 +273,7 @@ export default async function TopicLabPreviewPage({ searchParams }: PageProps) {
         </section>
 
         {!articles.length && !error ? (
-          <section className="rounded-[28px] border border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-500">
+          <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] px-5 py-8 text-center text-[var(--text-secondary)]">
             当前条件下没有匹配信源，可以换一个关键词或回到全部分类。
           </section>
         ) : null}

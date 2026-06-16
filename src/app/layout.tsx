@@ -43,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className={`antialiased`}>
-        {children}
+        <div className="worldweave-scale-root">{children}</div>
       </body>
     </html>
   );

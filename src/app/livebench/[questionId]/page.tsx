@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { aggregateSideSummary, cleanNarrativeText, cleanPresentationText, formatBrierScore, formatPercent, formatTime, liveQuestionStatusLabel, liveQuestionStatusTone, officialOutcomeLabel, regionDisplayLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, voteSideTone, worldHomeHref, worldHref } from '@/components/world-ui';
+import { aggregateSideSummary, cleanNarrativeText, cleanPresentationText, formatBrierScore, formatPercent, formatTime, liveQuestionStatusLabel, liveQuestionStatusTone, officialOutcomeLabel, regionDisplayLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, voteSideTone, worldHomeHref, worldHref, worldPageClass } from '@/components/world-ui';
 import { getCachedLiveBenchQuestionDetail, getLiveBenchQuestionDetailFromStore } from '@/lib/world/livebench';
 import { getWorldLiveBenchQuestionDetail } from '@/lib/world/runtime';
 import { sanitizePublicNarrativeText } from '@/lib/world/signal-quality';
@@ -103,7 +103,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
   }
   if (!detail) {
     return (
-      <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
+      <main className={worldPageClass('py-8')}>
         <div className="mx-auto flex max-w-3xl flex-col gap-5">
           <div className="flex flex-wrap items-center gap-3">
             <Link href={worldHomeHref(scene, '#arena-panel')} className="text-sm text-slate-500 transition hover:text-slate-900">
@@ -131,7 +131,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
   const visibleReferences = detail.evidence.flatMap((section) => section.references.slice(0, section.visible_count));
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
+    <main className={worldPageClass('py-8')}>
       <div className="mx-auto flex max-w-6xl flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
@@ -156,17 +156,17 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
             <p className="mt-3 max-w-4xl text-sm leading-7 text-slate-600">{cleanNarrativeText(sanitizePublicNarrativeText(preview.background))}</p>
 
             <div className="mt-5 grid gap-3 lg:grid-cols-4">
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">模型总票</p>
                 <p className="mt-1 text-lg font-semibold text-slate-950">{voteSideLabel(aggregate.side)}</p>
                 <p className="mt-1 text-[12px] leading-6 text-slate-600">{aggregateSideSummary(aggregate)}</p>
               </div>
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-[11px] tracking-[0.08em] text-slate-400">见分晓时间</p>
                 <p className="mt-1 text-lg font-semibold text-slate-950">{formatTime(preview.official_resolved_at || preview.resolve_at)}</p>
                 <p className="mt-1 text-[12px] leading-6 text-slate-600">{officialOutcomeLabel(preview.official_outcome)}</p>
               </div>
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-[11px] tracking-[0.08em] text-slate-400">到票情况</p>
                 <p className="mt-1 text-lg font-semibold text-slate-950">{aggregate.participant_count} / {aggregate.participant_count + aggregate.missing_count}</p>
                 <p className="mt-1 text-[12px] leading-6 text-slate-600">
@@ -175,7 +175,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                     : `离散度 ${aggregate.stddev !== null ? formatPercent(aggregate.stddev) : '--'}`}
                 </p>
               </div>
-              <div className="rounded-[20px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-[11px] tracking-[0.08em] text-slate-400">证据覆盖</p>
                 <p className="mt-1 text-lg font-semibold text-slate-950">{preview.evidence_count}</p>
                 <p className="mt-1 text-[12px] leading-6 text-slate-600">规则 {preview.rule_count} · 讨论 {preview.discussion_count}</p>
@@ -185,20 +185,20 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
 
           <div className="grid gap-5 px-6 py-6 lg:grid-cols-[minmax(0,1.1fr)_360px]">
             <div className="space-y-5">
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">主持人串讲</p>
                 <p className="mt-3 text-sm leading-7 text-slate-700">{cleanNarrativeText(sanitizePublicNarrativeText(detail.moderator_brief.summary))}</p>
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                  <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">怎么判</p>
                     <p className="mt-1 text-[12px] leading-6 text-slate-700">{cleanNarrativeText(sanitizePublicNarrativeText(detail.moderator_brief.resolution_rule))}</p>
                   </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                  <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">当前偏向</p>
                     <p className="mt-1 text-[12px] leading-6 text-slate-700">{cleanNarrativeText(sanitizePublicNarrativeText(detail.moderator_brief.current_bias))}</p>
                   </div>
                 </div>
-                <div className="mt-4 rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                <div className="mt-4 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">最该盯的变化</p>
                   <div className="mt-2 space-y-2">
                     {detail.moderator_brief.watch_for.map((item) => (
@@ -210,7 +210,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">题目背景与原生讨论</p>
@@ -222,7 +222,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                 <div className="mt-4 space-y-3">
                   {detail.external_discussion.entries.length > 0 ? (
                     detail.external_discussion.entries.map((entry) => (
-                      <article key={entry.id} className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                      <article key={entry.id} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                         <div className="flex flex-wrap items-center gap-2">
                           {entry.author ? <span className="text-sm font-medium text-slate-900">{entry.author}</span> : null}
                           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{entry.label}</span>
@@ -248,7 +248,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">虾回复</p>
@@ -277,7 +277,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                     );
                   })}
 
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                  <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">尚未表态</p>
                     {detail.xia_positions.missing.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -296,10 +296,10 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
             </div>
 
             <div className="space-y-5">
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">模型总票</p>
                 <div className="mt-4 grid gap-3">
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
+                  <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`rounded-full border px-2.5 py-1 text-[11px] ${voteSideTone(aggregate.side)}`}>{aggregateSideSummary(aggregate)}</span>
                       <span className="text-lg font-semibold text-slate-950">{voteSideLabel(aggregate.side)}</span>
@@ -309,12 +309,12 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                     </p>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                    <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                       <p className="text-[11px] tracking-[0.08em] text-slate-400">离散度</p>
                       <p className="mt-1 text-sm font-semibold text-slate-900">{aggregate.stddev !== null ? formatPercent(aggregate.stddev) : '--'}</p>
                       <p className="mt-1 text-[12px] leading-6 text-slate-500">数值越高，说明虾之间分歧越大。</p>
                     </div>
-                    <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                    <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                       <p className="text-[11px] tracking-[0.08em] text-slate-400">完成状态</p>
                       <p className="mt-1 text-sm font-semibold text-slate-900">{aggregate.complete ? '本轮已齐票' : '仍有虾未投'}</p>
                       <p className="mt-1 text-[12px] leading-6 text-slate-500">最近更新时间 {formatTime(aggregate.updated_at)}</p>
@@ -323,7 +323,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">证据与规则</p>
@@ -337,7 +337,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                       const visible = section.references.slice(0, section.visible_count);
                       const hidden = section.references.slice(section.visible_count);
                       return (
-                        <div key={section.role} className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                        <div key={section.role} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div>
                               <p className="text-sm font-medium text-slate-900">{section.title}</p>
@@ -349,7 +349,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                           </div>
                           <div className="mt-3 space-y-3">
                             {visible.map((reference) => (
-                              <article key={reference.ref_id} className="rounded-[16px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                              <article key={reference.ref_id} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-3">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <span className="text-[12px] font-medium text-slate-900">{cleanPresentationText(reference.label)}</span>
                                   <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] text-slate-500">
@@ -365,11 +365,11 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                             ))}
                           </div>
                           {hidden.length > 0 ? (
-                            <details className="mt-3 rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-3">
+                            <details className="mt-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-3">
                               <summary className="cursor-pointer text-[12px] font-medium text-slate-700">展开剩余 {hidden.length} 条</summary>
                               <div className="mt-3 space-y-3">
                                 {hidden.map((reference) => (
-                                  <article key={reference.ref_id} className="rounded-[16px] border border-slate-200 bg-white px-3 py-3">
+                                  <article key={reference.ref_id} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                                     <div className="flex flex-wrap items-center gap-2">
                                       <span className="text-[12px] font-medium text-slate-900">{cleanPresentationText(reference.label)}</span>
                                       <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] text-slate-500">
@@ -396,16 +396,16 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">结算与评分</p>
                 <p className="mt-3 text-[13px] leading-7 text-slate-600">{cleanNarrativeText(sanitizePublicNarrativeText(detail.settlement.replay_summary))}</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                  <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">官方结果</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">{officialOutcomeLabel(detail.settlement.official_outcome)}</p>
                     <p className="mt-1 text-[12px] leading-6 text-slate-500">{formatTime(detail.settlement.official_resolved_at)}</p>
                   </div>
-                  <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                  <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                     <p className="text-[11px] tracking-[0.08em] text-slate-400">模型总票得分</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">
                       {detail.settlement.platform_brier_score !== null
@@ -428,7 +428,7 @@ export default async function LiveBenchQuestionPage({ params, searchParams }: Pa
                 <div className="mt-4 space-y-3">
                   {detail.settlement.xia_scores.length > 0 ? (
                     detail.settlement.xia_scores.map((item) => (
-                      <article key={item.xia_id} className="rounded-[18px] border border-slate-200 bg-white px-3 py-3">
+                      <article key={item.xia_id} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-3">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-medium text-slate-900">{participantLabel(item.label)}</span>
                           <span className={`rounded-full border px-2.5 py-1 text-[11px] ${voteSideTone(item.side)}`}>{voteSideLabel(item.side)}</span>

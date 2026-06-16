@@ -11,9 +11,12 @@ import {
   regionDisplayLabel,
   severityLabel,
   severitySoftTone,
+  shellCardClass,
   signalDetailHref,
   worldHomeHref,
   worldHref,
+  worldChipClass,
+  worldPageClass,
 } from '@/components/world-ui';
 import {
   dashboardSignalMatchesScene,
@@ -56,7 +59,6 @@ const DAILY_META: Record<
     subtitle: string;
     empty: string;
     href: string;
-    tone: string;
     softTone: string;
     iconTone: string;
   }
@@ -68,7 +70,6 @@ const DAILY_META: Record<
     subtitle: '把今天最值得先看的地缘、冲突、外交和公共安全线索整理在一页。',
     empty: '当前还没有可展示的地缘日报线索。',
     href: worldHomeHref('geo-politics-daily'),
-    tone: 'border-teal-200 bg-[linear-gradient(135deg,#f0faf4,#fbfdf8)] text-[#08201c]',
     softTone: 'border-[#d4ded8] bg-white/90',
     iconTone: 'border-teal-200 bg-white text-[#087265]',
   },
@@ -79,7 +80,6 @@ const DAILY_META: Record<
     subtitle: '把今天值得看的模型、Agent、论文、开源和产业动态整理在一页。',
     empty: '当前还没有可展示的 AI 日报线索。',
     href: worldHomeHref('tech-ai'),
-    tone: 'border-teal-200 bg-[linear-gradient(135deg,#f0faf4,#fbfdf8)] text-[#08201c]',
     softTone: 'border-[#d4ded8] bg-white/90',
     iconTone: 'border-teal-200 bg-white text-[#087265]',
   },
@@ -90,7 +90,6 @@ const DAILY_META: Record<
     subtitle: '把正在跟踪和已经结算的问题集中成一页，便于看判断是否经得起后续结果检验。',
     empty: '当前还没有可展示的演绎题目。',
     href: worldHomeHref('global'),
-    tone: 'border-teal-200 bg-[linear-gradient(135deg,#f0faf4,#fbfdf8)] text-[#08201c]',
     softTone: 'border-[#d4ded8] bg-white/90',
     iconTone: 'border-teal-200 bg-white text-[#087265]',
   },
@@ -401,32 +400,30 @@ export default async function DailyPage({ params }: PageProps) {
       : dailyDigest(kind, signals, meta.empty);
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f5f7f4_0%,#fbfcf8_44%,#eef5f1_100%)] text-slate-950">
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(20,184,166,0.58),rgba(217,159,72,0.45),transparent)]" />
+    <main className={worldPageClass('py-0')}>
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
             href={meta.href}
-            className="inline-flex items-center gap-2 rounded-full border border-[#d3ddd7] bg-white/85 px-3 py-1.5 text-xs text-slate-600 transition hover:border-teal-300 hover:text-[#08201c]"
+            className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-3 py-1.5 text-xs text-[var(--text-secondary)] transition hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             返回世界脉络
           </Link>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Link href="./geo" className={`rounded-full border px-3 py-1.5 transition ${kind === 'geo' ? 'border-teal-300 bg-[#eefaf4] text-[#087265]' : 'border-[#d3ddd7] bg-white/85 text-slate-500 hover:border-teal-300 hover:text-[#08201c]'}`}>
+            <Link href="./geo" className={worldChipClass(kind === 'geo', 'py-1.5')}>
               主世界日报
             </Link>
-            <Link href="./ai" className={`rounded-full border px-3 py-1.5 transition ${kind === 'ai' ? 'border-teal-300 bg-[#eefaf4] text-[#087265]' : 'border-[#d3ddd7] bg-white/85 text-slate-500 hover:border-teal-300 hover:text-[#08201c]'}`}>
+            <Link href="./ai" className={worldChipClass(kind === 'ai', 'py-1.5')}>
               AI 日报
             </Link>
-            <Link href="./livebench" className={`rounded-full border px-3 py-1.5 transition ${kind === 'livebench' ? 'border-teal-300 bg-[#eefaf4] text-[#087265]' : 'border-[#d3ddd7] bg-white/85 text-slate-500 hover:border-teal-300 hover:text-[#08201c]'}`}>
+            <Link href="./livebench" className={worldChipClass(kind === 'livebench', 'py-1.5')}>
               演绎日报
             </Link>
           </div>
         </div>
 
-        <section className={`animate-fade-in-soft relative overflow-hidden rounded-[30px] border ${meta.tone} px-5 py-5 shadow-[0_16px_42px_rgba(20,43,39,0.065)] sm:px-6`}>
-          <div className="pointer-events-none absolute inset-x-6 top-0 h-px animate-tashan-scan bg-[linear-gradient(90deg,transparent,rgba(20,184,166,0.62),rgba(217,159,72,0.52),transparent)]" />
+        <section className={shellCardClass('animate-fade-in-soft relative px-5 py-5 sm:px-6')}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${meta.iconTone}`}>
@@ -436,7 +433,7 @@ export default async function DailyPage({ params }: PageProps) {
               <h1 className="mt-4 font-serif text-4xl font-semibold sm:text-5xl">{meta.title}</h1>
               <p className="mt-3 text-sm leading-7 text-slate-600">{meta.subtitle}</p>
             </div>
-            <div className="rounded-2xl border border-white/80 bg-white/72 px-4 py-3 text-sm text-slate-600 shadow-[0_10px_24px_rgba(20,43,39,0.045)]">
+            <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-3 text-sm text-[var(--text-secondary)]">
               {dailyEditionLabel(state?.generated_at)} · 最近更新 {state ? formatTime(state.generated_at) : '--'}
             </div>
           </div>
@@ -471,7 +468,7 @@ export default async function DailyPage({ params }: PageProps) {
                       <Link
                         key={signal.id}
                         href={dailySignalHref(signal.id, meta.scene)}
-                        className="group animate-rise-in block rounded-[24px] border border-[#d4ded8] bg-white/88 px-4 py-4 transition duration-300 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)]"
+                        className="group animate-rise-in block rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4 transition duration-300 hover:-translate-y-0.5 hover:border-[var(--border-hover)] hover:shadow-sm"
                         style={{ animationDelay: `${80 + index * 45}ms` }}
                       >
                         <div className="flex flex-wrap items-center gap-2">
@@ -506,7 +503,7 @@ export default async function DailyPage({ params }: PageProps) {
                   })}
                 </div>
               ) : (
-                <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/80 px-4 py-8 text-sm text-slate-500">
+                <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-8 text-sm text-[var(--text-secondary)]">
                   {meta.empty}
                 </div>
               )}
@@ -519,7 +516,7 @@ export default async function DailyPage({ params }: PageProps) {
                 <Link
                   key={preview.question_id}
                   href={worldHref(preview.href, 'global')}
-                className="group animate-rise-in block rounded-[24px] border border-[#d4ded8] bg-white/88 px-4 py-4 transition duration-300 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_14px_32px_rgba(20,43,39,0.08)]"
+                className="group animate-rise-in block rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4 transition duration-300 hover:-translate-y-0.5 hover:border-[var(--border-hover)] hover:shadow-sm"
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-teal-200 bg-[#eefaf4] px-2.5 py-1 text-[11px] text-[#087265]">
@@ -540,7 +537,7 @@ export default async function DailyPage({ params }: PageProps) {
                 </Link>
               ))
             ) : (
-              <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/80 px-4 py-8 text-sm text-slate-500">
+              <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-8 text-sm text-[var(--text-secondary)]">
                 {meta.empty}
               </div>
             )}

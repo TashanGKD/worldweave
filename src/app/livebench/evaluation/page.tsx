@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import Link from 'next/link';
 
-import { cleanPresentationText, formatBrierScore, formatPercent, formatTime, officialOutcomeLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, worldHomeHref, worldHref } from '@/components/world-ui';
+import { cleanPresentationText, formatBrierScore, formatPercent, formatTime, officialOutcomeLabel, sceneDisplayLabel, shellCardClass, voteSideLabel, worldHomeHref, worldHref, worldPageClass } from '@/components/world-ui';
 import { readWorldApiSnapshot } from '@/lib/world/api-snapshot';
 import { resolveRequestOrigin } from '@/lib/request-origin';
 import { sanitizePublicNarrativeText } from '@/lib/world/signal-quality';
@@ -110,7 +110,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
 
   if (!evaluation) {
     return (
-      <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
+      <main className={worldPageClass('py-8')}>
         <div className="mx-auto flex max-w-3xl flex-col gap-5">
           <Link href={worldHomeHref(scene, '#arena-panel')} className="text-sm text-slate-500 transition hover:text-slate-900">
             返回首页
@@ -143,7 +143,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
   const visibleResolvedQuestionSeries = evaluation.resolved_question_series.slice(0, EVALUATION_RESOLVED_LIMIT);
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#f3f7fb_0%,#f8fbff_40%,#f5f8fc_100%)] px-4 py-8 text-slate-900 sm:px-6">
+    <main className={worldPageClass('py-8')}>
       <div className="mx-auto flex max-w-6xl flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
@@ -165,19 +165,19 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
           <div className="grid gap-5 px-6 py-6 lg:grid-cols-[minmax(0,1.1fr)_360px]">
             <div className="space-y-5">
               <section className="grid gap-3 sm:grid-cols-4">
-                <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">平均预测误差</p>
                   <p className="mt-1 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">{formatBrierScore(displayedAvgError)}</p>
                   <p className="mt-1 text-[12px] leading-6 text-slate-500">越低说明判断越贴近最终结果</p>
                 </div>
-                <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">预测命中率</p>
                   <p className="mt-1 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">
                     {(hasSourceFormalScore || hasFormalScore || evaluation.platform_model.scored_question_count > 0) ? formatPercent(displayedHitRate) : '--'}
                   </p>
                   <p className="mt-1 text-[12px] leading-6 text-slate-500">已结算题里的方向命中情况</p>
                 </div>
-                <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">正式接入票</p>
                   <p className="mt-1 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">
                     {hasSourceFormalScore
@@ -198,7 +198,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
                         : `历史基线 ${evaluation.platform_model.scored_question_count} 题已计分`}
                   </p>
                 </div>
-                <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                   <p className="text-[11px] tracking-[0.08em] text-slate-400">当前待结算</p>
                   <p className="mt-1 font-serif text-2xl font-semibold tracking-[-0.03em] text-slate-950">{evaluation.platform_model.active_question_count}</p>
                   <p className="mt-1 text-[12px] leading-6 text-slate-500">还在持续汇票的题</p>
@@ -206,7 +206,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
               </section>
 
               {evaluation.platform_model.resolved_question_count > 0 && evaluation.platform_model.source_formal_scored_question_count === 0 ? (
-                <section className="rounded-[24px] border border-amber-200 bg-amber-50/80 px-4 py-4">
+                <section className="rounded-[var(--radius-lg)] border border-amber-200 bg-amber-50 px-4 py-4">
                   <p className="text-sm font-semibold text-amber-900">
                     {hasFormalVotes ? '正式票已接入，等待结算' : '当前还没有正式实盘成绩'}
                   </p>
@@ -218,7 +218,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
                 </section>
               ) : null}
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">校准</p>
@@ -233,7 +233,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
                     const empirical = Math.round(bucket.empirical_yes_rate * 100);
                     const predicted = Math.round((bucket.avg_probability_yes || 0) * 100);
                     return (
-                      <article key={bucket.label} className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
+                      <article key={bucket.label} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4">
                         <div className="flex items-center justify-between gap-3">
                           <span className="text-sm font-medium text-slate-900">{bucket.label}</span>
                           <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500">{bucket.count} 题</span>
@@ -267,7 +267,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">已结算题历史序列</p>
                 <p className="mt-1 text-[12px] leading-6 text-slate-500">
                   展示最近 {Math.min(EVALUATION_HISTORY_LIMIT, evaluation.history_series.length)} 个结算节点；真实接入虾成绩会在对应题目结算后单独标记。
@@ -275,7 +275,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
                 <div className="mt-4 space-y-3">
                   {visibleHistorySeries.length > 0 ? (
                     visibleHistorySeries.map((item, index) => (
-                      <article key={`${item.resolved_at}-${index}`} className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
+                      <article key={`${item.resolved_at}-${index}`} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
                             <p className="text-sm font-medium text-slate-900">第 {item.resolved_question_count} 题结算后</p>
@@ -296,7 +296,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
                       </article>
                     ))
                   ) : (
-                    <div className="rounded-[18px] border border-dashed border-slate-200 bg-white px-4 py-4 text-[13px] leading-7 text-slate-500">
+                    <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4 text-[13px] leading-7 text-[var(--text-secondary)]">
                       当前还没有进入结算的题目，历史序列会在首批回写后出现。
                     </div>
                   )}
@@ -305,12 +305,12 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
             </div>
 
             <div className="space-y-5">
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">单虾排行榜</p>
                 <div className="mt-4 space-y-3">
                   {visibleParticipantScorecards.length > 0 ? (
                     visibleParticipantScorecards.map((scorecard, index) => (
-                      <article key={scorecard.xia_id} className="rounded-[18px] border border-slate-200 bg-white px-4 py-4">
+                      <article key={scorecard.xia_id} className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
@@ -326,19 +326,19 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
                           </span>
                         </div>
                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          <div className="rounded-[16px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-3">
                             <p className="text-[11px] tracking-[0.08em] text-slate-400">平均预测误差</p>
                             <p className="mt-1 text-sm font-semibold text-slate-900">{formatBrierScore(scorecard.avg_brier_score)}</p>
                           </div>
-                          <div className="rounded-[16px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-3">
                             <p className="text-[11px] tracking-[0.08em] text-slate-400">命中率</p>
                             <p className="mt-1 text-sm font-semibold text-slate-900">{formatPercent(scorecard.hit_rate)}</p>
                           </div>
-                          <div className="rounded-[16px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-3">
                             <p className="text-[11px] tracking-[0.08em] text-slate-400">总投票数</p>
                             <p className="mt-1 text-sm font-semibold text-slate-900">{scorecard.vote_count}</p>
                           </div>
-                          <div className="rounded-[16px] border border-slate-200 bg-slate-50/80 px-3 py-3">
+                          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-3 py-3">
                             <p className="text-[11px] tracking-[0.08em] text-slate-400">分数余额</p>
                             <p className="mt-1 text-sm font-semibold text-slate-900">{scorecard.points_balance > 0 ? `+${scorecard.points_balance}` : scorecard.points_balance}</p>
                           </div>
@@ -346,14 +346,14 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
                       </article>
                     ))
                   ) : (
-                    <div className="rounded-[18px] border border-dashed border-slate-200 bg-white px-4 py-4 text-[13px] leading-7 text-slate-500">
+                    <div className="rounded-[var(--radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4 text-[13px] leading-7 text-[var(--text-secondary)]">
                       当前还没有足够的单虾评分数据。
                     </div>
                   )}
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-50/70 px-4 py-4">
+              <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-4">
                 <p className="text-sm font-semibold text-slate-900">最近已结算题</p>
                 <div className="mt-4 space-y-3">
                   {visibleResolvedQuestionSeries.length > 0 ? (
@@ -361,7 +361,7 @@ export default async function LiveBenchEvaluationPage({ searchParams }: PageProp
                       <Link
                         key={item.question_id}
                         href={worldHref(item.href, scene)}
-                        className="block rounded-[18px] border border-slate-200 bg-white px-4 py-4 transition hover:border-slate-300 hover:shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
+                        className="block rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-container)] px-4 py-4 transition hover:border-[var(--border-hover)] hover:shadow-sm"
                       >
                         <div className="flex flex-wrap items-center gap-2">
                           <span

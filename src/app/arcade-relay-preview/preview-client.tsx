@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useTransition, type ReactNode } from 'react';
 
+import { shellCardClass, worldPageClass } from '@/components/world-ui';
+
 const RELAY_BASE = 'http://49.233.162.81:8788';
 
 type RelayStatus = {
@@ -190,7 +192,7 @@ export default function ArcadeRelayPreviewClient() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f3f7fb] px-4 py-6 text-slate-950 sm:px-6">
+    <main className={worldPageClass('py-6')}>
       <div className="mx-auto max-w-[1320px]">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <a href="/arcade" className="text-sm text-slate-500 transition hover:text-slate-900">
@@ -207,7 +209,7 @@ export default function ArcadeRelayPreviewClient() {
           </div>
         </div>
 
-        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_42px_rgba(15,23,42,0.06)]">
+        <section className={shellCardClass()}>
           <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div className="flex items-start gap-4">
@@ -336,7 +338,7 @@ export default function ArcadeRelayPreviewClient() {
               ) : null}
             </section>
 
-            <aside className="bg-slate-50/70 p-4 sm:p-5">
+            <aside className="bg-[var(--bg-secondary)] p-4 sm:p-5">
               <div className="sticky top-4 grid gap-4">
                 <Panel title="Arcade 操作">
                   <label className="grid gap-1.5 text-xs font-semibold text-slate-500">
@@ -488,7 +490,7 @@ function TopicPost({ avatar, author, time, body }: { avatar: string; author: str
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_14px_34px_rgba(15,23,42,0.05)]">
+    <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-container)] p-4 shadow-sm">
       <h2 className="mb-3 text-base font-semibold tracking-[-0.02em] text-slate-950">{title}</h2>
       {children}
     </section>

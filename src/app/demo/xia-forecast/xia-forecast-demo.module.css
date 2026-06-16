@@ -1,48 +1,23 @@
 .shell {
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 18% 8%, rgba(56, 231, 192, .18), transparent 27%),
-    radial-gradient(circle at 75% 0%, rgba(103, 201, 255, .16), transparent 30%),
-    radial-gradient(circle at 92% 55%, rgba(255, 85, 120, .11), transparent 28%),
-    linear-gradient(145deg, #041119 0%, #071423 44%, #0b1020 100%);
-  color: #e9fbff;
-  padding: 28px;
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  overflow-x: hidden;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  padding: 20px;
+  font-family: var(--font-serif);
 }
 
 .shell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, .04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .8), rgba(0, 0, 0, .12));
+  content: none;
 }
 
 .aurora {
-  position: absolute;
-  inset: -28% -15% auto;
-  height: 440px;
-  pointer-events: none;
-  background: linear-gradient(90deg, rgba(56, 231, 192, .14), rgba(103, 201, 255, .12), rgba(255, 85, 120, .11));
-  filter: blur(62px);
-  transform: rotate(-7deg);
-  animation: auroraFloat 11s ease-in-out infinite alternate;
+  display: none;
 }
 
 .scanline {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(to bottom, transparent, rgba(103, 201, 255, .10), transparent);
-  height: 220px;
-  opacity: .35;
-  animation: scanMove 6s linear infinite;
+  display: none;
 }
 
 .header,
@@ -59,14 +34,19 @@
   justify-content: space-between;
   gap: 24px;
   max-width: 1680px;
-  margin: 0 auto 20px;
+  margin: 0 auto 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-container);
+  box-shadow: var(--shadow-md);
 }
 
 .brandRow {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: rgba(221, 244, 255, .72);
+  color: var(--text-secondary);
   font-size: 13px;
   letter-spacing: 0;
 }
@@ -78,15 +58,15 @@
   align-items: center;
   justify-content: center;
   border-radius: 11px;
-  color: #041119;
-  background: linear-gradient(135deg, #38e7c0, #67c9ff);
-  box-shadow: 0 0 32px rgba(56, 231, 192, .32);
+  color: #087265;
+  border: 1px solid var(--border-default);
+  background: var(--bg-secondary);
 }
 
 .header h1 {
   margin: 18px 0 10px;
-  font-size: clamp(42px, 6vw, 86px);
-  line-height: .96;
+  font-size: clamp(30px, 4vw, 56px);
+  line-height: 1.08;
   letter-spacing: 0;
   font-weight: 760;
   max-width: 900px;
@@ -95,8 +75,8 @@
 .header p {
   max-width: 720px;
   margin: 0;
-  color: rgba(221, 244, 255, .66);
-  font-size: 17px;
+  color: var(--text-secondary);
+  font-size: 15px;
   line-height: 1.72;
 }
 
@@ -113,19 +93,19 @@
   height: 40px;
   padding: 0 15px;
   border-radius: 999px;
-  border: 1px solid rgba(221, 244, 255, .16);
-  background: rgba(10, 24, 38, .72);
-  color: rgba(221, 244, 255, .78);
+  border: 1px solid var(--border-default);
+  background: var(--bg-container);
+  color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
   backdrop-filter: blur(14px);
 }
 
 .modeActive {
-  color: #03131a;
-  border-color: rgba(56, 231, 192, .75);
-  background: linear-gradient(135deg, #38e7c0, #67c9ff);
-  box-shadow: 0 12px 38px rgba(56, 231, 192, .25);
+  color: #fff;
+  border-color: #0f172a;
+  background: #0f172a;
+  box-shadow: var(--shadow-sm);
 }
 
 .metrics {
@@ -143,11 +123,10 @@
   gap: 12px;
   min-height: 72px;
   padding: 14px 16px;
-  border: 1px solid rgba(221, 244, 255, .13);
-  border-radius: 16px;
-  background: rgba(6, 19, 31, .62);
-  box-shadow: inset 0 1px rgba(255, 255, 255, .05);
-  backdrop-filter: blur(18px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-container);
+  box-shadow: var(--shadow-sm);
 }
 
 .metric svg {
@@ -155,13 +134,13 @@
 }
 
 .metric span {
-  color: rgba(221, 244, 255, .62);
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
 .metric strong {
   font-size: 27px;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .stage {
@@ -179,11 +158,10 @@
 .streamPanel,
 .chartPanel,
 .questionPanel {
-  border: 1px solid rgba(221, 244, 255, .13);
-  border-radius: 22px;
-  background: rgba(6, 18, 30, .72);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, .28), inset 0 1px rgba(255, 255, 255, .05);
-  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-container);
+  box-shadow: var(--shadow-md);
 }
 
 .stageRail {
