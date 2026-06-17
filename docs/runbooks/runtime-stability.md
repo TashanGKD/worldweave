@@ -157,6 +157,8 @@ The current runtime code protects against this by using fixed MiniMax-compatible
 
 `pnpm health:world` separates app health from remote model availability. A MiniMax `rate_limited` or upstream transient response is reported as `degraded` so operators can see that translation/label refresh is temporarily delayed, while the public web process can still serve cached signals. Missing keys or persistent non-degraded failures still need operator action before a full refresh window.
 
+Daily poster curation uses `WORLD_DAILY_CURATION_TIMEOUT_MS`, defaulting to `30000`. If production MiniMax responses are slow, temporarily raise it to `45000` or `60000`; do not set it below `5000`, because short startup windows can create false curation failures even when MiniMax is healthy.
+
 For source display regressions, run:
 
 ```bash

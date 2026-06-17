@@ -167,7 +167,10 @@ test('daily poster export uses model curation, title fallback dedupe, and a DOM-
   const runtimeSource = readSource('src/lib/world/runtime.ts');
 
   assert.match(runtimeSource, /export async function curateWorldDailySignals/);
+  assert.match(runtimeSource, /WORLD_DAILY_CURATION_TIMEOUT_MS/);
   assert.match(runtimeSource, /requestLabel: `daily-curation-\$\{input\.kind\}`/);
+  assert.doesNotMatch(runtimeSource, /timeoutMs:\s*4500/);
+  assert.match(runtimeSource, /requestMiniMaxChatCompletion/);
   assert.match(runtimeSource, /display_title/);
   assert.match(runtimeSource, /display_summary/);
   assert.match(dailyPageSource, /await curateWorldDailySignals/);

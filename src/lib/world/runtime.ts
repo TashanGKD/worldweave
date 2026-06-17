@@ -790,7 +790,7 @@ export async function curateWorldDailySignals(input: WorldDailyCurationInput): P
         })),
       }),
       temperature: 0.1,
-      timeoutMs: 4500,
+      timeoutMs: WORLD_DAILY_CURATION_TIMEOUT_MS,
       retryLimit: 0,
       requestLabel: `daily-curation-${input.kind}`,
     }),
@@ -1069,6 +1069,7 @@ const ALIGNMENT_BATCH_SIZE = resolveRuntimeInteger('WORLD_ALIGNMENT_BATCH_SIZE',
 const ALIGNMENT_PRIME_LIMIT = resolveRuntimeInteger('WORLD_ALIGNMENT_PRIME_LIMIT', 24, 0, 48);
 const MINIMAX_RETRYABLE_STATUS = new Set([408, 409, 425, 429, 500, 502, 503, 504, 529]);
 const MINIMAX_DEFAULT_TIMEOUT_MS = 35000;
+const WORLD_DAILY_CURATION_TIMEOUT_MS = resolveRuntimeInteger('WORLD_DAILY_CURATION_TIMEOUT_MS', 30000, 5000, 120000);
 const MINIMAX_DEFAULT_RETRY_LIMIT = 3;
 const MINIMAX_DEFAULT_BACKOFF_MS = 1800;
 const WORLD_VIEW_LIMIT = 120;
