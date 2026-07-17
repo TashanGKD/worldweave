@@ -43,7 +43,7 @@ NPM_REGISTRY=https://registry.npmjs.org
 
 - `DEPLOY_HOST`
 - `DEPLOY_USER`
-- `SSH_PRIVATE_KEY`
+- `SSH_PRIVATE_KEY`：填写私钥正文，不填本地路径或 `.pub` 公钥；支持多行、转义换行和 Base64。
 
 ## TopicLab 对接
 

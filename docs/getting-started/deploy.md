@@ -24,7 +24,7 @@ WorldWeave 由自己的仓库和 GitHub Actions 发布到 `worldweave.tashan.cha
 
 - `DEPLOY_HOST`：独立服务器地址。
 - `DEPLOY_USER`：SSH 用户。
-- `SSH_PRIVATE_KEY`：该用户对应的 SSH 私钥。
+- `SSH_PRIVATE_KEY`：该用户对应的 SSH 私钥正文（从 `-----BEGIN ... PRIVATE KEY-----` 到 `-----END ... PRIVATE KEY-----`），不能填写本地文件路径或 `.pub` 公钥。workflow 兼容原始多行、转义换行和 Base64 格式。
 - `DEPLOY_ENV`：完整的 WorldWeave 生产环境变量，多行 dotenv 格式。
 
 仓库是公开仓库，服务器使用公开 HTTPS URL 拉取代码，不需要 TopicLab 的 `SUBMODULE_TOKEN`。

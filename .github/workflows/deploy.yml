@@ -20,6 +20,61 @@ jobs:
     timeout-minutes: 120
 
     steps:
+      - name: Prepare SSH private key
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import binascii
+          import json
+          import os
+          from pathlib import Path
+
+          raw = os.environ.get("SSH_PRIVATE_KEY", "").strip()
+          candidates = [raw]
+
+          if raw.startswith('"') and raw.endswith('"'):
+              try:
+                  candidates.append(json.loads(raw))
+              except json.JSONDecodeError:
+                  pass
+
+          if "\\n" in raw:
+              candidates.append(raw.replace("\\r", "").replace("\\n", "\n"))
+
+          try:
+              compact = "".join(raw.split())
+              candidates.append(base64.b64decode(compact, validate=True).decode("utf-8"))
+          except (binascii.Error, ValueError, UnicodeDecodeError):
+              pass
+
+          key = next(
+              (
+                  candidate.strip()
+                  for candidate in candidates
+                  if "\n" in candidate
+                  and "-----BEGIN " in candidate
+                  and "PRIVATE KEY-----" in candidate
+              ),
+              "",
+          )
+          if not key:
+              raise SystemExit(
+                  "::error::SSH_PRIVATE_KEY must contain the private key text, not a local path or .pub public key."
+              )
+
+          target = Path(".deploy_key")
+          target.write_text(f"{key}\n", encoding="utf-8")
+          target.chmod(0o600)
+          PY
+          if ! ssh-keygen -y -f .deploy_key >/dev/null 2>&1; then
+            echo "::error::SSH_PRIVATE_KEY is not a valid unencrypted SSH private key."
+            exit 1
+          fi
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -28,7 +83,7 @@ jobs:
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          key_path: /github/workspace/.deploy_key
           envs: REPO,DEPLOY_ENV
           timeout: 120m
           command_timeout: 120m
