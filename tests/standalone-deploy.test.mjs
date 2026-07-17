@@ -11,6 +11,7 @@ test('standalone PM2 deployment keeps public and refresh workloads isolated', ()
   assert.match(config, /WORLDWEAVE_REFRESH_PM2_MAX_MEMORY \|\| '6G'/)
   assert.match(config, /world-source-refresh-daemon\.mjs/)
   assert.match(config, /WORLD_SOURCE_REFRESH_MANAGE_WORKER: '1'/)
+  assert.match(config, /HOST: process\.env\.HOST \|\| '127\.0\.0\.1'/)
   assert.doesNotMatch(config, /\/home\/ubuntu\/world/)
 })
 
@@ -20,4 +21,13 @@ test('remote deploy installs from the public npm registry before building', () =
 
   assert.match(deploy, /pnpm install --frozen-lockfile --registry=https:\/\/registry\.npmjs\.org/)
   assert.match(deploy, /WORLD_DEPLOY_PORT/)
+})
+
+
+test('production start honors the configured host and port', () => {
+  const start = readFileSync(new URL('../scripts/start.sh', import.meta.url), 'utf8')
+
+  assert.match(start, /PORT="\$\{PORT:-5000\}"/)
+  assert.match(start, /DEPLOY_RUN_HOST="\$\{DEPLOY_RUN_HOST:-\$\{HOST:-\$\{WORLD_HOST:-127\.0\.0\.1\}\}\}"/)
+  assert.match(start, /next start --hostname "\$\{DEPLOY_RUN_HOST\}" --port "\$\{DEPLOY_RUN_PORT\}"/)
 })

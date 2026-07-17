@@ -18,8 +18,8 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: Number(process.env.PORT || 5000),
-        HOST: process.env.HOST || '0.0.0.0',
-        WORLD_HOST: process.env.WORLD_HOST || '0.0.0.0',
+        HOST: process.env.HOST || '127.0.0.1',
+        WORLD_HOST: process.env.WORLD_HOST || '127.0.0.1',
         NODE_OPTIONS: process.env.WORLDWEAVE_NODE_OPTIONS || '--max-old-space-size=3072',
       },
       error_file: path.join(logsRoot, 'pm2-error.log'),
