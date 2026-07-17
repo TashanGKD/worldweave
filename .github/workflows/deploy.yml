@@ -39,18 +39,69 @@ jobs:
             REPO_NAME="$(basename "$REPO")"
             REPO_DIR="$BASE_DIR/$REPO_NAME"
             REPO_URL="https://github.com/${REPO}.git"
+            CLONE_DIR="$BASE_DIR/.${REPO_NAME}.clone"
+            PREVIOUS_DIR="$BASE_DIR/.${REPO_NAME}.previous"
+            export GIT_TERMINAL_PROMPT=0
 
             retry() {
               local attempts="$1"
               shift
               local current=1
+              local status=0
               until "$@"; do
+                status="$?"
                 if [ "$current" -ge "$attempts" ]; then
-                  return 1
+                  echo "::error::Command failed after ${current} attempts: $1"
+                  return "$status"
                 fi
+                echo "::warning::Command failed (attempt ${current}/${attempts}): $1; retrying in 5 seconds"
                 current=$((current + 1))
                 sleep 5
               done
+            }
+
+            clone_checkout() {
+              local status=0
+              cd "$BASE_DIR"
+              rm -rf -- "$CLONE_DIR"
+              timeout 180 git \
+                -c http.version=HTTP/1.1 \
+                -c http.lowSpeedLimit=1024 \
+                -c http.lowSpeedTime=30 \
+                clone \
+                --depth 1 \
+                --single-branch \
+                --branch main \
+                --no-tags \
+                "$REPO_URL" \
+                "$CLONE_DIR" || status="$?"
+              if [ "$status" -ne 0 ]; then
+                rm -rf -- "$CLONE_DIR"
+                return "$status"
+              fi
+
+              rm -rf -- "$PREVIOUS_DIR"
+              if [ -e "$REPO_DIR" ]; then
+                mv "$REPO_DIR" "$PREVIOUS_DIR"
+              fi
+              if mv "$CLONE_DIR" "$REPO_DIR"; then
+                rm -rf -- "$PREVIOUS_DIR"
+                return 0
+              fi
+
+              if [ -e "$PREVIOUS_DIR" ] && [ ! -e "$REPO_DIR" ]; then
+                mv "$PREVIOUS_DIR" "$REPO_DIR"
+              fi
+              return 1
+            }
+
+            fetch_checkout() {
+              cd "$REPO_DIR"
+              timeout 180 git \
+                -c http.version=HTTP/1.1 \
+                -c http.lowSpeedLimit=1024 \
+                -c http.lowSpeedTime=30 \
+                fetch --prune --depth 1 --no-tags origin main
             }
 
             run_with_heartbeat() {
@@ -71,7 +122,7 @@ jobs:
               status="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 10 --max-time 20 "$url" || true)"
               if [ -z "$status" ] || [ "$status" = "000" ]; then
                 echo "::error::Target server cannot reach $url"
-                exit 1
+                return 1
               fi
               echo "[deploy] egress $url -> HTTP $status"
             }
@@ -101,17 +152,29 @@ jobs:
             }
 
             command -v docker >/dev/null
+            command -v git >/dev/null
+            command -v timeout >/dev/null
             docker compose version
 
             mkdir -p "$BASE_DIR"
-            if [ ! -d "$REPO_DIR/.git" ]; then
-              retry 3 git clone "$REPO_URL" "$REPO_DIR"
+            cd "$BASE_DIR"
+            retry 3 check_egress https://github.com/
+
+            if [ -d "$REPO_DIR/.git" ]; then
+              git -C "$REPO_DIR" remote set-url origin "$REPO_URL"
+              if retry 3 fetch_checkout; then
+                cd "$REPO_DIR"
+                git reset --hard FETCH_HEAD
+              else
+                echo "::warning::Existing checkout could not be refreshed; replacing it with a clean shallow clone."
+                cd "$BASE_DIR"
+                retry 3 clone_checkout
+              fi
+            else
+              retry 3 clone_checkout
             fi
 
             cd "$REPO_DIR"
-            git remote set-url origin "$REPO_URL"
-            retry 3 git fetch --prune origin
-            git reset --hard origin/main
             git clean -ffd
 
             if [ -z "${DEPLOY_ENV:-}" ]; then
