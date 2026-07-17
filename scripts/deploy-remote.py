@@ -97,6 +97,12 @@ def parse_args() -> argparse.Namespace:
         help="PM2 application name for the recurring source refresh worker",
     )
     parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("WORLD_DEPLOY_PORT", "5000")),
+        help="Remote WorldWeave HTTP port used for health checks",
+    )
+    parser.add_argument(
         "--include-zvec",
         action="store_true",
         help="Also sync the vendored zvec tree. Off by default to keep deploys fast.",
@@ -231,29 +237,29 @@ def main() -> int:
 
         run_remote(
             client,
-            f"bash -lc {shlex.quote(f'export PATH=$HOME/bin:$PATH && cd {args.remote_root} && pnpm build')}",
+            f"bash -lc {shlex.quote(f'export PATH=$HOME/bin:$PATH && cd {args.remote_root} && mkdir -p logs && pnpm install --frozen-lockfile --registry=https://registry.npmjs.org && pnpm build')}",
             timeout=7200,
         )
         restart_cmd = (
             f"export PATH=$HOME/bin:$PATH && cd {args.remote_root} && "
-            f"(npx --yes pm2 describe {args.pm2_app} >/dev/null 2>&1 && "
-            f"npx --yes pm2 restart {args.pm2_app} --update-env || "
-            f"npx --yes pm2 start ecosystem.config.js --only {args.pm2_app} --update-env)"
+            f"WORLDWEAVE_DIR={shlex.quote(args.remote_root)} PORT={args.port} "
+            f"npx --yes pm2 startOrReload ecosystem.config.js "
+            f"--only {args.pm2_app} --update-env"
         )
         run_remote(client, f"bash -lc {shlex.quote(restart_cmd)}", timeout=600)
         refresh_cmd = (
             f"export PATH=$HOME/bin:$PATH && cd {args.remote_root} && "
-            f"(npx --yes pm2 describe {args.refresh_pm2_app} >/dev/null 2>&1 && "
-            f"npx --yes pm2 restart {args.refresh_pm2_app} --update-env || "
-            f"npx --yes pm2 start ecosystem.config.js --only {args.refresh_pm2_app} --update-env)"
+            f"WORLDWEAVE_DIR={shlex.quote(args.remote_root)} PORT={args.port} "
+            f"npx --yes pm2 startOrReload ecosystem.config.js "
+            f"--only {args.refresh_pm2_app} --update-env"
         )
         run_remote(client, f"bash -lc {shlex.quote(refresh_cmd)}", timeout=600)
         run_remote(client, f"bash -lc {shlex.quote(f'cd {args.remote_root} && npx --yes pm2 save')}", timeout=300)
 
         for url in [
-            "http://127.0.0.1:5000/",
-            "http://127.0.0.1:5000/api/v1/world/state?scene=global",
-            "http://127.0.0.1:5000/api/v1/openclaw/skill.md",
+            f"http://127.0.0.1:{args.port}/",
+            f"http://127.0.0.1:{args.port}/api/v1/world/state?scene=global",
+            f"http://127.0.0.1:{args.port}/api/v1/openclaw/skill.md",
         ]:
             run_remote(client, f"bash -lc {shlex.quote(f'curl -I --max-time 20 {url}')}", timeout=120)
     finally:

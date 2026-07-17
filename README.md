@@ -102,25 +102,40 @@ pnpm audit:world-skill
 
 ## Deployment Notes
 
-Windows 本地生产启动链路已经统一到 Node 包装脚本：
+生产部署由本仓库独立负责。合并到 `main` 后，GitHub Actions 会在 WorldWeave 服务器上构建并启动 Docker Compose：
+
+- `worldweave`：对外 Web/API，宿主机默认仅监听 `127.0.0.1:5000`
+- `worldweave-refresh`：独立的信源刷新 daemon 和重任务 worker
+
+服务器仓库密钥使用 `DEPLOY_HOST`、`DEPLOY_USER`、`SSH_PRIVATE_KEY`、`DEPLOY_ENV`。公网入口为：
+
+- `https://worldweave.tashan.chat`
+
+完整流程见：
+
+- `docs/getting-started/deploy.md`
+- `docs/runbooks/deploy-api-keys.md`
+
+本地生产启动链路仍统一到 Node 包装脚本：
 
 - `scripts/world-build.mjs`
 - `scripts/world-start.mjs`
 - `scripts/world-daemon.mjs`
 
-默认绑定：
+本地默认绑定：
 
 - `0.0.0.0:5000`
 
-主开发环境是 Windows + PowerShell。如果在类 Unix 环境运行，请优先沿用同一套 `pnpm` 脚本，而不是绕开 `scripts/` 目录直接调用底层命令。
+主开发环境是 Windows + PowerShell。如果在类 Unix 环境运行，请优先沿用同一套 `pnpm` 脚本。
 
 ## TopicLab Alignment
 
-这个仓库正在按 `Tashan-TopicLab` 的工程习惯收敛，目标不是立刻重构成多包仓库，而是先做到：
+这个仓库沿用 `Tashan-TopicLab` 的 CI 与 GitHub Actions 部署习惯，但运行和发布已独立：
 
 - 产品代码、脚本、文档、研究材料边界清楚
 - 健康检查和运行脚本可重复执行
 - 本地产物、第三方镜像、外部参考不污染主评审面
+- TopicLab 只通过 `WORLDWEAVE_BASE_URL` / `WORLDWEAVE_UPSTREAM` 使用公网服务
 
 当前对齐说明见：
 

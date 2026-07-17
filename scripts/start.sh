@@ -2,8 +2,9 @@
 set -Eeuo pipefail
 
 WORLD_WORKSPACE_PATH="${WORLD_WORKSPACE_PATH:-$(pwd)}"
-PORT=5000
+PORT="${PORT:-5000}"
 DEPLOY_RUN_PORT="${DEPLOY_RUN_PORT:-$PORT}"
+DEPLOY_RUN_HOST="${DEPLOY_RUN_HOST:-${HOST:-${WORLD_HOST:-127.0.0.1}}}"
 BUILD_LOCK_FILE="${BUILD_LOCK_FILE:-/tmp/world-threads-build.lock}"
 
 has_production_build() {
@@ -38,9 +39,9 @@ start_service() {
         set +a
     fi
     ensure_production_build
-    echo "Starting HTTP service on port ${DEPLOY_RUN_PORT} for deploy..."
-    npx next start --port ${DEPLOY_RUN_PORT}
+    echo "Starting HTTP service on ${DEPLOY_RUN_HOST}:${DEPLOY_RUN_PORT} for deploy..."
+    npx next start --hostname "${DEPLOY_RUN_HOST}" --port "${DEPLOY_RUN_PORT}"
 }
 
-echo "Starting HTTP service on port ${DEPLOY_RUN_PORT} for deploy..."
+echo "Starting HTTP service on ${DEPLOY_RUN_HOST}:${DEPLOY_RUN_PORT} for deploy..."
 start_service
