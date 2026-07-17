@@ -73,6 +73,8 @@ test('GitHub Actions deploys main with the configured server secrets', () => {
   assert.doesNotMatch(deploy, /SUBMODULE_TOKEN|git submodule/)
 
   assert.match(ci, /Validate Docker deployment/)
+  assert.match(ci, /github\.event\.pull_request\.head\.sha \|\| github\.sha/)
+  assert.match(ci, /pnpm install --frozen-lockfile --registry=https:\/\/registry\.npmjs\.org/)
   assert.match(ci, /docker compose --env-file \.env\.example config --quiet/)
   assert.match(ci, /docker compose --env-file \.env\.example build worldweave/)
 })
