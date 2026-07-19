@@ -104,7 +104,7 @@ pnpm audit:world-skill
 
 生产部署由本仓库独立负责。合并到 `main` 后，GitHub Actions 会在 WorldWeave 服务器上构建并启动 Docker Compose：
 
-- `worldweave`：对外 Web/API，宿主机默认仅监听 `127.0.0.1:5000`
+- `worldweave`：对外 Web/API，容器内监听 `5000`，宿主机默认仅监听 `127.0.0.1:3020`
 - `worldweave-refresh`：独立的信源刷新 daemon 和重任务 worker
 
 服务器仓库密钥使用 `DEPLOY_HOST`、`DEPLOY_USER`、`SSH_PRIVATE_KEY`、`DEPLOY_ENV`。公网入口为：

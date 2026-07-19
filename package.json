@@ -20,6 +20,7 @@
   ],
   "scripts": {
     "clean:workspace": "bash ./scripts/clean-workspace.sh",
+    "check:egress": "node ./scripts/check-runtime-egress.mjs",
     "reset:world-data": "bash ./scripts/reset-world-data.sh",
     "recover:world": "bash ./scripts/recover-world.sh",
     "audit:world-client": "node ./scripts/audit-world-client.mjs",
@@ -141,6 +142,7 @@
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {
+    "node": ">=22.21.0",
     "pnpm": ">=9.0.0"
   },
   "pnpm": {

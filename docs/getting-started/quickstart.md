@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 22.21+
 - `pnpm`
 - a valid MiniMax key for the Anthropic-compatible endpoint
 

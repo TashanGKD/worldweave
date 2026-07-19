@@ -195,6 +195,9 @@ jobs:
             wait_for_healthy worldweave
             wait_for_healthy worldweave-refresh
 
+            docker compose exec -T worldweave node scripts/check-runtime-egress.mjs
+            docker compose exec -T worldweave-refresh node scripts/check-runtime-egress.mjs
+
             docker compose exec -T worldweave node -e \
               "fetch('http://127.0.0.1:5000/api/v1/openclaw/skill.md',{signal:AbortSignal.timeout(30000)}).then(r=>{if(!r.ok)throw new Error('skill HTTP '+r.status);console.log('skill HTTP '+r.status)}).catch(e=>{console.error(e);process.exit(1)})"
             docker compose exec -T worldweave node -e \
@@ -206,7 +209,7 @@ jobs:
             echo "WorldWeave Docker stack deployed"
             echo "Repository: $REPO"
             echo "Commit:     ${{ github.sha }}"
-            echo "Local URL:  http://127.0.0.1:5000"
+            echo "Local URL:  http://127.0.0.1:3020"
             echo "--------------------------------------------"
 
   public-smoke:
@@ -239,5 +242,5 @@ jobs:
             echo "Public route is not ready yet (attempt $attempt/12)"
             sleep 20
           done
-          echo "::error::Docker deployment completed, but ${BASE_URL} did not pass public HTTPS checks. Verify DNS, TLS, and the reverse proxy to 127.0.0.1:5000."
+          echo "::error::Docker deployment completed, but ${BASE_URL} did not pass public HTTPS checks. Verify DNS, TLS, and the reverse proxy to 127.0.0.1:3020."
           exit 1

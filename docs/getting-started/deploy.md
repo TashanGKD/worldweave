@@ -33,7 +33,7 @@ WorldWeave 由自己的仓库和 GitHub Actions 发布到 `worldweave.tashan.cha
 
 `docker-compose.yml` 只属于 WorldWeave：
 
-- Web 容器内部监听 `0.0.0.0:5000`，宿主机默认映射为 `127.0.0.1:5000`。
+- Web 容器内部监听 `0.0.0.0:5000`，宿主机默认映射为 `127.0.0.1:3020`，避开同机已有的 `5000` 服务。
 - 刷新容器不开放公网端口。
 - 两个容器共享 `worldweave-cache` volume，刷新结果可被 Web 进程读取。
 - Web 进程关闭重刷新，避免公开请求触发高内存任务。
@@ -55,7 +55,7 @@ WORLDWEAVE_REFRESH_NODE_OPTIONS=--max-old-space-size=4096
 - Docker Engine 与 Docker Compose v2 已安装。
 - SSH 用户能在 `/var/www/github-actions/repos` 下创建目录并运行 Docker。
 - 服务器能访问 GitHub、`registry.npmjs.org`、`api.scnet.cn` 及所配置的信源。
-- `worldweave.tashan.chat` 的 HTTPS 反向代理指向 `127.0.0.1:5000`。
+- `worldweave.tashan.chat` 的 HTTPS 反向代理指向 `127.0.0.1:3020`。
 
 部署前可在服务器检查外网：
 
@@ -78,8 +78,8 @@ docker compose ps
 验证接口：
 
 ```bash
-curl -fsS http://127.0.0.1:5000/api/v1/openclaw/skill.md >/dev/null
-curl -fsS 'http://127.0.0.1:5000/api/v1/world/source-knowledge/status?scene=global' >/dev/null
+curl -fsS http://127.0.0.1:3020/api/v1/openclaw/skill.md >/dev/null
+curl -fsS 'http://127.0.0.1:3020/api/v1/world/source-knowledge/status?scene=global' >/dev/null
 ```
 
 停止本地容器：

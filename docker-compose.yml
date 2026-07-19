@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:20-slim}
+        NODE_BASE_IMAGE: ${NODE_BASE_IMAGE:-node:22-slim}
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
     restart: unless-stopped
     init: true
@@ -20,8 +20,10 @@ services:
       WORLD_HOST: 0.0.0.0
       WORLD_WEB_ENABLE_HEAVY_REFRESH: "0"
       NODE_OPTIONS: ${WORLDWEAVE_NODE_OPTIONS:---max-old-space-size=1536}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
-      - "127.0.0.1:${WORLDWEAVE_HOST_PORT:-5000}:5000"
+      - "127.0.0.1:${WORLDWEAVE_HOST_PORT:-3020}:5000"
     volumes:
       - worldweave-cache:/app/.cache
     healthcheck:
@@ -59,6 +61,8 @@ services:
       WORLD_SOURCE_KNOWLEDGE_SYNC_INTERVAL_MINUTES: ${WORLD_SOURCE_KNOWLEDGE_SYNC_INTERVAL_MINUTES:-30}
       WORLD_SOURCE_KNOWLEDGE_EMBED_BATCH_SIZE: ${WORLD_SOURCE_KNOWLEDGE_EMBED_BATCH_SIZE:-3}
       WORLD_SOURCE_KNOWLEDGE_EMBED_MAX_PENDING: ${WORLD_SOURCE_KNOWLEDGE_EMBED_MAX_PENDING:-60}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command:
       - node
       - scripts/world-source-refresh-daemon.mjs

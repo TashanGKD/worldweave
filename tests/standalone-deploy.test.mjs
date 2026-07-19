@@ -37,12 +37,13 @@ test('standalone Docker stack isolates web and refresh containers', () => {
   const dockerfile = readFileSync(new URL('../Dockerfile', import.meta.url), 'utf8')
   const compose = readFileSync(new URL('../docker-compose.yml', import.meta.url), 'utf8')
 
-  assert.match(dockerfile, /ARG NODE_BASE_IMAGE=node:20-slim/)
+  assert.match(dockerfile, /ARG NODE_BASE_IMAGE=node:22-slim/)
   assert.match(dockerfile, /ARG NPM_REGISTRY=https:\/\/registry\.npmjs\.org/)
   assert.match(dockerfile, /EXPOSE 5000/)
   assert.match(dockerfile, /node scripts\/world-start\.mjs/)
 
-  assert.match(compose, /127\.0\.0\.1:\$\{WORLDWEAVE_HOST_PORT:-5000\}:5000/)
+  assert.match(compose, /127\.0\.0\.1:\$\{WORLDWEAVE_HOST_PORT:-3020\}:5000/)
+  assert.equal((compose.match(/host\.docker\.internal:host-gateway/g) || []).length, 2)
   assert.match(compose, /WORLD_WEB_ENABLE_HEAVY_REFRESH: "0"/)
   assert.match(compose, /worldweave-refresh:/)
   assert.match(compose, /scripts\/world-source-refresh-daemon\.mjs/)
@@ -74,6 +75,8 @@ test('GitHub Actions deploys main with the configured server secrets', () => {
   assert.doesNotMatch(deploy, /git clone "\$REPO_URL" "\$REPO_DIR"/)
   assert.match(deploy, /docker compose build --pull/)
   assert.match(deploy, /docker compose up -d --remove-orphans/)
+  assert.match(deploy, /docker compose exec -T worldweave node scripts\/check-runtime-egress\.mjs/)
+  assert.match(deploy, /docker compose exec -T worldweave-refresh node scripts\/check-runtime-egress\.mjs/)
   assert.match(deploy, /https:\/\/worldweave\.tashan\.chat/)
   assert.doesNotMatch(deploy, /SUBMODULE_TOKEN|git submodule/)
 
