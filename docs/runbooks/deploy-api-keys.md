@@ -28,13 +28,25 @@ METASO_API_KEY=填真实密钥
 METACULUS_API_TOKEN=填真实 token
 WORLDWEAVE_DATABASE_URL=填 WorldWeave 监控库连接串
 OPENCLAW_BASE_URL=https://worldweave.tashan.chat
-WORLDWEAVE_HOST_PORT=5000
+WORLDWEAVE_HOST_PORT=3020
 WORLDWEAVE_MEM_LIMIT=2g
 WORLDWEAVE_REFRESH_MEM_LIMIT=5g
 WORLDWEAVE_NODE_OPTIONS=--max-old-space-size=1536
 WORLDWEAVE_REFRESH_NODE_OPTIONS=--max-old-space-size=4096
-NODE_BASE_IMAGE=node:20-slim
+NODE_BASE_IMAGE=node:22-slim
 NPM_REGISTRY=https://registry.npmjs.org
+```
+
+目标服务器需要通过宿主机代理访问海外信源时，再在同一个 `DEPLOY_ENV` 中加入：
+
+```dotenv
+NODE_USE_ENV_PROXY=1
+HTTP_PROXY=http://host.docker.internal:1081
+HTTPS_PROXY=http://host.docker.internal:1081
+http_proxy=http://host.docker.internal:1081
+https_proxy=http://host.docker.internal:1081
+NO_PROXY=localhost,127.0.0.1,::1,host.docker.internal,worldweave,worldweave-refresh,.tashan.chat,.tashan.ac.cn,newapi.tashan.chat,coding.dashscope.aliyuncs.com,dashscope.aliyuncs.com,metaso.cn,.scnet.cn,api.scnet.cn,.aliyuncs.com,.aliyun.com,eastmoney.com,push2.eastmoney.com,push2his.eastmoney.com,.coze.cn,api.coze.cn
+no_proxy=localhost,127.0.0.1,::1,host.docker.internal,worldweave,worldweave-refresh,.tashan.chat,.tashan.ac.cn,newapi.tashan.chat,coding.dashscope.aliyuncs.com,dashscope.aliyuncs.com,metaso.cn,.scnet.cn,api.scnet.cn,.aliyuncs.com,.aliyun.com,eastmoney.com,push2.eastmoney.com,push2his.eastmoney.com,.coze.cn,api.coze.cn
 ```
 
 ## GitHub Actions SSH 密钥
@@ -73,7 +85,7 @@ TopicLab 自身生产环境仍需要它原有的密钥和数据库配置：
 ## 上线前确认
 
 1. `docker compose ps` 显示 `worldweave` 与 `worldweave-refresh` 都为 healthy。
-2. WorldWeave 宿主机只在 `127.0.0.1:5000` 监听应用端口。
+2. WorldWeave 宿主机只在 `127.0.0.1:3020` 监听应用端口；容器内部仍为 `5000`。
 3. `https://worldweave.tashan.chat/` 能打开世界脉络。
 4. `https://worldweave.tashan.chat/api/v1/openclaw/skill.md` 能返回当前 Skill。
 5. `https://worldweave.tashan.chat/api/v1/openclaw/ai.skill.md` 能返回 AI 日报 Skill。

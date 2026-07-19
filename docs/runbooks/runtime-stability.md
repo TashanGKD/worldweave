@@ -27,9 +27,9 @@ What they cover:
 Also check the live runtime health fields after deploy:
 
 ```bash
-curl --noproxy '*' http://127.0.0.1:5000/api/v1/world/livebench/evaluation?scene=global
-curl --noproxy '*' http://127.0.0.1:5000/api/v1/world/source-knowledge/status?scene=global
-curl --noproxy '*' http://127.0.0.1:5000/api/v1/world/source-knowledge/status?scene=tech-ai
+curl --noproxy '*' http://127.0.0.1:3020/api/v1/world/livebench/evaluation?scene=global
+curl --noproxy '*' http://127.0.0.1:3020/api/v1/world/source-knowledge/status?scene=global
+curl --noproxy '*' http://127.0.0.1:3020/api/v1/world/source-knowledge/status?scene=tech-ai
 ```
 
 The LiveBench `source_health` payload should show enough open questions for the current window, and `source_knowledge.source_health.freshness_status` should not stay `stale` after the refresh daemon has completed. If `METACULUS_API_TOKEN` is missing, LiveBench remains usable but should be treated as degraded because Metaculus is not contributing to the question pool.
