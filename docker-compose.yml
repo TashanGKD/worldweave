@@ -93,3 +93,4 @@ services:
 volumes:
   worldweave-cache:
     name: ${WORLDWEAVE_CACHE_VOLUME_NAME:-worldweave_worldweave-cache}
+    external: ${WORLDWEAVE_CACHE_VOLUME_EXTERNAL:-false}

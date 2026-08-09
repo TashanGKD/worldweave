@@ -44,6 +44,7 @@ test('standalone Docker stack isolates web and refresh containers', () => {
 
   assert.match(compose, /\$\{WORLDWEAVE_BIND_HOST:-127\.0\.0\.1\}:\$\{WORLDWEAVE_HOST_PORT:-5000\}:5000/)
   assert.match(compose, /name: \$\{WORLDWEAVE_CACHE_VOLUME_NAME:-worldweave_worldweave-cache\}/)
+  assert.match(compose, /external: \$\{WORLDWEAVE_CACHE_VOLUME_EXTERNAL:-false\}/)
   assert.match(compose, /WORLD_WEB_ENABLE_HEAVY_REFRESH: "0"/)
   assert.match(compose, /worldweave-refresh:/)
   assert.match(compose, /scripts\/world-source-refresh-daemon\.mjs/)
