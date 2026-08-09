@@ -189,16 +189,40 @@ jobs:
             check_egress https://api.scnet.cn/
 
             docker compose config --quiet
-            run_with_heartbeat "docker compose build" docker compose build --pull
-            docker compose up -d --remove-orphans
+            if docker image inspect worldweave:local >/dev/null 2>&1; then
+              docker image tag worldweave:local worldweave:rollback
+            fi
+            rollback_worldweave() {
+              echo "::warning::Rolling WorldWeave back to the image active before this deployment."
+              if docker image inspect worldweave:rollback >/dev/null 2>&1; then
+                docker image tag worldweave:rollback worldweave:local
+                docker compose up -d --no-deps --force-recreate worldweave worldweave-refresh || true
+              fi
+            }
 
-            wait_for_healthy worldweave
-            wait_for_healthy worldweave-refresh
+            run_with_heartbeat "docker compose build" \
+              timeout --signal=TERM --kill-after=30s 60m \
+              docker compose build --pull
+            if ! docker compose up -d --remove-orphans; then
+              rollback_worldweave
+              exit 1
+            fi
 
-            docker compose exec -T worldweave node -e \
-              "fetch('http://127.0.0.1:5000/api/v1/openclaw/skill.md',{signal:AbortSignal.timeout(30000)}).then(r=>{if(!r.ok)throw new Error('skill HTTP '+r.status);console.log('skill HTTP '+r.status)}).catch(e=>{console.error(e);process.exit(1)})"
-            docker compose exec -T worldweave node -e \
-              "fetch('http://127.0.0.1:5000/api/v1/world/source-knowledge/status?scene=global',{signal:AbortSignal.timeout(120000)}).then(async r=>{const body=await r.text();JSON.parse(body);if(![200,503].includes(r.status))throw new Error('source status HTTP '+r.status);console.log('source status HTTP '+r.status+(r.status===503?' (initial refresh pending)':''))}).catch(e=>{console.error(e);process.exit(1)})"
+            if ! wait_for_healthy worldweave || ! wait_for_healthy worldweave-refresh; then
+              rollback_worldweave
+              exit 1
+            fi
+
+            if ! docker compose exec -T worldweave node -e \
+              "fetch('http://127.0.0.1:5000/api/v1/openclaw/skill.md',{signal:AbortSignal.timeout(30000)}).then(r=>{if(!r.ok)throw new Error('skill HTTP '+r.status);console.log('skill HTTP '+r.status)}).catch(e=>{console.error(e);process.exit(1)})"; then
+              rollback_worldweave
+              exit 1
+            fi
+            if ! docker compose exec -T worldweave node -e \
+              "Promise.all(['/api/v1/world/source-knowledge/status?scene=global','/api/v1/world/asean?limit=1','/api/v1/world/asean/refresh'].map(async path=>{const r=await fetch('http://127.0.0.1:5000'+path,{signal:AbortSignal.timeout(120000)});const body=await r.text();JSON.parse(body);if(![200,503].includes(r.status))throw new Error(path+' HTTP '+r.status);console.log(path+' HTTP '+r.status)})).catch(e=>{console.error(e);process.exit(1)})"; then
+              rollback_worldweave
+              exit 1
+            fi
 
             docker image prune -f
 
@@ -210,7 +234,7 @@ jobs:
             echo "--------------------------------------------"
 
   public-smoke:
-    name: Verify worldweave.tashan.chat
+    name: Verify world.tashan.chat/worldweave
     needs: deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -218,12 +242,13 @@ jobs:
     steps:
       - name: Wait for public route
         env:
-          BASE_URL: https://worldweave.tashan.chat
+          BASE_URL: https://world.tashan.chat/worldweave
         run: |
           set -euo pipefail
           paths=(
             "/"
             "/api/v1/openclaw/skill.md"
+            "/api/v1/world/asean?limit=1"
           )
           for attempt in $(seq 1 12); do
             all_ready=1
@@ -239,5 +264,5 @@ jobs:
             echo "Public route is not ready yet (attempt $attempt/12)"
             sleep 20
           done
-          echo "::error::Docker deployment completed, but ${BASE_URL} did not pass public HTTPS checks. Verify DNS, TLS, and the reverse proxy to 127.0.0.1:5000."
+          echo "::error::Docker deployment completed, but ${BASE_URL} did not pass public HTTPS checks. Verify TLS and the reverse proxy to the configured loopback port."
           exit 1
