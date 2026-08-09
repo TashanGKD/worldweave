@@ -8,10 +8,12 @@ export const revalidate = 0;
 
 async function loadDecisionModel(request: Request) {
   const url = new URL(request.url);
+  const dataRefreshRequested = url.searchParams.get('fresh') === '1';
   const topic = await readAseanTopic({
     request,
     limit: 80,
-    force: url.searchParams.get('fresh') === '1',
+    force: dataRefreshRequested,
+    cacheOnly: !dataRefreshRequested,
   });
   const result = await buildAseanDecisionModel(topic, {
     force: url.searchParams.get('refresh') === '1',

@@ -208,8 +208,18 @@ function sanitizeAseanTopicForClient(topic: Awaited<ReturnType<typeof readAseanT
   } as unknown as typeof topic;
 }
 
+type AseanClientTopic = Awaited<ReturnType<typeof readAseanTopic>>;
+const clientTopicSnapshots = new WeakMap<object, AseanClientTopic>();
+
+function aseanTopicForClient(topic: AseanClientTopic) {
+  const cached = clientTopicSnapshots.get(topic as object);
+  if (cached) return cached;
+  const clientTopic = sanitizeClientStrings(sanitizeAseanTopicForClient(topic)) as AseanClientTopic;
+  clientTopicSnapshots.set(topic as object, clientTopic);
+  return clientTopic;
+}
+
 export default async function AseanDemoPage() {
   const topic = await readAseanTopic({ cacheOnly: true });
-  const clientTopic = sanitizeClientStrings(sanitizeAseanTopicForClient(topic)) as Awaited<ReturnType<typeof readAseanTopic>>;
-  return <AseanDemoClient topic={clientTopic} />;
+  return <AseanDemoClient topic={aseanTopicForClient(topic)} />;
 }

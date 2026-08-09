@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
 import { readAseanDatasetMetricState } from '@/lib/world/asean-dataset-metrics';
 import { withAseanTimeout } from '@/lib/world/asean-abort';
 import { readAseanMetasoSearchStatus, readAseanMetasoSignals, type AseanMetasoSearchStatus } from '@/lib/world/asean-metaso-search';
@@ -110,7 +113,7 @@ function publicSourcePool<T extends AseanTopicPayload['source_pool']>(sourcePool
   })) as T;
 }
 
-export async function readAseanTopic(
+async function readAseanTopicUncached(
   options: ReadAseanTopicOptions = {},
 ): Promise<
   AseanTopicPayload & {
@@ -240,4 +243,61 @@ export async function readAseanTopic(
       primary_resolution_sources: blueprint.primary_resolution_sources.map(publicAseanText),
     })),
   });
+}
+
+type AseanTopicResult = Awaited<ReturnType<typeof readAseanTopicUncached>>;
+
+const ASEAN_TOPIC_CACHE_INPUTS = [
+  'asean-dataset-metric-cache.json',
+  'asean-metaso-search-cache.json',
+  'asean-public-risk-cache.json',
+  'asean-research-results.json',
+  'asean-source-feed-cache.json',
+] as const;
+
+let cachedAseanTopicFingerprint: string | null = null;
+const cachedAseanTopics = new Map<number, AseanTopicResult>();
+const pendingAseanTopics = new Map<number, Promise<AseanTopicResult>>();
+
+async function aseanTopicCacheFingerprint() {
+  const cacheRoot = path.join(process.cwd(), '.cache');
+  const fingerprints = await Promise.all(
+    ASEAN_TOPIC_CACHE_INPUTS.map(async (fileName) => {
+      try {
+        const stat = await fs.stat(path.join(cacheRoot, fileName));
+        return `${fileName}:${stat.size}:${stat.mtimeMs}`;
+      } catch {
+        return `${fileName}:missing`;
+      }
+    }),
+  );
+  return fingerprints.join('|');
+}
+
+export async function readAseanTopic(options: ReadAseanTopicOptions = {}): Promise<AseanTopicResult> {
+  const limit = options.limit || 40;
+  const canReuseSnapshot = options.cacheOnly === true && !options.force && !options.signal && (limit === 40 || limit === 80);
+  if (!canReuseSnapshot) return readAseanTopicUncached(options);
+
+  const fingerprint = await aseanTopicCacheFingerprint();
+  if (cachedAseanTopicFingerprint !== fingerprint) {
+    cachedAseanTopicFingerprint = fingerprint;
+    cachedAseanTopics.clear();
+    pendingAseanTopics.clear();
+  }
+  const cachedTopic = cachedAseanTopics.get(limit);
+  if (cachedTopic) return cachedTopic;
+  const pendingTopic = pendingAseanTopics.get(limit);
+  if (pendingTopic) return pendingTopic;
+
+  const promise = readAseanTopicUncached(options)
+    .then((topic) => {
+      if (cachedAseanTopicFingerprint === fingerprint) cachedAseanTopics.set(limit, topic);
+      return topic;
+    })
+    .finally(() => {
+      if (pendingAseanTopics.get(limit) === promise) pendingAseanTopics.delete(limit);
+    });
+  pendingAseanTopics.set(limit, promise);
+  return promise;
 }

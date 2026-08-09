@@ -216,6 +216,7 @@ test('ASEAN topic filters existing signals and exposes range-based forecast ques
   const aseanFuelTrainingScriptSource = readSource('scripts/asean_train_fuel_price.py');
   const aseanModelDataReportSource = readSource('scripts/asean-model-data-report.mjs');
   const aseanDecisionModelSource = readSource('src/lib/world/asean-decision-model.ts');
+  const aseanDecisionModelRouteSource = readSource('src/app/api/v1/world/asean/decision-model/route.ts');
   const packageSource = readSource('package.json');
   const appPageSource = readSource('src/app/page.tsx');
   const dashboardSource = readSource('src/lib/world/dashboard-presentation.ts');
@@ -289,6 +290,8 @@ test('ASEAN topic filters existing signals and exposes range-based forecast ques
   assert.match(routeSource, /limit,/);
   assert.match(routeSource, /量化区间研判问题/);
   assert.match(demoPageSource, /readAseanTopic\(\{ cacheOnly: true \}\)/);
+  assert.match(demoPageSource, /new WeakMap<object, AseanClientTopic>/);
+  assert.match(demoPageSource, /aseanTopicForClient\(topic\)/);
   assert.match(demoPageSource, /data_refreshed_at/);
   assert.match(demoClientSource, /topic\.data_refreshed_at \|\| topic\.generated_at/);
   assert.match(demoClientSource, /fetch\('\/api\/v1\/world\/asean\/refresh'/);
@@ -299,6 +302,12 @@ test('ASEAN topic filters existing signals and exposes range-based forecast ques
   assert.match(aseanPageDataSource, /readAseanPublicRiskSignals/);
   assert.match(aseanPageDataSource, /readAseanDatasetMetricState/);
   assert.match(aseanPageDataSource, /datasetMetrics: datasetMetricState\.metrics/);
+  assert.match(aseanPageDataSource, /ASEAN_TOPIC_CACHE_INPUTS/);
+  assert.match(aseanPageDataSource, /aseanTopicCacheFingerprint/);
+  assert.match(aseanPageDataSource, /cachedAseanTopics = new Map<number/);
+  assert.match(aseanPageDataSource, /pendingAseanTopics = new Map<number/);
+  assert.match(aseanPageDataSource, /limit === 40 \|\| limit === 80/);
+  assert.match(aseanDecisionModelRouteSource, /cacheOnly: !dataRefreshRequested/);
   assert.match(aseanPublicRiskSource, /GDACS Disaster Alerts RSS/);
   assert.match(aseanPublicRiskSource, /USGS Earthquake GeoJSON M4\.5\+/);
   assert.match(aseanPublicRiskSource, /NASA EONET Open Events/);
