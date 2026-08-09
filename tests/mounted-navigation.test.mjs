@@ -64,8 +64,16 @@ test('ASEAN entry redirects and dashboard cards use the mounted WorldWeave route
   assert.match(homePageSource, /redirect\('\/worldweave\/demo\/asean'\);/);
   assert.match(dashboardSource, /const aseanTopicHref = worldMountedHref\('\/demo\/asean'\);/);
   assert.match(dashboardSource, /href: aseanTopicHref,/);
-  assert.match(dashboardSource, /href=\{aseanTopicHref\}/);
+  assert.match(dashboardSource, /<a\s+href=\{aseanTopicHref\}/);
+  assert.doesNotMatch(dashboardSource, /<Link\s+href=\{aseanTopicHref\}/);
   assert.doesNotMatch(dashboardSource, /href="\/demo\/asean"/);
+});
+
+test('dashboard background refresh does not block on the unused subworld catalog', () => {
+  const dashboardSource = readSource('src/app/dashboard-client.tsx');
+
+  assert.doesNotMatch(dashboardSource, /fetch\(`\/api\/v1\/world\/subworlds/);
+  assert.match(dashboardSource, /subworlds: normalizedInitialSubworlds,/);
 });
 
 test('ASEAN right-column model and research panels share the same width contract', () => {

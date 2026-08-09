@@ -983,9 +983,8 @@ export default function DashboardClient({
     try {
       const requestStamp = Date.now();
       const stateRequest = fetch(`/api/v1/world/state?scene=${nextScene}&_=${requestStamp}`, { cache: 'no-store' });
-      const subworldsRequest = fetch(`/api/v1/world/subworlds?_=${requestStamp}`, { cache: 'no-store' });
-      const [stateRes, subworldsRes] = await Promise.all([stateRequest, subworldsRequest]);
-      const [stateData, subworldsData] = await Promise.all([stateRes.json(), subworldsRes.json()]);
+      const stateRes = await stateRequest;
+      const stateData = await stateRes.json();
       if (!stateRes.ok) throw new Error(stateData.error || '加载世界状态失败');
 
       const normalizedState = normalizeDashboardState(stateData);
@@ -995,7 +994,6 @@ export default function DashboardClient({
       if (nextScene === 'tech-ai') {
         setTechAiTimelineState(normalizedState);
       }
-      const nextSubworlds = normalizeSubworlds(subworldsData?.subworlds);
       let nextQuestionPool = questionPoolFromState(normalizedState);
       if (nextQuestionPool.length === 0) {
         nextQuestionPool = await fetchLiveBenchQuestionFallback(nextScene);
@@ -1015,7 +1013,7 @@ export default function DashboardClient({
           saved_at: Date.now(),
           scene: nextScene,
           state: normalizedState,
-          subworlds: nextSubworlds,
+          subworlds: normalizedInitialSubworlds,
         });
       }
       setQuestionPool((currentPool) => (nextQuestionPool.length > 0 || currentPool.length === 0 ? nextQuestionPool : currentPool));
@@ -1025,7 +1023,7 @@ export default function DashboardClient({
       setLoading(false);
       if (options.manual) setRefreshing(false);
     }
-  }, []);
+  }, [normalizedInitialSubworlds]);
 
   useEffect(() => {
     let backgroundTimer: number | null = null;
@@ -1624,12 +1622,12 @@ export default function DashboardClient({
               >
                 整体态势
               </Link>
-              <Link
+              <a
                 href={aseanTopicHref}
                 className="rounded-[var(--radius-md)] px-4 py-2 font-medium text-[var(--text-secondary)] transition hover:bg-[var(--bg-container)] hover:text-[var(--text-primary)]"
               >
                 东盟专题
-              </Link>
+              </a>
             </nav>
             <span className="px-3 py-2 font-medium text-[var(--text-tertiary)]">AI</span>
             <span className="px-3 py-2 font-medium text-[var(--text-tertiary)]">
@@ -1694,12 +1692,12 @@ export default function DashboardClient({
                       全部信源
                     </span>
                   </a>
-                  <Link href={aseanTopicHref} className={dashboardTileClass}>
+                  <a href={aseanTopicHref} className={dashboardTileClass}>
                     <span className="inline-flex items-center gap-2 text-[13px] font-bold text-[#0f766e]">
                       <MapIcon className="h-4 w-4" />
                       东盟专题
                     </span>
-                  </Link>
+                  </a>
                 </div>
               </div>
             </div>

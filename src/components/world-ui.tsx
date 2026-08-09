@@ -16,12 +16,16 @@ export function asArray<T>(value: T[] | null | undefined): T[] {
 
 export function formatTime(value?: string | null) {
   if (!value) return '--';
-  return new Date(value).toLocaleString('zh-CN', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const timestamp = new Date(value).getTime();
+  if (!Number.isFinite(timestamp)) return '--';
+  // China has used UTC+8 without daylight-saving changes since 1991. UTC
+  // getters keep SSR and browser hydration output byte-for-byte identical.
+  const shanghaiTime = new Date(timestamp + 8 * 60 * 60 * 1000);
+  const month = shanghaiTime.getUTCMonth() + 1;
+  const day = shanghaiTime.getUTCDate();
+  const hour = String(shanghaiTime.getUTCHours()).padStart(2, '0');
+  const minute = String(shanghaiTime.getUTCMinutes()).padStart(2, '0');
+  return `${month}月${day}日 ${hour}:${minute}`;
 }
 
 export function formatPercent(value: number) {
