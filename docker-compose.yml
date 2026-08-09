@@ -23,7 +23,7 @@ services:
       WORLD_WEB_ENABLE_HEAVY_REFRESH: "0"
       NODE_OPTIONS: ${WORLDWEAVE_NODE_OPTIONS:---max-old-space-size=1536}
     ports:
-      - "127.0.0.1:${WORLDWEAVE_HOST_PORT:-5000}:5000"
+      - "${WORLDWEAVE_BIND_HOST:-127.0.0.1}:${WORLDWEAVE_HOST_PORT:-5000}:5000"
     volumes:
       - worldweave-cache:/app/.cache
     healthcheck:
@@ -92,3 +92,4 @@ services:
 
 volumes:
   worldweave-cache:
+    name: ${WORLDWEAVE_CACHE_VOLUME_NAME:-worldweave_worldweave-cache}
