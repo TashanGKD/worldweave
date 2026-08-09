@@ -70,10 +70,15 @@ test('ASEAN entry redirects and dashboard cards use the mounted WorldWeave route
 });
 
 test('dashboard background refresh does not block on the unused subworld catalog', () => {
+  const homePageSource = readSource('src/app/page.tsx');
   const dashboardSource = readSource('src/app/dashboard-client.tsx');
 
   assert.doesNotMatch(dashboardSource, /fetch\(`\/api\/v1\/world\/subworlds/);
   assert.match(dashboardSource, /subworlds: normalizedInitialSubworlds,/);
+  assert.doesNotMatch(dashboardSource, /AUTO_REFRESH_MS|INITIAL_BACKGROUND_REFRESH_DELAY_MS/);
+  assert.doesNotMatch(dashboardSource, /window\.addEventListener\('focus'/);
+  assert.doesNotMatch(dashboardSource, /加载 AI 摘要失败|加载主世界地图失败/);
+  assert.match(homePageSource, /if \(scene === 'tech-ai'\) return 'tech-ai';\s+return 'geo-politics-daily';/);
 });
 
 test('ASEAN right-column model and research panels share the same width contract', () => {

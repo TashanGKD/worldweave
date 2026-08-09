@@ -181,7 +181,8 @@ function resolveInitialScene(searchParams?: Record<string, string | string[] | u
   const scene = Array.isArray(rawScene) ? rawScene[0] : rawScene;
   if (scene === 'asean' || scene === 'southeast-asia') return 'asean';
   if (scene === 'geo-politics-daily' || scene === 'global' || scene === 'finance') return 'geo-politics-daily';
-  return 'tech-ai';
+  if (scene === 'tech-ai') return 'tech-ai';
+  return 'geo-politics-daily';
 }
 
 export default async function Page({ searchParams }: PageProps) {

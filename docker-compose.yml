@@ -27,15 +27,11 @@ services:
     volumes:
       - worldweave-cache:/app/.cache
     healthcheck:
-      test:
-        - CMD-SHELL
-        - >-
-          node -e "fetch('http://127.0.0.1:5000/api/v1/openclaw/skill.md',
-          {signal:AbortSignal.timeout(15000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      test: ["CMD", "node", "scripts/world-web-health.mjs"]
       interval: 10s
-      timeout: 20s
-      retries: 18
-      start_period: 60s
+      timeout: 100s
+      retries: 6
+      start_period: 90s
 
   worldweave-refresh:
     image: worldweave:local

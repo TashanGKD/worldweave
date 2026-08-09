@@ -84,8 +84,6 @@ const dashboardInsetPanelClass = 'rounded-[var(--radius-lg)] bg-transparent px-1
 const dashboardTileClass =
   'group rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-secondary)] px-4 py-3 text-left transition hover:-translate-y-0.5 hover:border-[var(--border-hover)] hover:bg-[var(--bg-container)] hover:shadow-sm';
 
-const AUTO_REFRESH_MS = 60 * 1000;
-const INITIAL_BACKGROUND_REFRESH_DELAY_MS = 1800;
 const DASHBOARD_CACHE_TTL_MS = 10 * 60 * 1000;
 const DASHBOARD_CACHE_VERSION = 4;
 const DASHBOARD_CACHE_PREFIX = `world-v2:${DASHBOARD_CACHE_VERSION}:dashboard`;
@@ -234,16 +232,21 @@ const DEFAULT_SUBWORLDS: WorldSubworld[] = [
   { key: 'tech-ai', title: 'AI 日报', summary: '模型、Agent、AI 产品、论文、开源和 AI 前沿动态。', signal_count: 0, matched_tags: ['technology', 'ai', 'llm', 'agent', 'chip', 'aihot'], recommended_bundles: [] },
 ];
 const PRIMARY_SUBWORLD_ORDER = ['geo-politics-daily', 'tech-ai'];
+function shanghaiDate(iso: string) {
+  const timestamp = new Date(iso).getTime();
+  return Number.isFinite(timestamp) ? new Date(timestamp + 8 * 60 * 60 * 1000) : null;
+}
+
 function techAiDayLabel(iso: string) {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return '未知日期';
-  return `${date.getMonth() + 1}月${date.getDate()}日`;
+  const date = shanghaiDate(iso);
+  if (!date) return '未知日期';
+  return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日`;
 }
 
 function techAiTimeLabel(iso: string) {
-  const date = new Date(iso);
-  if (!Number.isFinite(date.getTime())) return '--:--';
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  const date = shanghaiDate(iso);
+  if (!date) return '--:--';
+  return `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
 }
 
 function dashboardCacheKey(scene: WorldScene) {
@@ -1026,7 +1029,6 @@ export default function DashboardClient({
   }, [normalizedInitialSubworlds]);
 
   useEffect(() => {
-    let backgroundTimer: number | null = null;
     if (scene === normalizedInitialScene && hasUsefulDashboardState(normalizedInitialState)) {
       persistDashboardCache({
         version: DASHBOARD_CACHE_VERSION,
@@ -1042,9 +1044,6 @@ export default function DashboardClient({
           ? current
           : chooseDefaultActiveSignalId(normalizedInitialState),
       );
-      backgroundTimer = window.setTimeout(() => {
-        void loadDashboard(scene, { background: true });
-      }, INITIAL_BACKGROUND_REFRESH_DELAY_MS);
     } else {
       const cached = readDashboardCache(scene);
       if (cached) {
@@ -1056,24 +1055,11 @@ export default function DashboardClient({
             : chooseDefaultActiveSignalId(cached.state),
         );
         setLoading(false);
-        backgroundTimer = window.setTimeout(() => {
-          void loadDashboard(scene, { background: true });
-        }, INITIAL_BACKGROUND_REFRESH_DELAY_MS);
       } else {
         void loadDashboard(scene);
       }
     }
-    return () => {
-      if (backgroundTimer !== null) window.clearTimeout(backgroundTimer);
-    };
   }, [loadDashboard, normalizedInitialScene, normalizedInitialState, normalizedInitialSubworlds, scene]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      void loadDashboard(scene, { background: true });
-    }, AUTO_REFRESH_MS);
-    return () => window.clearInterval(timer);
-  }, [loadDashboard, scene]);
 
   useEffect(() => {
     if (quickGeoSignals.length > 0) return;
@@ -1164,54 +1150,6 @@ export default function DashboardClient({
   }, [techAiTimelineState, timelineScene]);
 
   useEffect(() => {
-    if (techAiTimelineState || scene === 'tech-ai') return;
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      const requestStamp = Date.now();
-      void fetch(`/api/v1/world/state?scene=tech-ai&fresh=1&_=${requestStamp}`, { cache: 'no-store' })
-        .then(async (response) => {
-          const data = await response.json();
-          if (!response.ok) throw new Error(data?.error || '加载 AI 摘要失败');
-          return normalizeDashboardState(data);
-        })
-        .then((nextState) => {
-          if (!cancelled) setTechAiTimelineState(nextState);
-        })
-        .catch(() => {
-          if (!cancelled) setTechAiTimelineState(null);
-        });
-    }, 1400);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [scene, techAiTimelineState]);
-
-  useEffect(() => {
-    if (geoTimelineState || scene === 'geo-politics-daily') return;
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      const requestStamp = Date.now();
-      void fetch(`/api/v1/world/state?scene=geo-politics-daily&_=${requestStamp}`, { cache: 'no-store' })
-        .then(async (response) => {
-          const data = await response.json();
-          if (!response.ok) throw new Error(data?.error || '加载主世界地图失败');
-          return normalizeDashboardState(data);
-        })
-        .then((nextState) => {
-          if (!cancelled) setGeoTimelineState(nextState);
-        })
-        .catch(() => {
-          if (!cancelled) setGeoTimelineState(null);
-        });
-    }, 900);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [geoTimelineState, scene]);
-
-  useEffect(() => {
     if (questionPool.length > 0) return;
     let cancelled = false;
     void fetchLiveBenchQuestionFallback(scene).then((previews) => {
@@ -1223,18 +1161,6 @@ export default function DashboardClient({
       cancelled = true;
     };
   }, [questionPool.length, scene]);
-
-  useEffect(() => {
-    const handleFocusRefresh = () => {
-      void loadDashboard(scene, { background: true });
-    };
-    window.addEventListener('focus', handleFocusRefresh);
-    window.addEventListener('online', handleFocusRefresh);
-    return () => {
-      window.removeEventListener('focus', handleFocusRefresh);
-      window.removeEventListener('online', handleFocusRefresh);
-    };
-  }, [loadDashboard, scene]);
 
   const mapScene: WorldScene = scene === 'tech-ai' ? 'geo-politics-daily' : scene;
   const mapState = scene === 'tech-ai' ? geoTimelineState : state;
