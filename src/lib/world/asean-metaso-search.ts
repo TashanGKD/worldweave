@@ -2,6 +2,14 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import {
+  createLinkedTimeoutSignal,
+  mapAseanWithConcurrency,
+  raceAseanAbort,
+  throwIfAseanAborted,
+  writeAseanCacheAtomic,
+  type AseanReadOptions,
+} from './asean-abort';
 import type { AseanSignalLike } from './asean-topic';
 
 type MetasoSearchResponse = {
@@ -48,6 +56,7 @@ const CACHE_TTL_MS = Math.max(5, Number(process.env.WORLD_ASEAN_METASO_TTL_MINUT
 const QUERY_SIZE = Math.min(10, Math.max(3, Number(process.env.WORLD_ASEAN_METASO_QUERY_SIZE || 6)));
 const MAX_CACHE_ITEMS = Math.min(160, Math.max(20, Number(process.env.WORLD_ASEAN_METASO_MAX_ITEMS || 80)));
 const REQUEST_TIMEOUT_MS = Math.min(30000, Math.max(5000, Number(process.env.WORLD_ASEAN_METASO_TIMEOUT_MS || 15000)));
+const FETCH_CONCURRENCY = Math.min(6, Math.max(1, Number(process.env.WORLD_ASEAN_METASO_CONCURRENCY || 3)));
 
 export const ASEAN_METASO_KEYWORDS = [
   '中国 东盟 人工智能 应用合作中心 广西 算力',
@@ -287,20 +296,23 @@ async function readCache(): Promise<AseanMetasoCache | null> {
   }
 }
 
-async function writeCache(cache: AseanMetasoCache) {
+async function writeCache(cache: AseanMetasoCache, signal?: AbortSignal) {
   await fs.mkdir(path.dirname(CACHE_FILE), { recursive: true });
-  await fs.writeFile(CACHE_FILE, `${JSON.stringify(cache, null, 2)}\n`, 'utf-8');
+  await writeAseanCacheAtomic(CACHE_FILE, `${JSON.stringify(cache, null, 2)}\n`, signal);
 }
 
 function axisForQuery(query: string) {
   return ASEAN_TARGETED_SEARCHES.find((item) => item.query === query)?.axis || 'general';
 }
 
-async function fetchMetasoQuery(search: { axis: string; query: string }, nowIso: string): Promise<AseanMetasoCacheItem[]> {
+async function fetchMetasoQuery(
+  search: { axis: string; query: string },
+  nowIso: string,
+  signal?: AbortSignal,
+): Promise<AseanMetasoCacheItem[]> {
   if (!API_KEY) return [];
   const { axis, query } = search;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = createLinkedTimeoutSignal(signal, REQUEST_TIMEOUT_MS, `ASEAN Metaso ${axis}`);
   try {
     const response = await fetch(SEARCH_URL, {
       method: 'POST',
@@ -317,7 +329,7 @@ async function fetchMetasoQuery(search: { axis: string; query: string }, nowIso:
         includeRawContent: false,
         conciseSnippet: false,
       }),
-      signal: controller.signal,
+      signal: timeout.signal,
     });
     if (!response.ok) return [];
     const payload = (await response.json()) as MetasoSearchResponse;
@@ -346,9 +358,10 @@ async function fetchMetasoQuery(search: { axis: string; query: string }, nowIso:
       })
       .filter((item): item is AseanMetasoCacheItem => Boolean(item));
   } catch {
+    throwIfAseanAborted(signal);
     return [];
   } finally {
-    clearTimeout(timer);
+    timeout.dispose();
   }
 }
 
@@ -384,19 +397,24 @@ function toAseanSignal(item: AseanMetasoCacheItem): AseanSignalLike {
   };
 }
 
-export async function readAseanMetasoSignals(options: { force?: boolean } = {}): Promise<AseanSignalLike[]> {
-  const cache = await readCache();
-  const now = Date.now();
-  const nowIso = new Date(now).toISOString();
-  const cacheAge = cache ? now - new Date(cache.refreshed_at).getTime() : Infinity;
-  if (!ENABLED || !API_KEY) return (cache?.items || []).map(toAseanSignal);
-  if (!options.force && cache && Number.isFinite(cacheAge) && cacheAge < CACHE_TTL_MS) {
-    return cache.items.map(toAseanSignal);
-  }
+let refreshInFlight: Promise<AseanMetasoCache> | null = null;
 
-  const fetched = (
-    await Promise.all(ASEAN_TARGETED_SEARCHES.map((search) => fetchMetasoQuery(search, nowIso)))
-  ).flat();
+async function refreshMetaso(cache: AseanMetasoCache | null, nowIso: string, signal?: AbortSignal) {
+  const fetched = (await mapAseanWithConcurrency(
+    ASEAN_TARGETED_SEARCHES,
+    FETCH_CONCURRENCY,
+    (search) => fetchMetasoQuery(search, nowIso, signal),
+    signal,
+  )).flat();
+  throwIfAseanAborted(signal);
+  if (!fetched.length) {
+    return cache || {
+      version: 1 as const,
+      refreshed_at: new Date(0).toISOString(),
+      queries: ASEAN_TARGETED_SEARCHES.map((item) => item.query),
+      items: [],
+    };
+  }
   const previousUrls = new Set((cache?.items || []).map((item) => item.source_url));
   const newItemCount = fetched.filter((item) => !previousUrls.has(item.source_url)).length;
   const nextItems = mergeCacheItems(cache?.items || [], fetched);
@@ -413,7 +431,27 @@ export async function readAseanMetasoSignals(options: { force?: boolean } = {}):
       query_count: ASEAN_TARGETED_SEARCHES.length,
     },
   };
-  await writeCache(nextCache);
+  await writeCache(nextCache, signal);
+  return nextCache;
+}
+
+export async function readAseanMetasoSignals(options: AseanReadOptions = {}): Promise<AseanSignalLike[]> {
+  const cache = await readCache();
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const cacheAge = cache ? now - new Date(cache.refreshed_at).getTime() : Infinity;
+  if (!ENABLED || !API_KEY) return (cache?.items || []).map(toAseanSignal);
+  if (options.cacheOnly) return (cache?.items || []).map(toAseanSignal);
+  if (!options.force && cache && Number.isFinite(cacheAge) && cacheAge < CACHE_TTL_MS) {
+    return cache.items.map(toAseanSignal);
+  }
+
+  if (!refreshInFlight) {
+    refreshInFlight = raceAseanAbort(refreshMetaso(cache, nowIso, options.signal), options.signal).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  const nextCache = await refreshInFlight;
   return nextCache.items.map(toAseanSignal);
 }
 

@@ -2,6 +2,13 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import {
+  createLinkedTimeoutSignal,
+  raceAseanAbort,
+  throwIfAseanAborted,
+  writeAseanCacheAtomic,
+  type AseanReadOptions,
+} from './asean-abort';
 import type { AseanSignalLike } from './asean-topic';
 
 type PublicRiskCacheItem = {
@@ -136,43 +143,43 @@ function isValidPublicRiskItem(item: PublicRiskCacheItem) {
   return item.country_scope.some((country) => country === '东盟' || ASEAN_COUNTRY_PATTERNS.some(([label]) => label === country));
 }
 
-async function fetchText(url: string) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+async function fetchText(url: string, signal?: AbortSignal) {
+  const timeout = createLinkedTimeoutSignal(signal, REQUEST_TIMEOUT_MS, 'ASEAN public risk text');
   try {
     const response = await fetch(url, {
       headers: {
         Accept: 'application/xml, text/xml, application/rss+xml, */*',
         'User-Agent': 'WorldWeaveAseanPublicRisk/0.1',
       },
-      signal: controller.signal,
+      signal: timeout.signal,
     });
     if (!response.ok) return null;
     return response.text();
   } catch {
+    throwIfAseanAborted(signal);
     return null;
   } finally {
-    clearTimeout(timer);
+    timeout.dispose();
   }
 }
 
-async function fetchJson(url: string) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+async function fetchJson(url: string, signal?: AbortSignal) {
+  const timeout = createLinkedTimeoutSignal(signal, REQUEST_TIMEOUT_MS, 'ASEAN public risk JSON');
   try {
     const response = await fetch(url, {
       headers: {
         Accept: 'application/json, */*',
         'User-Agent': 'WorldWeaveAseanPublicRisk/0.1',
       },
-      signal: controller.signal,
+      signal: timeout.signal,
     });
     if (!response.ok) return null;
     return response.json();
   } catch {
+    throwIfAseanAborted(signal);
     return null;
   } finally {
-    clearTimeout(timer);
+    timeout.dispose();
   }
 }
 
@@ -197,14 +204,14 @@ async function readCache(): Promise<PublicRiskCache | null> {
   }
 }
 
-async function writeCache(cache: PublicRiskCache) {
+async function writeCache(cache: PublicRiskCache, signal?: AbortSignal) {
   await fs.mkdir(path.dirname(CACHE_FILE), { recursive: true });
-  await fs.writeFile(CACHE_FILE, `${JSON.stringify(cache, null, 2)}\n`, 'utf-8');
+  await writeAseanCacheAtomic(CACHE_FILE, `${JSON.stringify(cache, null, 2)}\n`, signal);
 }
 
-async function fetchGdacs(nowIso: string): Promise<PublicRiskCacheItem[] | null> {
+async function fetchGdacs(nowIso: string, signal?: AbortSignal): Promise<PublicRiskCacheItem[] | null> {
   const url = 'https://www.gdacs.org/xml/rss.xml';
-  const xml = await fetchText(url);
+  const xml = await fetchText(url, signal);
   if (!xml) return null;
   return Array.from(xml.matchAll(/<item\b[\s\S]*?<\/item>/giu))
     .map((match) => match[0])
@@ -234,9 +241,9 @@ async function fetchGdacs(nowIso: string): Promise<PublicRiskCacheItem[] | null>
     .slice(0, 12);
 }
 
-async function fetchUsgs(nowIso: string): Promise<PublicRiskCacheItem[] | null> {
+async function fetchUsgs(nowIso: string, signal?: AbortSignal): Promise<PublicRiskCacheItem[] | null> {
   const url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_week.geojson';
-  const json = await fetchJson(url) as { features?: UsgsFeature[] } | null;
+  const json = await fetchJson(url, signal) as { features?: UsgsFeature[] } | null;
   if (!json?.features) return null;
   return json.features
     .map((feature) => {
@@ -262,9 +269,9 @@ async function fetchUsgs(nowIso: string): Promise<PublicRiskCacheItem[] | null> 
     .slice(0, 16);
 }
 
-async function fetchEonet(nowIso: string): Promise<PublicRiskCacheItem[] | null> {
+async function fetchEonet(nowIso: string, signal?: AbortSignal): Promise<PublicRiskCacheItem[] | null> {
   const url = 'https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=50';
-  const json = await fetchJson(url) as { events?: EonetEvent[] } | null;
+  const json = await fetchJson(url, signal) as { events?: EonetEvent[] } | null;
   if (!json?.events) return null;
   return json.events
     .map((event) => {
@@ -322,10 +329,18 @@ function toSignal(item: PublicRiskCacheItem): AseanSignalLike {
   };
 }
 
-async function refreshPublicRisk(cache: PublicRiskCache | null, nowIso: string) {
-  const results = await Promise.all([fetchGdacs(nowIso), fetchUsgs(nowIso), fetchEonet(nowIso)]);
+async function refreshPublicRisk(cache: PublicRiskCache | null, nowIso: string, signal?: AbortSignal) {
+  const results = await Promise.all([fetchGdacs(nowIso, signal), fetchUsgs(nowIso, signal), fetchEonet(nowIso, signal)]);
+  throwIfAseanAborted(signal);
   const failedCount = results.filter((items) => items === null).length;
   const fetched = results.flatMap((items) => items || []);
+  if (failedCount === results.length) {
+    return cache || {
+      version: 1 as const,
+      refreshed_at: new Date(0).toISOString(),
+      items: [],
+    };
+  }
   const previousIds = new Set((cache?.items || []).map((item) => item.id));
   const nextItems = mergeItems(cache?.items || [], fetched);
   const nextCache: PublicRiskCache = {
@@ -341,18 +356,28 @@ async function refreshPublicRisk(cache: PublicRiskCache | null, nowIso: string) 
       failed_count: failedCount,
     },
   };
-  await writeCache(nextCache);
+  await writeCache(nextCache, signal);
   return nextCache;
 }
 
-export async function readAseanPublicRiskSignals(options: { force?: boolean } = {}): Promise<AseanSignalLike[]> {
+let refreshInFlight: Promise<PublicRiskCache> | null = null;
+
+export async function readAseanPublicRiskSignals(options: AseanReadOptions = {}): Promise<AseanSignalLike[]> {
   const cache = await readCache();
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   const cacheAge = cache ? now - new Date(cache.refreshed_at).getTime() : Infinity;
+  if (options.cacheOnly && cache) return cache.items.filter(isValidPublicRiskItem).map(toSignal);
+  const shouldRefresh =
+    ENABLED && !options.cacheOnly && (options.force || !cache || !Number.isFinite(cacheAge) || cacheAge >= CACHE_TTL_MS);
+  if (shouldRefresh && !refreshInFlight) {
+    refreshInFlight = raceAseanAbort(refreshPublicRisk(cache, nowIso, options.signal), options.signal).finally(() => {
+      refreshInFlight = null;
+    });
+  }
   const nextCache =
-    ENABLED && (options.force || !cache || !Number.isFinite(cacheAge) || cacheAge >= CACHE_TTL_MS)
-      ? await refreshPublicRisk(cache, nowIso)
+    shouldRefresh
+      ? await refreshInFlight!
       : cache || {
           version: 1 as const,
           refreshed_at: nowIso,

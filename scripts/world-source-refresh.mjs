@@ -3,6 +3,20 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import {
+  abortMessage,
+  acquireFileLock,
+  combineAbortSignals,
+  createAbortError,
+  createRunId,
+  delayWithSignal,
+  isAbortError,
+  processTreeIsAlive,
+  terminateProcessTree,
+  withDeadline,
+  writeJsonAtomicSync,
+} from './world-refresh-control.mjs';
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
 const cacheDir = path.join(root, '.cache');
@@ -12,6 +26,9 @@ const directoryCandidateScript = path.join(root, 'scripts', 'extract-source-dire
 fs.mkdirSync(cacheDir, { recursive: true });
 
 const statusPath = path.join(cacheDir, 'world-source-refresh-status.json');
+const lockPath = path.join(cacheDir, 'world-source-refresh.lock');
+const workerPidPath = path.join(cacheDir, 'world-source-refresh-worker.pid');
+const heavyCursorPath = path.join(cacheDir, 'world-source-refresh-heavy-cursor.json');
 const outPath = path.join(cacheDir, 'world-source-refresh.out.log');
 const errPath = path.join(cacheDir, 'world-source-refresh.err.log');
 const apiSnapshotPath = path.join(cacheDir, 'world-api-snapshots.json');
@@ -27,6 +44,9 @@ function parseArgs(argv) {
     timeZone: process.env.WORLD_SOURCE_REFRESH_TIME_ZONE || 'Asia/Shanghai',
     skipWorldWarm: false,
     includeHeavyWorldSync: process.env.WORLD_SOURCE_REFRESH_INCLUDE_HEAVY_SYNC === '1',
+    endpointConcurrency: Math.max(1, Number(process.env.WORLD_SOURCE_REFRESH_ENDPOINT_CONCURRENCY || 3)),
+    heavyBatchSize: Math.max(1, Number(process.env.WORLD_SOURCE_REFRESH_HEAVY_BATCH_SIZE || 1)),
+    trigger: process.env.WORLD_SOURCE_REFRESH_TRIGGER || 'scheduled',
     worldBaseUrl: (process.env.WORLD_BATCH_REFRESH_BASE_URL || '').replace(/\/+$/, ''),
     worldBaseUrlExplicit: Boolean(process.env.WORLD_BATCH_REFRESH_BASE_URL),
   };
@@ -174,7 +194,7 @@ function refreshDirectoryCandidates(reportDate) {
 }
 
 function writeStatus(status) {
-  fs.writeFileSync(statusPath, `${JSON.stringify(status, null, 2)}\n`, 'utf8');
+  writeJsonAtomicSync(statusPath, status);
 }
 
 let refreshDbPool = null;
@@ -314,19 +334,30 @@ function writeApiSnapshot(scene, key, data) {
     saved_at: now,
     data,
   };
-  fs.writeFileSync(apiSnapshotPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  writeJsonAtomicSync(apiSnapshotPath, payload);
 }
 
-async function callWorldEndpoint(baseUrl, method, pathname, timeoutMs = 120000, snapshot, batchHeader = false) {
+async function callWorldEndpoint(
+  baseUrl,
+  method,
+  pathname,
+  timeoutMs = 120000,
+  snapshot,
+  batchHeader = false,
+  signal,
+  runId,
+) {
   const startedAt = Date.now();
   try {
+    if (signal?.aborted) throw createAbortError(abortMessage(signal));
     const response = await fetch(`${baseUrl}${pathname}`, {
       method,
       headers: {
         Accept: 'application/json',
         ...(batchHeader ? { 'x-world-batch-refresh': '1' } : {}),
+        ...(runId ? { 'x-world-refresh-run-id': runId } : {}),
       },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: combineAbortSignals([signal, AbortSignal.timeout(timeoutMs)]),
     });
     let snapshotWritten = false;
     if (snapshot && response.ok) {
@@ -355,6 +386,7 @@ async function callWorldEndpoint(baseUrl, method, pathname, timeoutMs = 120000, 
       snapshot_written: snapshotWritten,
     };
   } catch (error) {
+    const timedOut = error?.name === 'TimeoutError' || (isAbortError(error) && !signal?.aborted);
     return {
       path: pathname,
       method,
@@ -362,19 +394,23 @@ async function callWorldEndpoint(baseUrl, method, pathname, timeoutMs = 120000, 
       status: null,
       duration_ms: Date.now() - startedAt,
       error: error instanceof Error ? error.message : String(error),
+      canceled: Boolean(signal?.aborted),
+      timed_out: timedOut,
     };
   }
 }
 
-async function fetchWorldJson(baseUrl, pathname, timeoutMs = 45000, batchHeader = false) {
+async function fetchWorldJson(baseUrl, pathname, timeoutMs = 45000, batchHeader = false, signal, runId) {
   const startedAt = Date.now();
   try {
+    if (signal?.aborted) throw createAbortError(abortMessage(signal));
     const response = await fetch(`${baseUrl}${pathname}`, {
       headers: {
         Accept: 'application/json',
         ...(batchHeader ? { 'x-world-batch-refresh': '1' } : {}),
+        ...(runId ? { 'x-world-refresh-run-id': runId } : {}),
       },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: combineAbortSignals([signal, AbortSignal.timeout(timeoutMs)]),
     });
     let data = null;
     try {
@@ -389,22 +425,25 @@ async function fetchWorldJson(baseUrl, pathname, timeoutMs = 45000, batchHeader 
       data,
     };
   } catch (error) {
+    const timedOut = error?.name === 'TimeoutError' || (isAbortError(error) && !signal?.aborted);
     return {
       ok: false,
       status: null,
       duration_ms: Date.now() - startedAt,
       data: null,
       error: error instanceof Error ? error.message : String(error),
+      canceled: Boolean(signal?.aborted),
+      timed_out: timedOut,
     };
   }
 }
 
-async function probeWorldBaseUrl(baseUrl) {
+async function probeWorldBaseUrl(baseUrl, signal) {
   const startedAt = Date.now();
   try {
     const response = await fetch(`${baseUrl}/api/v1/world/livebench/questions?scene=global&limit=1`, {
       headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(5000),
+      signal: combineAbortSignals([signal, AbortSignal.timeout(5000)]),
     });
     await response.arrayBuffer().catch(() => null);
     return {
@@ -424,11 +463,36 @@ async function probeWorldBaseUrl(baseUrl) {
   }
 }
 
-async function resolveWorldBaseUrl(args) {
+async function probeManagedWorkerHealth(baseUrl, signal) {
+  const startedAt = Date.now();
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/openclaw/skill.md`, {
+      headers: { Accept: 'text/markdown, text/plain;q=0.9, */*;q=0.5' },
+      signal: combineAbortSignals([signal, AbortSignal.timeout(5_000)]),
+    });
+    await response.arrayBuffer().catch(() => null);
+    return {
+      base_url: baseUrl,
+      ok: response.ok,
+      status: response.status,
+      duration_ms: Date.now() - startedAt,
+    };
+  } catch (error) {
+    return {
+      base_url: baseUrl,
+      ok: false,
+      status: null,
+      duration_ms: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function resolveWorldBaseUrl(args, signal) {
   if (args.skipWorldWarm) return args;
   const configured = args.worldBaseUrl;
   if (configured) {
-    const probe = await probeWorldBaseUrl(configured);
+    const probe = await probeWorldBaseUrl(configured, signal);
     if (probe.ok || args.worldBaseUrlExplicit) {
       return { ...args, worldBaseUrl: configured, worldBaseUrlProbe: probe };
     }
@@ -448,7 +512,8 @@ async function resolveWorldBaseUrl(args) {
   const probes = [];
   for (const candidate of uniqueCandidates) {
     if (candidate === configured) continue;
-    const probe = await probeWorldBaseUrl(candidate);
+    if (signal?.aborted) throw createAbortError(abortMessage(signal));
+    const probe = await probeWorldBaseUrl(candidate, signal);
     probes.push(probe);
     if (probe.ok) {
       append(outPath, `[${nowIso()}] selected world refresh base ${candidate}\n`);
@@ -492,24 +557,104 @@ function summarizeSourceFreshness(payload) {
   };
 }
 
-async function warmWorldCaches(args) {
+function selectRotatingHeavyEndpoints(endpointPool, batchSize) {
+  if (!endpointPool.length) return [];
+  const cursorState = readJson(heavyCursorPath);
+  const cursor = Number.isInteger(cursorState?.cursor) ? cursorState.cursor % endpointPool.length : 0;
+  const count = Math.min(endpointPool.length, Math.max(1, batchSize));
+  const selected = Array.from({ length: count }, (_, offset) => endpointPool[(cursor + offset) % endpointPool.length]);
+  writeJsonAtomicSync(heavyCursorPath, {
+    cursor: (cursor + count) % endpointPool.length,
+    selected_at: nowIso(),
+    selected_paths: selected.map((endpoint) => endpoint.pathname),
+  });
+  return selected;
+}
+
+function workerPid() {
+  try {
+    const value = Number(fs.readFileSync(workerPidPath, 'utf8').trim());
+    return Number.isInteger(value) && value > 1 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function ownsManagedWorker(baseUrl) {
+  if (process.env.WORLD_SOURCE_REFRESH_MANAGE_WORKER === '0') return false;
+  try {
+    const url = new URL(baseUrl);
+    const expectedPort = String(process.env.WORLD_SOURCE_REFRESH_WORKER_PORT || '5020');
+    return ['127.0.0.1', 'localhost', '::1'].includes(url.hostname) && (url.port || '80') === expectedPort;
+  } catch {
+    return false;
+  }
+}
+
+async function resetManagedWorker(baseUrl, reason, signal) {
+  if (!ownsManagedWorker(baseUrl)) return { attempted: false, reason: 'worker-not-managed-locally' };
+  const pid = workerPid();
+  const detached = process.platform !== 'win32';
+  if (!pid || !processTreeIsAlive(pid, { detached })) return { attempted: false, reason: 'worker-pid-not-running', pid };
+  const startedAt = Date.now();
+  append(errPath, `[${nowIso()}] resetting source refresh worker pid=${pid} reason=${reason}\n`);
+  const stopped = await terminateProcessTree(pid, {
+    detached,
+    graceMs: Math.max(5_000, Number(process.env.WORLD_SOURCE_REFRESH_WORKER_RESET_GRACE_MS || 25_000)),
+  });
+  if (!stopped.ok) {
+    return { attempted: true, ok: false, pid, reason: 'worker-tree-did-not-stop', ...stopped };
+  }
+
+  const readyDeadline = Date.now() + Math.max(5_000, Number(process.env.WORLD_SOURCE_REFRESH_WORKER_READY_TIMEOUT_MS || 30_000));
+  let probe = null;
+  while (Date.now() < readyDeadline) {
+    if (signal?.aborted) throw createAbortError(abortMessage(signal));
+    const replacementPid = workerPid();
+    if (replacementPid && replacementPid !== pid && processTreeIsAlive(replacementPid, { detached })) {
+      probe = await probeManagedWorkerHealth(baseUrl, signal);
+      if (probe.ok) {
+        return {
+          attempted: true,
+          ok: true,
+          pid,
+          replacement_pid: replacementPid,
+          replacement_ready: true,
+          forced: stopped.forced,
+          duration_ms: Date.now() - startedAt,
+        };
+      }
+    }
+    await delayWithSignal(500, signal);
+  }
+  return {
+    attempted: true,
+    ok: false,
+    pid,
+    replacement_ready: false,
+    duration_ms: Date.now() - startedAt,
+    reason: probe?.error || 'replacement-worker-not-ready',
+  };
+}
+
+async function warmWorldCaches(args, signal, runId) {
   if (args.skipWorldWarm) {
     return { skipped: true, reason: 'skip-world-warm' };
   }
-  const endpoints = [];
+  let heavyEndpoints = [];
   if (args.includeHeavyWorldSync) {
-    endpoints.push(
+    const heavyEndpointPool = [
       {
         method: 'POST',
-        pathname: '/api/v1/world/livebench/sync?scene=global&batch=1',
-        timeoutMs: 120000,
+        pathname: '/api/v1/world/source-knowledge/sync?scene=global&batch=1',
+        timeoutMs: 90000,
         critical: false,
         batchHeader: true,
       },
       {
         method: 'POST',
-        pathname: '/api/v1/world/source-knowledge/sync?scene=global&batch=1',
-        timeoutMs: 90000,
+        pathname: '/api/v1/world/livebench/sync?scene=global&batch=1',
+        timeoutMs: 120000,
         critical: false,
         batchHeader: true,
       },
@@ -534,10 +679,11 @@ async function warmWorldCaches(args) {
         critical: false,
         batchHeader: false,
       },
-    );
+    ];
+    heavyEndpoints = selectRotatingHeavyEndpoints(heavyEndpointPool, args.heavyBatchSize);
   }
   const snapshotBatchHeader = args.includeHeavyWorldSync;
-  endpoints.push(
+  const snapshotEndpoints = [
     {
       method: 'GET',
       pathname: '/api/v1/world/livebench/questions?scene=global&limit=500',
@@ -573,14 +719,26 @@ async function warmWorldCaches(args) {
     {
       method: 'GET',
       pathname: '/api/v1/world/asean?limit=80&fresh=1',
-      timeoutMs: 60000,
+      timeoutMs: 15000,
       critical: false,
       batchHeader: snapshotBatchHeader,
       snapshot: { scene: 'asean', key: 'topic' },
     },
-  );
+  ];
   const results = [];
-  for (const endpoint of endpoints) {
+  const runEndpoint = async (endpoint) => {
+    if (signal?.aborted) {
+      return {
+        path: endpoint.pathname,
+        method: endpoint.method,
+        ok: false,
+        status: null,
+        duration_ms: 0,
+        error: abortMessage(signal),
+        canceled: true,
+        critical: endpoint.critical,
+      };
+    }
     const result = await callWorldEndpoint(
       args.worldBaseUrl,
       endpoint.method,
@@ -588,23 +746,73 @@ async function warmWorldCaches(args) {
       endpoint.timeoutMs,
       endpoint.snapshot,
       Boolean(endpoint.batchHeader),
+      signal,
+      runId,
     );
-    results.push({
+    const recorded = {
       ...result,
       critical: endpoint.critical,
-    });
+    };
     append(
       outPath,
       `[${nowIso()}] world warm ${endpoint.method} ${endpoint.pathname} status=${result.status ?? 'ERR'} duration=${
         result.duration_ms
       }ms snapshot=${result.snapshot_written ? result.snapshot_key : '-'}\n`,
     );
+    return recorded;
+  };
+
+  // Heavy cache mutations share large files and remain serialized. Read-only
+  // snapshots are bounded-concurrent so independent scenes do not inherit the
+  // sum of every timeout.
+  const workerResets = [];
+  for (const endpoint of heavyEndpoints) {
+    if (signal?.aborted) break;
+    const result = await runEndpoint(endpoint);
+    results.push(result);
+    if (result.timed_out && !signal?.aborted) {
+      workerResets.push(await resetManagedWorker(args.worldBaseUrl, `endpoint-timeout:${result.path}`, signal));
+    }
+  }
+
+  let cursor = 0;
+  const snapshotResults = [];
+  const concurrency = Math.min(snapshotEndpoints.length, Math.max(1, args.endpointConcurrency));
+  const workers = Array.from({ length: concurrency }, async () => {
+    while (cursor < snapshotEndpoints.length && !signal?.aborted) {
+      const endpoint = snapshotEndpoints[cursor];
+      cursor += 1;
+      const result = await runEndpoint(endpoint);
+      snapshotResults.push(result);
+      results.push(result);
+    }
+  });
+  await Promise.all(workers);
+
+  const timedOutSnapshots = snapshotResults.filter((result) => result.timed_out);
+  if (timedOutSnapshots.length && !signal?.aborted) {
+    workerResets.push(
+      await resetManagedWorker(
+        args.worldBaseUrl,
+        `snapshot-timeouts:${timedOutSnapshots.map((result) => result.path).join(',')}`,
+        signal,
+      ),
+    );
+  }
+
+  if (signal?.aborted) {
+    for (const endpoint of [...heavyEndpoints, ...snapshotEndpoints]) {
+      if (results.some((result) => result.path === endpoint.pathname)) continue;
+      results.push(await runEndpoint(endpoint));
+    }
   }
   return {
     skipped: false,
     base_url: args.worldBaseUrl,
     ok: results.filter((item) => item.critical).every((item) => item.ok),
     degraded: results.some((item) => !item.ok),
+    heavy_endpoint_paths: heavyEndpoints.map((endpoint) => endpoint.pathname),
+    worker_resets: workerResets,
     endpoints: results,
   };
 }
@@ -646,7 +854,7 @@ function classifyRuntimeFailures(governance) {
   return byKind;
 }
 
-async function runSourceRefreshRemediation(args, warmStatus) {
+async function runSourceRefreshRemediation(args, warmStatus, signal, runId) {
   const remediation = {
     checked_at: nowIso(),
     ok: true,
@@ -667,6 +875,8 @@ async function runSourceRefreshRemediation(args, warmStatus) {
       45000,
       null,
       true,
+      signal,
+      runId,
     );
     status = await callWorldEndpoint(
       args.worldBaseUrl,
@@ -675,6 +885,8 @@ async function runSourceRefreshRemediation(args, warmStatus) {
       15000,
       { scene: 'global', key: 'source_status_after_remediation_check' },
       false,
+      signal,
+      runId,
     );
     remediation.actions.push({ action: 'governance-check', ok: governance.ok, status: governance.status });
     remediation.actions.push({ action: 'source-status-check', ok: status.ok, status: status.status });
@@ -685,9 +897,10 @@ async function runSourceRefreshRemediation(args, warmStatus) {
 
   let governancePayload = null;
   try {
+    if (signal?.aborted) throw createAbortError(abortMessage(signal));
     const response = await fetch(`${args.worldBaseUrl}/api/v1/world/source-knowledge/governance`, {
       headers: { Accept: 'application/json', 'x-world-batch-refresh': '1' },
-      signal: AbortSignal.timeout(45000),
+      signal: combineAbortSignals([signal, AbortSignal.timeout(45000)]),
     });
     governancePayload = response.ok ? await response.json() : null;
   } catch {
@@ -701,6 +914,8 @@ async function runSourceRefreshRemediation(args, warmStatus) {
     '/api/v1/world/source-knowledge/status?scene=global&fresh=1',
     45000,
     true,
+    signal,
+    runId,
   );
   const sourceFreshnessCheckFailed = !sourceStatusPayload.ok || !sourceStatusPayload.data;
   if (!sourceFreshnessCheckFailed) {
@@ -739,11 +954,22 @@ async function runSourceRefreshRemediation(args, warmStatus) {
 
   const needsSync =
     !sourceStatusBusy &&
-    (remediation.runtime_failure_count > 0 ||
-      Boolean(remediation.shrink_guard) ||
+    (Boolean(remediation.shrink_guard) ||
       sourceFreshnessCheckFailed ||
-      Boolean(remediation.source_freshness?.stale) ||
-      warmStatus?.ok === false);
+      Boolean(remediation.source_freshness?.stale));
+  if (
+    !needsSync &&
+    remediation.runtime_failure_count > 0 &&
+    remediation.source_freshness?.freshness_status === 'fresh'
+  ) {
+    remediation.actions.push({
+      action: 'defer-runtime-failure-resync',
+      ok: true,
+      reason: 'latest-signal-is-fresh',
+      runtime_failure_count: remediation.runtime_failure_count,
+    });
+    remediation.notes.push('存在单源运行失败，但最新有效信号仍新鲜；等待失败源冷却后轮转重试，不重复触发全量同步。');
+  }
   if (needsSync) {
     const syncResult = await callWorldEndpoint(
       args.worldBaseUrl,
@@ -752,6 +978,8 @@ async function runSourceRefreshRemediation(args, warmStatus) {
       120000,
       { scene: 'global', key: 'source_sync_after_remediation' },
       true,
+      signal,
+      runId,
     );
     remediation.actions.push({
       action: 'source-knowledge-sync',
@@ -766,6 +994,13 @@ async function runSourceRefreshRemediation(args, warmStatus) {
           ? 'shrunken-refresh-or-runtime-failure'
           : 'runtime-failure',
     });
+    if (syncResult.timed_out && !signal?.aborted) {
+      remediation.worker_reset = await resetManagedWorker(
+        args.worldBaseUrl,
+        'remediation-source-knowledge-timeout',
+        signal,
+      );
+    }
     remediation.ok = remediation.ok && syncResult.ok;
     if (syncResult.ok) {
       const afterSyncStatus = await fetchWorldJson(
@@ -773,6 +1008,8 @@ async function runSourceRefreshRemediation(args, warmStatus) {
         '/api/v1/world/source-knowledge/status?scene=global&fresh=1',
         45000,
         true,
+        signal,
+        runId,
       );
       const afterFreshness = afterSyncStatus.ok && afterSyncStatus.data ? summarizeSourceFreshness(afterSyncStatus.data) : null;
       remediation.actions.push({
@@ -809,54 +1046,161 @@ async function runSourceRefreshRemediation(args, warmStatus) {
   return remediation;
 }
 
+const lifecycleController = new AbortController();
+
+function requestShutdown(signalName) {
+  if (lifecycleController.signal.aborted) return;
+  lifecycleController.abort(createAbortError(`Refresh process received ${signalName}`));
+}
+
+process.once('SIGINT', () => requestShutdown('SIGINT'));
+process.once('SIGTERM', () => requestShutdown('SIGTERM'));
+
 async function runOnce(args) {
-  args = await resolveWorldBaseUrl(args);
   const startedAt = nowIso();
   const reportDate = startedAt.slice(0, 10);
-  const baseStatus = {
+  const runId = createRunId();
+  const deadlineMs = Math.max(1, Number(args.timeoutMinutes) || 20) * 60_000;
+  const deadlineAt = new Date(Date.now() + deadlineMs).toISOString();
+  const lock = acquireFileLock(lockPath, {
+    runId,
+    staleAfterMs: deadlineMs + 5 * 60_000,
+    metadata: { trigger: args.trigger, deadline_at: deadlineAt },
+  });
+  if (!lock.acquired) {
+    append(
+      outPath,
+      `[${startedAt}] source refresh skipped because run ${lock.lock?.run_id || 'unknown'} already owns the lock\n`,
+    );
+    return {
+      kind: 'world-source-refresh',
+      run_id: runId,
+      state: 'running',
+      reused: true,
+      reason: 'already-running',
+      existing_run_id: lock.lock?.run_id || null,
+      started_at: startedAt,
+      finished_at: startedAt,
+      ok: true,
+      running: true,
+    };
+  }
+
+  const status = {
     kind: 'world-source-refresh',
+    run_id: runId,
+    trigger: args.trigger,
+    state: 'queued',
+    queued_at: startedAt,
     started_at: startedAt,
+    deadline_at: deadlineAt,
+    heartbeat_at: startedAt,
     finished_at: null,
     ok: false,
-    running: true,
+    running: false,
     timed_out: false,
+    canceled: false,
     exit_code: null,
+    error_code: null,
     duration_ms: null,
     report_date: reportDate,
     command: ['node', 'scripts/world-source-refresh.mjs'],
-    world_base_url: args.worldBaseUrl,
-    world_base_url_probe: args.worldBaseUrlProbe || null,
+    world_base_url: args.worldBaseUrl || null,
+    world_base_url_probe: null,
     outputs: collectOutputs(reportDate),
   };
-  await writeStatusWithMonitor(baseStatus);
-  append(outPath, `\n[${startedAt}] WorldWeave runtime refresh start\n`);
-
-  let exitCode = 0;
-  let timedOut = false;
-
-  const sourceFinishedAt = nowIso();
-  const directoryCandidateRefresh = refreshDirectoryCandidates(reportDate);
-  const status = {
-    ...baseStatus,
-    source_finished_at: sourceFinishedAt,
-    finished_at: sourceFinishedAt,
-    ok: exitCode === 0 && !timedOut,
-    running: false,
-    timed_out: timedOut,
-    exit_code: exitCode,
-    duration_ms: new Date(sourceFinishedAt).getTime() - new Date(startedAt).getTime(),
-    outputs: collectOutputs(reportDate),
-    directory_candidate_refresh: directoryCandidateRefresh,
-  };
-  status.world_cache_refresh = await warmWorldCaches(args);
-  status.self_healing = await runSourceRefreshRemediation(args, status.world_cache_refresh);
-  const finishedAt = nowIso();
-  status.finished_at = finishedAt;
-  status.duration_ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
-  status.ok = status.ok && (status.world_cache_refresh.skipped || status.world_cache_refresh.ok !== false);
-  status.ok = status.ok && status.self_healing.ok !== false;
   await writeStatusWithMonitor(status);
-  append(outPath, `\n[${finishedAt}] source refresh finish ok=${status.ok} exit=${exitCode} timed_out=${timedOut}\n`);
+  status.state = 'running';
+  status.running = true;
+  status.heartbeat_at = nowIso();
+  await writeStatusWithMonitor(status);
+  append(outPath, `\n[${startedAt}] WorldWeave runtime refresh start\n`);
+  const heartbeatTimer = setInterval(() => {
+    if (!status.running) return;
+    status.heartbeat_at = nowIso();
+    writeStatus(status);
+  }, 15_000);
+  heartbeatTimer.unref?.();
+
+  try {
+    await withDeadline(
+      async (signal) => {
+        args = await resolveWorldBaseUrl(args, signal);
+        if (signal?.aborted) throw createAbortError(abortMessage(signal));
+        status.world_base_url = args.worldBaseUrl;
+        status.world_base_url_probe = args.worldBaseUrlProbe || null;
+        status.heartbeat_at = nowIso();
+        status.directory_candidate_refresh = refreshDirectoryCandidates(reportDate);
+        status.source_finished_at = nowIso();
+        status.outputs = collectOutputs(reportDate);
+        status.heartbeat_at = nowIso();
+        status.world_cache_refresh = await warmWorldCaches(args, signal, runId);
+        if (signal?.aborted) throw createAbortError(abortMessage(signal));
+        status.heartbeat_at = nowIso();
+        status.self_healing = await runSourceRefreshRemediation(args, status.world_cache_refresh, signal, runId);
+        if (signal?.aborted) throw createAbortError(abortMessage(signal));
+        if (ownsManagedWorker(args.worldBaseUrl)) {
+          status.final_worker_health = await probeManagedWorkerHealth(args.worldBaseUrl, signal);
+          if (!status.final_worker_health.ok) {
+            status.final_worker_recovery = await resetManagedWorker(
+              args.worldBaseUrl,
+              `final-health-check:${runId}`,
+              signal,
+            );
+            status.final_worker_health_after_recovery = await probeManagedWorkerHealth(args.worldBaseUrl, signal);
+          }
+        }
+      },
+      deadlineMs,
+      {
+        signal: lifecycleController.signal,
+        message: `World source refresh deadline exceeded after ${args.timeoutMinutes} minutes`,
+      },
+    );
+    const cacheOk = status.world_cache_refresh?.skipped || status.world_cache_refresh?.ok !== false;
+    const remediationOk = status.self_healing?.ok !== false;
+    status.ok = Boolean(cacheOk && remediationOk);
+    status.state = status.ok && !status.world_cache_refresh?.degraded ? 'success' : 'degraded';
+    status.exit_code = status.ok ? 0 : 2;
+    status.error_code = status.ok ? null : 'REFRESH_DEGRADED';
+  } catch (error) {
+    const canceled = lifecycleController.signal.aborted;
+    const timedOut = isAbortError(error) && !canceled;
+    status.ok = false;
+    status.canceled = canceled;
+    status.timed_out = timedOut;
+    status.state = timedOut ? 'timed_out' : canceled ? 'canceled' : 'failed';
+    status.exit_code = timedOut ? 124 : canceled ? 130 : 1;
+    status.error_code = timedOut ? 'DEADLINE_EXCEEDED' : canceled ? 'CANCELED' : 'REFRESH_FAILED';
+    status.error = error instanceof Error ? error.message : String(error);
+    append(errPath, `\n[${nowIso()}] source refresh ${status.state}: ${status.error}\n`);
+    if (timedOut) {
+      status.deadline_exceeded_at = nowIso();
+      writeStatus(status);
+      status.worker_reset_after_deadline = await resetManagedWorker(
+        args.worldBaseUrl,
+        `run-deadline:${runId}`,
+        undefined,
+      ).catch((resetError) => ({
+        attempted: true,
+        ok: false,
+        reason: resetError instanceof Error ? resetError.message : String(resetError),
+      }));
+    }
+  } finally {
+    clearInterval(heartbeatTimer);
+    const finishedAt = nowIso();
+    status.running = false;
+    status.finished_at = finishedAt;
+    status.heartbeat_at = finishedAt;
+    status.duration_ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
+    await writeStatusWithMonitor(status);
+    append(
+      outPath,
+      `\n[${finishedAt}] source refresh finish state=${status.state} ok=${status.ok} exit=${status.exit_code} timed_out=${status.timed_out}\n`,
+    );
+    lock.release();
+  }
   return status;
 }
 
@@ -865,6 +1209,7 @@ async function main() {
   const dailySlots = parseDailySlots(args.dailySlots);
 
   do {
+    if (lifecycleController.signal.aborted) break;
     try {
       await runOnce(args);
     } catch (error) {
@@ -893,11 +1238,22 @@ async function main() {
         dailySlots.length > 0 ? ` slots=${args.dailySlots} tz=${args.timeZone}` : ` interval=${args.intervalMinutes}`
       }\n`,
     );
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    try {
+      await delayWithSignal(waitMs, lifecycleController.signal);
+    } catch (error) {
+      if (!isAbortError(error)) throw error;
+      break;
+    }
   } while (true);
+
+  if (refreshDbPool) await refreshDbPool.end().catch(() => null);
 }
 
 main().catch(async (error) => {
+  if (isAbortError(error) || lifecycleController.signal.aborted) {
+    if (refreshDbPool) await refreshDbPool.end().catch(() => null);
+    return;
+  }
   append(errPath, `\n[${nowIso()}] fatal: ${error instanceof Error ? error.stack || error.message : String(error)}\n`);
   await writeStatusWithMonitor({
     kind: 'world-source-refresh',

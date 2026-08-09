@@ -163,6 +163,8 @@ function sanitizeAseanTopicForClient(topic: Awaited<ReturnType<typeof readAseanT
     title: topic.title,
     summary: topic.summary,
     generated_at: topic.generated_at,
+    page_generated_at: topic.page_generated_at,
+    data_refreshed_at: topic.data_refreshed_at,
     signal_count: signalCount,
     processed_signal_count: signals.length,
     raw_signal_count: topic.raw_signal_count,
@@ -207,7 +209,7 @@ function sanitizeAseanTopicForClient(topic: Awaited<ReturnType<typeof readAseanT
 }
 
 export default async function AseanDemoPage() {
-  const topic = await readAseanTopic();
+  const topic = await readAseanTopic({ cacheOnly: true });
   const clientTopic = sanitizeClientStrings(sanitizeAseanTopicForClient(topic)) as Awaited<ReturnType<typeof readAseanTopic>>;
   return <AseanDemoClient topic={clientTopic} />;
 }

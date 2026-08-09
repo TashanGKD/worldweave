@@ -32,6 +32,8 @@ type AseanMapTopology = {
 
 type AseanDemoTopic = AseanTopicPayload & {
   generated_at: string;
+  page_generated_at?: string;
+  data_refreshed_at?: string | null;
   incremental_search?: {
     enabled: boolean;
     search_ready: boolean;
@@ -86,6 +88,12 @@ type AseanDemoTopic = AseanTopicPayload & {
 type AseanTopicSignal = AseanDemoTopic['signals'][number];
 type AseanTimelineItem = AseanDemoTopic['timeline'][number];
 type AseanDatasetMetricRow = AseanDemoTopic['dataset_metrics'][number];
+type AseanRefreshStatus = {
+  run_id?: string | null;
+  state?: 'idle' | 'queued' | 'running' | 'success' | 'degraded' | 'timed_out' | 'canceled' | 'failed';
+  error?: string | null;
+  reused?: boolean;
+};
 type ResearchSource = {
   title?: string;
   url?: string;
@@ -510,12 +518,31 @@ const CORE_DATA_COLUMNS: Array<{ key: string; label: string; patterns: string[] 
   { key: 'investment', label: '资本流入', patterns: ['FDI净流入'] },
   { key: 'openness', label: '贸易开放', patterns: ['贸易开放度'] },
 ];
+const SHANGHAI_DAY_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Shanghai',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function shanghaiDayIndex(time: number) {
+  const parts = SHANGHAI_DAY_FORMATTER.formatToParts(new Date(time));
+  const value = (type: string) => Number(parts.find((part) => part.type === type)?.value || 0);
+  return Math.floor(Date.UTC(value('year'), value('month') - 1, value('day')) / (24 * 60 * 60 * 1000));
+}
 
 function shortTime(value: string) {
   if (!value) return '待更新';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '待更新';
-  return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleString('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 }
 
 type SignalUrgencyInput = {
@@ -580,17 +607,9 @@ function mapLayerForTopic(topic: AseanTopicKey): Exclude<MapLayerKey, 'routes'> 
 function signalTimeBucket(signal: Pick<AseanTopicSignal, 'published_at'>, referenceTime: number): SignalTimeBucket {
   const publishedTime = new Date(signal.published_at || '').getTime();
   if (!Number.isFinite(publishedTime) || !Number.isFinite(referenceTime)) return 'older';
-  const referenceDate = new Date(referenceTime);
-  const startOfReferenceDay = new Date(
-    referenceDate.getFullYear(),
-    referenceDate.getMonth(),
-    referenceDate.getDate(),
-  ).getTime();
-  const startOfNextDay = startOfReferenceDay + 24 * 60 * 60 * 1000;
-  if (publishedTime >= startOfReferenceDay && publishedTime < startOfNextDay) return 'today';
-  if (publishedTime >= startOfReferenceDay - 29 * 24 * 60 * 60 * 1000 && publishedTime < startOfNextDay) {
-    return 'recent30';
-  }
+  const dayDelta = shanghaiDayIndex(referenceTime) - shanghaiDayIndex(publishedTime);
+  if (dayDelta === 0) return 'today';
+  if (dayDelta > 0 && dayDelta <= 29) return 'recent30';
   return 'older';
 }
 
@@ -2623,14 +2642,14 @@ function AseanMap({
   const [visibleMapLayers, setVisibleMapLayers] = useState<Set<MapLayerKey>>(() => new Set(DEFAULT_MAP_LAYERS));
   const [mapTimeScope, setMapTimeScope] = useState<MapTimeScope>('recent30');
   const mapReferenceTime = useMemo(() => {
-    const generatedTime = new Date(topic.generated_at || '').getTime();
+    const generatedTime = new Date(topic.data_refreshed_at || topic.generated_at || '').getTime();
     if (Number.isFinite(generatedTime)) return generatedTime;
     const latestSignalTime = topic.signals.reduce((latest, signal) => {
       const publishedTime = new Date(signal.published_at || '').getTime();
       return Number.isFinite(publishedTime) ? Math.max(latest, publishedTime) : latest;
     }, 0);
     return latestSignalTime;
-  }, [topic.generated_at, topic.signals]);
+  }, [topic.data_refreshed_at, topic.generated_at, topic.signals]);
   const countryCounts = useMemo(() => {
     if (activeIssue === 'all') {
       return new Map(topic.country_counts.map((country) => [country.label, country.count]));
@@ -2850,6 +2869,8 @@ export default function AseanDemoClient({ topic }: { topic: AseanDemoTopic }) {
   const [decisionModel, setDecisionModel] = useState<AseanDecisionModelResult | null>(null);
   const [decisionLoading, setDecisionLoading] = useState(false);
   const [decisionError, setDecisionError] = useState('');
+  const [dataRefreshPending, setDataRefreshPending] = useState(false);
+  const [dataRefreshStatus, setDataRefreshStatus] = useState<AseanRefreshStatus | null>(null);
   const researchAbortRef = useRef<AbortController | null>(null);
   const researchDialogRef = useRef<HTMLDivElement | null>(null);
   const researchInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -2962,6 +2983,51 @@ export default function AseanDemoClient({ topic }: { topic: AseanDemoTopic }) {
   useEffect(() => {
     void loadDecisionModel(false);
   }, []);
+
+  const startDataRefresh = async () => {
+    if (dataRefreshPending) return;
+    setDataRefreshPending(true);
+    try {
+      const response = await fetch('/api/v1/world/asean/refresh', {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(5_000),
+      });
+      const submitted = (await response.json().catch(() => ({}))) as AseanRefreshStatus;
+      if (!response.ok) throw new Error(submitted.error || '数据刷新提交失败');
+      setDataRefreshStatus(submitted);
+      for (let attempt = 0; attempt < 65; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 2_000));
+        const statusResponse = await fetch('/api/v1/world/asean/refresh', {
+          headers: { Accept: 'application/json' },
+          signal: AbortSignal.timeout(5_000),
+        });
+        const status = (await statusResponse.json().catch(() => ({}))) as AseanRefreshStatus;
+        if (!statusResponse.ok) throw new Error(status.error || '数据刷新状态读取失败');
+        setDataRefreshStatus(status);
+        if (status.state === 'success' || status.state === 'degraded') {
+          window.location.reload();
+          return;
+        }
+        if (status.state === 'timed_out' || status.state === 'canceled' || status.state === 'failed') return;
+      }
+      setDataRefreshStatus((current) => ({ ...current, state: 'timed_out', error: '状态轮询超过 130 秒' }));
+    } catch (error) {
+      setDataRefreshStatus({ state: 'failed', error: error instanceof Error ? error.message : '数据刷新失败' });
+    } finally {
+      setDataRefreshPending(false);
+    }
+  };
+
+  const dataRefreshLabel = dataRefreshPending
+    ? dataRefreshStatus?.state === 'running'
+      ? '后台更新中'
+      : '已排队'
+    : dataRefreshStatus?.state === 'timed_out'
+      ? '更新超时'
+      : dataRefreshStatus?.state === 'failed'
+        ? '重试更新'
+        : '更新数据';
 
   const runResearch = async () => {
     const content = researchInput.trim();
@@ -3168,6 +3234,16 @@ export default function AseanDemoClient({ topic }: { topic: AseanDemoTopic }) {
         <nav className={styles.viewSwitch} aria-label="世界脉络视图切换">
           <a href={worldHomeHref('geo-politics-daily')}>整体态势</a>
           <a href={worldMountedHref('/demo/asean')} aria-current="page">东盟专题</a>
+          <button
+            type="button"
+            onClick={() => void startDataRefresh()}
+            disabled={dataRefreshPending}
+            aria-live="polite"
+            title={dataRefreshStatus?.error || '提交后台刷新；当前页面继续使用最后有效缓存'}
+          >
+            <RefreshCw size={13} className={dataRefreshPending ? styles.spinIcon : ''} />
+            {dataRefreshLabel}
+          </button>
         </nav>
       </header>
 
@@ -3203,7 +3279,7 @@ export default function AseanDemoClient({ topic }: { topic: AseanDemoTopic }) {
                     : `${TOPIC_LABELS[activeIssue]}：${activeIssueCount} 条线索，${ISSUE_DESCRIPTIONS[activeIssue]}。`}
               </p>
             </div>
-            <span className={styles.timeBadge}><Timer size={14} />更新 {shortTime(topic.generated_at)}</span>
+            <span className={styles.timeBadge}><Timer size={14} />数据更新 {shortTime(topic.data_refreshed_at || topic.generated_at)}</span>
           </div>
           <div className={styles.mapOverviewGrid}>
             <TimelinePanel timelineItems={timelineItems} visibleTimelineCount={visibleTimelineCount} />

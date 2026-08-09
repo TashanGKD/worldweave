@@ -2,6 +2,13 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import {
+  createLinkedTimeoutSignal,
+  raceAseanAbort,
+  throwIfAseanAborted,
+  writeAseanCacheAtomic,
+  type AseanReadOptions,
+} from './asean-abort';
 import { ASEAN_SOURCE_POOL, type AseanSignalLike, type AseanTopicKey, type AseanTopicSource } from './asean-topic';
 
 export type AseanDatasetMetric = {
@@ -64,12 +71,12 @@ type AseanDatasetMetricCache = {
 const CACHE_FILE = path.join(process.cwd(), '.cache', 'asean-dataset-metric-cache.json');
 const ENABLED = process.env.WORLD_ASEAN_DATASET_METRICS !== '0';
 const CACHE_TTL_MS = Math.max(15, Number(process.env.WORLD_ASEAN_DATASET_METRIC_TTL_MINUTES || 180)) * 60 * 1000;
-const REQUEST_TIMEOUT_MS = Math.min(30000, Math.max(5000, Number(process.env.WORLD_ASEAN_DATASET_METRIC_TIMEOUT_MS || 12000)));
+const REQUEST_TIMEOUT_MS = Math.min(30000, Math.max(5000, Number(process.env.WORLD_ASEAN_DATASET_METRIC_TIMEOUT_MS || 8000)));
 const SOURCE_LIMIT = Math.min(48, Math.max(1, Number(process.env.WORLD_ASEAN_DATASET_METRIC_SOURCE_LIMIT || 36)));
 const METRICS_LIMIT = Math.min(240, Math.max(8, Number(process.env.WORLD_ASEAN_DATASET_METRIC_LIMIT || 220)));
 const SERIES_LIMIT = Math.min(220, Math.max(8, Number(process.env.WORLD_ASEAN_DATASET_SERIES_LIMIT || 160)));
-const FETCH_ATTEMPTS = Math.min(4, Math.max(1, Number(process.env.WORLD_ASEAN_DATASET_FETCH_ATTEMPTS || 3)));
-const FETCH_CONCURRENCY = Math.min(8, Math.max(1, Number(process.env.WORLD_ASEAN_DATASET_FETCH_CONCURRENCY || 2)));
+const FETCH_ATTEMPTS = Math.min(4, Math.max(1, Number(process.env.WORLD_ASEAN_DATASET_FETCH_ATTEMPTS || 2)));
+const FETCH_CONCURRENCY = Math.min(8, Math.max(1, Number(process.env.WORLD_ASEAN_DATASET_FETCH_CONCURRENCY || 4)));
 const INCLUDE_EXTENDED_DATASETS = process.env.WORLD_ASEAN_INCLUDE_EXTENDED_DATASETS === '1';
 const EXTENDED_DATASET_SOURCE = /Our World in Data|Philippines PSA|Open Development Cambodia|USGS|Malaysia OpenAPI Electricity Supply|Malaysia OpenAPI Electricity Consumption|Malaysia OpenAPI Industrial Production/i;
 const CORE_ENERGY_DATASET_SOURCE = /Our World in Data Energy Dataset|Malaysia OpenAPI Electricity Supply|Malaysia OpenAPI Electricity Consumption/i;
@@ -290,55 +297,63 @@ async function readCache(): Promise<AseanDatasetMetricCache | null> {
   }
 }
 
-async function writeCache(cache: AseanDatasetMetricCache) {
+async function writeCache(cache: AseanDatasetMetricCache, signal?: AbortSignal) {
   await fs.mkdir(path.dirname(CACHE_FILE), { recursive: true });
-  await fs.writeFile(CACHE_FILE, `${JSON.stringify(publicCache(cache), null, 2)}\n`, 'utf-8');
+  await writeAseanCacheAtomic(CACHE_FILE, `${JSON.stringify(publicCache(cache), null, 2)}\n`, signal);
 }
 
-async function fetchJson(source: AseanTopicSource): Promise<unknown | null> {
+async function fetchJson(source: AseanTopicSource, signal?: AbortSignal): Promise<unknown | null> {
   for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    throwIfAseanAborted(signal);
+    const timeout = createLinkedTimeoutSignal(signal, REQUEST_TIMEOUT_MS, `ASEAN dataset ${source.name}`);
     try {
       const response = await fetch(source.url, {
         headers: {
           Accept: 'application/json, */*',
           'User-Agent': 'WorldWeaveAseanDataset/0.1',
         },
-        signal: controller.signal,
+        signal: timeout.signal,
       });
       if (response.ok) return response.json();
       if (response.status < 500 && response.status !== 429) return null;
     } catch {
+      throwIfAseanAborted(signal);
       // Transient resets are common on public data APIs under bursty polling; retry below.
     } finally {
-      clearTimeout(timer);
+      timeout.dispose();
     }
-    if (attempt < FETCH_ATTEMPTS) await sleep(250 * attempt);
+    if (attempt < FETCH_ATTEMPTS) {
+      await sleep(250 * attempt);
+      throwIfAseanAborted(signal);
+    }
   }
   return null;
 }
 
-async function fetchText(source: AseanTopicSource): Promise<string | null> {
+async function fetchText(source: AseanTopicSource, signal?: AbortSignal): Promise<string | null> {
   for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    throwIfAseanAborted(signal);
+    const timeout = createLinkedTimeoutSignal(signal, REQUEST_TIMEOUT_MS, `ASEAN dataset ${source.name}`);
     try {
       const response = await fetch(source.url, {
         headers: {
           Accept: 'text/csv, text/plain, */*',
           'User-Agent': 'WorldWeaveAseanDataset/0.1',
         },
-        signal: controller.signal,
+        signal: timeout.signal,
       });
       if (response.ok) return response.text();
       if (response.status < 500 && response.status !== 429) return null;
     } catch {
+      throwIfAseanAborted(signal);
       // Retry transient public data errors.
     } finally {
-      clearTimeout(timer);
+      timeout.dispose();
     }
-    if (attempt < FETCH_ATTEMPTS) await sleep(250 * attempt);
+    if (attempt < FETCH_ATTEMPTS) {
+      await sleep(250 * attempt);
+      throwIfAseanAborted(signal);
+    }
   }
   return null;
 }
@@ -1030,10 +1045,15 @@ function selectedSources() {
     .slice(0, SOURCE_LIMIT);
 }
 
-async function forEachSourceWithConcurrency<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
+async function forEachSourceWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+  signal?: AbortSignal,
+) {
   let cursor = 0;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (cursor < items.length) {
+    while (cursor < items.length && !signal?.aborted) {
       const index = cursor;
       cursor += 1;
       await worker(items[index]);
@@ -1067,7 +1087,7 @@ function metricToSignal(metric: AseanDatasetMetric): AseanSignalLike {
   };
 }
 
-async function refreshMetrics(cache: AseanDatasetMetricCache | null, nowIso: string) {
+async function refreshMetrics(cache: AseanDatasetMetricCache | null, nowIso: string, signal?: AbortSignal) {
   const sources = selectedSources();
   let fetchedCount = 0;
   let failedCount = 0;
@@ -1078,7 +1098,8 @@ async function refreshMetrics(cache: AseanDatasetMetricCache | null, nowIso: str
     sources,
     FETCH_CONCURRENCY,
     async (source) => {
-      const payload = source.source_type === 'csv' ? await fetchText(source) : await fetchJson(source);
+      throwIfAseanAborted(signal);
+      const payload = source.source_type === 'csv' ? await fetchText(source, signal) : await fetchJson(source, signal);
       if (!payload) {
         failedCount += 1;
         sourceHealth.push({
@@ -1109,9 +1130,20 @@ async function refreshMetrics(cache: AseanDatasetMetricCache | null, nowIso: str
         checked_at: nowIso,
       });
     },
+    signal,
   );
-  const failedSourceNames = new Set(sourceHealth.filter((source) => !source.fetched).map((source) => source.source_name));
-  const failedSourceUrls = new Set(sourceHealth.filter((source) => !source.fetched).map((source) => source.source_url));
+  throwIfAseanAborted(signal);
+  if (fetchedCount === 0) {
+    return cache || {
+      version: 1 as const,
+      refreshed_at: new Date(0).toISOString(),
+      metrics: [],
+      series: [],
+      source_health: sourceHealth,
+    };
+  }
+  const failedSourceNames = new Set(sourceHealth.filter((source) => source.status !== 'ok').map((source) => source.source_name));
+  const failedSourceUrls = new Set(sourceHealth.filter((source) => source.status !== 'ok').map((source) => source.source_url));
   const preservedMetrics = (cache?.metrics || []).filter((metric) => failedSourceNames.has(metric.source_name) || failedSourceUrls.has(metric.source_url));
   const preservedSeries = (cache?.series || []).filter((item) => failedSourceNames.has(item.source_name) || failedSourceUrls.has(item.source_url));
   const metricById = new Map<string, AseanDatasetMetric>();
@@ -1126,6 +1158,9 @@ async function refreshMetrics(cache: AseanDatasetMetricCache | null, nowIso: str
     })
     .slice(0, METRICS_LIMIT);
   const nextSeries = Array.from(seriesById.values()).slice(0, SERIES_LIMIT);
+  if (cache?.metrics.length && nextMetrics.length < Math.max(8, Math.floor(cache.metrics.length * 0.5))) {
+    return cache;
+  }
   const nextCache: AseanDatasetMetricCache = {
     version: 1,
     refreshed_at: nowIso,
@@ -1140,25 +1175,34 @@ async function refreshMetrics(cache: AseanDatasetMetricCache | null, nowIso: str
       failed_count: failedCount,
     },
   };
-  await writeCache(nextCache);
+  await writeCache(nextCache, signal);
   return nextCache;
 }
 
-export async function readAseanDatasetMetricState(options: { force?: boolean } = {}) {
+let refreshInFlight: Promise<AseanDatasetMetricCache> | null = null;
+
+export async function readAseanDatasetMetricState(options: AseanReadOptions = {}) {
   const cache = await readCache();
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
   const cacheAge = cache ? now - new Date(cache.refreshed_at).getTime() : Infinity;
+  const shouldRefresh =
+    ENABLED && !options.cacheOnly && (options.force || !cache || !Number.isFinite(cacheAge) || cacheAge >= CACHE_TTL_MS);
+  if (shouldRefresh && !refreshInFlight) {
+    refreshInFlight = raceAseanAbort(refreshMetrics(cache, nowIso, options.signal), options.signal).finally(() => {
+      refreshInFlight = null;
+    });
+  }
   const nextCache =
-    ENABLED && (options.force || !cache || !Number.isFinite(cacheAge) || cacheAge >= CACHE_TTL_MS)
-      ? await refreshMetrics(cache, nowIso)
+    shouldRefresh
+      ? await refreshInFlight!
       : cache || {
           version: 1 as const,
-          refreshed_at: nowIso,
+          refreshed_at: new Date(0).toISOString(),
           metrics: [],
           source_health: [],
           latest_run: {
-            refreshed_at: nowIso,
+            refreshed_at: new Date(0).toISOString(),
             source_count: 0,
             fetched_count: 0,
             metric_count: 0,

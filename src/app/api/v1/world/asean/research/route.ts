@@ -244,45 +244,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'question is required' }, { status: 400 });
     }
     const config = getAseanDeepResearchConfig();
-    const context = await buildAseanResearchContext();
     const wantsStream = request.headers.get('accept')?.includes('text/event-stream') || new URL(request.url).searchParams.get('stream') === '1';
-    if (!config.configured) {
-      const unavailablePayload = {
-        error: '研究服务暂未就绪，请稍后重试',
-        generated_at: new Date().toISOString(),
-        question,
-        context_generated_at: context.generated_at,
-        source_summary: publicSourceSummary(context.source_summary),
-        validation_summary: context.validation_summary,
-      };
-      if (wantsStream) {
-        const encoder = new TextEncoder();
-        return new Response(
-          new ReadableStream({
-            start(controller) {
-              controller.enqueue(encoder.encode(toSse('error', unavailablePayload)));
-              controller.close();
-            },
-          }),
-          {
-            headers: {
-              'Cache-Control': 'no-store, max-age=0',
-              'Content-Type': 'text/event-stream; charset=utf-8',
-              Connection: 'keep-alive',
-              'X-Accel-Buffering': 'no',
-            },
-          },
-        );
-      }
-      return NextResponse.json(unavailablePayload, { status: 503, headers: { 'Cache-Control': 'no-store, max-age=0' } });
-    }
-    const messages = body.messages.length
-      ? buildAseanDeepResearchConversation({ messages: body.messages, context_text: context.context_text })
-      : buildAseanDeepResearchMessages({
-          question,
-          clarification: body.clarification || null,
-          context_text: context.context_text,
-        });
     if (wantsStream) {
       const encoder = new TextEncoder();
       return new Response(
@@ -317,7 +279,15 @@ export async function POST(request: Request) {
               clearInterval(heartbeat);
               controller.close();
             };
+            let context: Awaited<ReturnType<typeof buildAseanResearchContext>> | null = null;
             try {
+              send('phase', {
+                type: 'phase',
+                status: 'running',
+                phase: '准备上下文',
+                message: '正在读取已缓存的公开来源',
+              });
+              context = await buildAseanResearchContext();
               send('meta', {
                 generated_at: new Date().toISOString(),
                 question,
@@ -326,12 +296,31 @@ export async function POST(request: Request) {
                 validation_summary: context.validation_summary,
                 context_sources: context.context_sources,
               });
+              if (!config.configured) {
+                send('error', {
+                  error: '研究服务暂未就绪，请稍后重试',
+                  generated_at: new Date().toISOString(),
+                  question,
+                  context_generated_at: context.generated_at,
+                  source_summary: publicSourceSummary(context.source_summary),
+                  validation_summary: context.validation_summary,
+                });
+                close();
+                return;
+              }
               send('phase', {
                 type: 'phase',
                 status: 'running',
                 phase: '关联来源',
                 message: '正在筛选可用公开来源',
               });
+              const messages = body.messages.length
+                ? buildAseanDeepResearchConversation({ messages: body.messages, context_text: context.context_text })
+                : buildAseanDeepResearchMessages({
+                    question,
+                    clarification: body.clarification || null,
+                    context_text: context.context_text,
+                  });
               const result = await runQwenDeepResearchStream(messages, (event) => {
                 send(event.type, event);
               }, { signal: request.signal });
@@ -346,6 +335,13 @@ export async function POST(request: Request) {
               close();
             } catch (error) {
               if (request.signal.aborted) {
+                close();
+                return;
+              }
+              if (!context) {
+                send('error', {
+                  error: error instanceof Error ? error.message : 'Failed to prepare ASEAN research context',
+                });
                 close();
                 return;
               }
@@ -391,6 +387,27 @@ export async function POST(request: Request) {
         },
       );
     }
+    const context = await buildAseanResearchContext();
+    if (!config.configured) {
+      return NextResponse.json(
+        {
+          error: '研究服务暂未就绪，请稍后重试',
+          generated_at: new Date().toISOString(),
+          question,
+          context_generated_at: context.generated_at,
+          source_summary: publicSourceSummary(context.source_summary),
+          validation_summary: context.validation_summary,
+        },
+        { status: 503, headers: { 'Cache-Control': 'no-store, max-age=0' } },
+      );
+    }
+    const messages = body.messages.length
+      ? buildAseanDeepResearchConversation({ messages: body.messages, context_text: context.context_text })
+      : buildAseanDeepResearchMessages({
+          question,
+          clarification: body.clarification || null,
+          context_text: context.context_text,
+        });
     let result = await runQwenDeepResearch(messages, { signal: request.signal });
     let model = config.model;
     if (!result.content.trim()) {

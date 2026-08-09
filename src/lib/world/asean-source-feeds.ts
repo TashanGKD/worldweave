@@ -2,6 +2,14 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import {
+  createLinkedTimeoutSignal,
+  mapAseanWithConcurrency,
+  raceAseanAbort,
+  throwIfAseanAborted,
+  writeAseanCacheAtomic,
+  type AseanReadOptions,
+} from './asean-abort';
 import { ASEAN_SOURCE_POOL, type AseanSignalLike, type AseanTopicKey } from './asean-topic';
 
 type AseanFeedCacheItem = {
@@ -43,6 +51,7 @@ const CACHE_TTL_MS = Math.max(5, Number(process.env.WORLD_ASEAN_SOURCE_FEED_TTL_
 const REQUEST_TIMEOUT_MS = Math.min(30000, Math.max(5000, Number(process.env.WORLD_ASEAN_SOURCE_FEED_TIMEOUT_MS || 15000)));
 const PER_SOURCE_LIMIT = Math.min(6, Math.max(1, Number(process.env.WORLD_ASEAN_SOURCE_FEED_PER_SOURCE_LIMIT || 3)));
 const SOURCE_LIMIT = Math.min(24, Math.max(1, Number(process.env.WORLD_ASEAN_SOURCE_FEED_LIMIT || 18)));
+const FETCH_CONCURRENCY = Math.min(8, Math.max(1, Number(process.env.WORLD_ASEAN_SOURCE_FEED_CONCURRENCY || 4)));
 
 function compactText(value: string, max = 260) {
   const normalized = value
@@ -158,9 +167,9 @@ async function readCache(): Promise<AseanFeedCache | null> {
   }
 }
 
-async function writeCache(cache: AseanFeedCache) {
+async function writeCache(cache: AseanFeedCache, signal?: AbortSignal) {
   await fs.mkdir(path.dirname(CACHE_FILE), { recursive: true });
-  await fs.writeFile(CACHE_FILE, `${JSON.stringify(cache, null, 2)}\n`, 'utf-8');
+  await writeAseanCacheAtomic(CACHE_FILE, `${JSON.stringify(cache, null, 2)}\n`, signal);
 }
 
 function selectedSources() {
@@ -170,16 +179,19 @@ function selectedSources() {
     .slice(0, SOURCE_LIMIT);
 }
 
-async function fetchSource(source: ReturnType<typeof selectedSources>[number], nowIso: string): Promise<AseanFeedCacheItem[]> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+async function fetchSource(
+  source: ReturnType<typeof selectedSources>[number],
+  nowIso: string,
+  signal?: AbortSignal,
+): Promise<AseanFeedCacheItem[]> {
+  const timeout = createLinkedTimeoutSignal(signal, REQUEST_TIMEOUT_MS, `ASEAN feed ${source.name}`);
   try {
     const response = await fetch(source.url, {
       headers: {
         Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
         'User-Agent': 'WorldWeaveAseanFeed/0.1',
       },
-      signal: controller.signal,
+      signal: timeout.signal,
     });
     if (!response.ok) return [];
     const xml = await response.text();
@@ -203,9 +215,10 @@ async function fetchSource(source: ReturnType<typeof selectedSources>[number], n
         } satisfies AseanFeedCacheItem;
       });
   } catch {
+    throwIfAseanAborted(signal);
     return [];
   } finally {
-    clearTimeout(timer);
+    timeout.dispose();
   }
 }
 
@@ -249,18 +262,24 @@ function toSignal(item: AseanFeedCacheItem): AseanSignalLike {
   };
 }
 
-export async function readAseanSourceFeedSignals(options: { force?: boolean } = {}): Promise<AseanSignalLike[]> {
-  const cache = await readCache();
-  const now = Date.now();
-  const nowIso = new Date(now).toISOString();
-  const cacheAge = cache ? now - new Date(cache.refreshed_at).getTime() : Infinity;
-  if (!ENABLED) return (cache?.items || []).map(toSignal);
-  if (!options.force && cache && Number.isFinite(cacheAge) && cacheAge < CACHE_TTL_MS) {
-    return cache.items.map(toSignal);
-  }
+let refreshInFlight: Promise<AseanFeedCache> | null = null;
 
+async function refreshSourceFeeds(cache: AseanFeedCache | null, nowIso: string, signal?: AbortSignal) {
   const sources = selectedSources();
-  const fetched = (await Promise.all(sources.map((source) => fetchSource(source, nowIso)))).flat();
+  const fetched = (await mapAseanWithConcurrency(
+    sources,
+    FETCH_CONCURRENCY,
+    (source) => fetchSource(source, nowIso, signal),
+    signal,
+  )).flat();
+  throwIfAseanAborted(signal);
+  if (!fetched.length) {
+    return cache || {
+      version: 1 as const,
+      refreshed_at: new Date(0).toISOString(),
+      items: [],
+    };
+  }
   const previousIds = new Set((cache?.items || []).map((item) => item.id));
   const nextItems = mergeItems(cache?.items || [], fetched);
   const nextCache: AseanFeedCache = {
@@ -275,6 +294,26 @@ export async function readAseanSourceFeedSignals(options: { force?: boolean } = 
       new_item_count: fetched.filter((item) => !previousIds.has(item.id)).length,
     },
   };
-  await writeCache(nextCache);
-  return nextItems.map(toSignal);
+  await writeCache(nextCache, signal);
+  return nextCache;
+}
+
+export async function readAseanSourceFeedSignals(options: AseanReadOptions = {}): Promise<AseanSignalLike[]> {
+  const cache = await readCache();
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const cacheAge = cache ? now - new Date(cache.refreshed_at).getTime() : Infinity;
+  if (!ENABLED) return (cache?.items || []).map(toSignal);
+  if (options.cacheOnly) return (cache?.items || []).map(toSignal);
+  if (!options.force && cache && Number.isFinite(cacheAge) && cacheAge < CACHE_TTL_MS) {
+    return cache.items.map(toSignal);
+  }
+
+  if (!refreshInFlight) {
+    refreshInFlight = raceAseanAbort(refreshSourceFeeds(cache, nowIso, options.signal), options.signal).finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  const nextCache = await refreshInFlight;
+  return nextCache.items.map(toSignal);
 }

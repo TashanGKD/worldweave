@@ -102,6 +102,23 @@ const child = spawn(
   },
 );
 
+let stopping = false;
+let stopTimer = null;
+
+function stopServer(signalName) {
+  if (stopping) return;
+  stopping = true;
+  if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+  stopTimer = setTimeout(() => {
+    if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+  }, Math.max(3_000, Number(process.env.WORLD_START_STOP_GRACE_MS || 10_000)));
+  stopTimer.unref?.();
+  process.stderr.write(`[world-start] received ${signalName}; stopping Next.js pid=${child.pid}\n`);
+}
+
+process.once('SIGINT', () => stopServer('SIGINT'));
+process.once('SIGTERM', () => stopServer('SIGTERM'));
+
 fs.mkdirSync(cacheDir, { recursive: true });
 fs.writeFileSync(servicePidFile, `${child.pid ?? ''}\n`, 'utf-8');
 fs.writeFileSync(wrapperPidFile, `${process.pid}\n`, 'utf-8');
@@ -116,7 +133,8 @@ listenerPoll.unref?.();
 
 child.on('exit', (code, signal) => {
   clearInterval(listenerPoll);
-  for (const pidFile of [wrapperPidFile]) {
+  if (stopTimer) clearTimeout(stopTimer);
+  for (const pidFile of [servicePidFile, wrapperPidFile]) {
     try {
       const recordedPid = fs.readFileSync(pidFile, 'utf-8').trim();
       if (recordedPid === String(pidFile === servicePidFile ? child.pid : process.pid)) {
@@ -125,6 +143,10 @@ child.on('exit', (code, signal) => {
     } catch {
       // Ignore cleanup races during process shutdown.
     }
+  }
+  if (stopping) {
+    process.exit(0);
+    return;
   }
   if (signal) {
     process.kill(process.pid, signal);

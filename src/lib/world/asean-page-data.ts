@@ -1,4 +1,5 @@
 import { readAseanDatasetMetricState } from '@/lib/world/asean-dataset-metrics';
+import { withAseanTimeout } from '@/lib/world/asean-abort';
 import { readAseanMetasoSearchStatus, readAseanMetasoSignals, type AseanMetasoSearchStatus } from '@/lib/world/asean-metaso-search';
 import { readAseanPublicRiskSignals } from '@/lib/world/asean-public-risk-events';
 import { readAseanResearchResults } from '@/lib/world/asean-research-results';
@@ -44,6 +45,8 @@ export type ReadAseanTopicOptions = {
   request?: Request;
   limit?: number;
   force?: boolean;
+  cacheOnly?: boolean;
+  signal?: AbortSignal;
 };
 
 function readAseanDashboard() {
@@ -112,6 +115,8 @@ export async function readAseanTopic(
 ): Promise<
   AseanTopicPayload & {
     generated_at: string;
+    page_generated_at: string;
+    data_refreshed_at: string | null;
     incremental_search: AseanMetasoSearchStatus;
     dataset_metric_status: {
       enabled: boolean;
@@ -135,13 +140,72 @@ export async function readAseanTopic(
     .map(sanitizePublicSignal)
     .filter(isPublicEventSignal);
 
-  const metasoSignals = await readAseanMetasoSignals({ force: options.force });
-  const sourceFeedSignals = await readAseanSourceFeedSignals({ force: options.force });
-  const publicRiskSignals = await readAseanPublicRiskSignals({ force: options.force });
-  const datasetMetricState = await readAseanDatasetMetricState({ force: options.force });
+  const [
+    metasoSignals,
+    sourceFeedSignals,
+    publicRiskSignals,
+    datasetMetricState,
+    metasoStatus,
+    recentResearchReports,
+  ] = await Promise.all([
+    withAseanTimeout(
+      (signal) => readAseanMetasoSignals({ force: options.force, cacheOnly: options.cacheOnly, signal }),
+      20_000,
+      [],
+      options.signal,
+      'ASEAN Metaso refresh',
+    ),
+    withAseanTimeout(
+      (signal) => readAseanSourceFeedSignals({ force: options.force, cacheOnly: options.cacheOnly, signal }),
+      20_000,
+      [],
+      options.signal,
+      'ASEAN source feed refresh',
+    ),
+    withAseanTimeout(
+      (signal) => readAseanPublicRiskSignals({ force: options.force, cacheOnly: options.cacheOnly, signal }),
+      20_000,
+      [],
+      options.signal,
+      'ASEAN public risk refresh',
+    ),
+    withAseanTimeout(
+      (signal) => readAseanDatasetMetricState({ force: options.force, cacheOnly: options.cacheOnly, signal }),
+      25_000,
+      {
+        enabled: false,
+        refreshed_at: new Date(0).toISOString(),
+        latest_run: null,
+        source_health: [],
+        metrics: [],
+        series: [],
+        signals: [],
+      },
+      options.signal,
+      'ASEAN dataset refresh',
+    ),
+    withAseanTimeout(
+      () => readAseanMetasoSearchStatus(),
+      5_000,
+      {
+        enabled: false,
+        search_ready: false,
+        keyword_count: 0,
+        signal_count: 0,
+        axis_counts: [],
+        cache_ttl_minutes: 60,
+        refreshed_at: null,
+        latest_run: null,
+      },
+      options.signal,
+      'ASEAN Metaso status',
+    ),
+    withAseanTimeout(() => readAseanResearchResults(6), 5_000, [], options.signal, 'ASEAN research results'),
+  ]);
   const datasetMapSignals = selectDatasetMetricSignals(datasetMetricState.signals);
-  const metasoStatus = await readAseanMetasoSearchStatus();
-  const recentResearchReports = await readAseanResearchResults(6);
+  const refreshTimes = [datasetMetricState.refreshed_at, metasoStatus.refreshed_at]
+    .filter((value): value is string => Boolean(value && Number.isFinite(new Date(value).getTime()) && new Date(value).getTime() > 0))
+    .sort((left, right) => right.localeCompare(left));
   const topicPayload = buildAseanTopic([...signals, ...sourceFeedSignals, ...publicRiskSignals, ...metasoSignals, ...datasetMapSignals], limit, {
     datasetMetrics: datasetMetricState.metrics,
     datasetSourceHealth: datasetMetricState.source_health,
@@ -149,6 +213,8 @@ export async function readAseanTopic(
 
   return publicAseanPayload({
     generated_at: dashboard.generated_at,
+    page_generated_at: dashboard.generated_at,
+    data_refreshed_at: refreshTimes[0] || null,
     incremental_search: {
       ...metasoStatus,
       signal_count: metasoSignals.length,
