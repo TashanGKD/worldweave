@@ -9,6 +9,7 @@ import {
 } from '../scripts/world-source-refresh-endpoints.mjs';
 
 const sourceRefreshScript = readFileSync(join(process.cwd(), 'scripts', 'world-source-refresh.mjs'), 'utf8');
+const worldRuntime = readFileSync(join(process.cwd(), 'src', 'lib', 'world', 'runtime.ts'), 'utf8');
 
 test('world source refresh rebuilds both public dashboard scenes every cycle', () => {
   assert.deepEqual(
@@ -37,4 +38,14 @@ test('world source refresh rotates heavy work and resets its managed worker afte
   assert.match(sourceRefreshScript, /retried_after_worker_reset/);
   assert.match(sourceRefreshScript, /recovered_after_timeout/);
   assert.match(sourceRefreshScript, /final_worker_health_after_recovery/);
+});
+
+test('dashboard snapshots record generated_at after signal refresh work completes', () => {
+  const dashboardStart = worldRuntime.indexOf('export async function getWorldDashboardState(');
+  const dashboardEnd = worldRuntime.indexOf('\nasync function getWorldBriefing(', dashboardStart);
+  const dashboardBody = worldRuntime.slice(dashboardStart, dashboardEnd);
+
+  assert.ok(dashboardBody.indexOf('const signals = await loadSignals(') >= 0);
+  assert.ok(dashboardBody.indexOf('const generated_at = new Date().toISOString();') > dashboardBody.indexOf('const signals = await loadSignals('));
+  assert.ok(dashboardBody.indexOf('const generated_at = new Date().toISOString();') < dashboardBody.indexOf('await persistWorldDashboardSnapshot('));
 });

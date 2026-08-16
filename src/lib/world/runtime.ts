@@ -9931,7 +9931,6 @@ export async function getWorldDashboardState(
   const skipLiveBenchForScene = isTechAiScene || isGeoPoliticsScene;
   const skipOperationalSummariesForScene = isTechAiScene;
   const mapSignalLimit = isGeoPoliticsScene ? GEO_POLITICS_VIEW_LIMIT : WORLD_VIEW_LIMIT;
-  const generated_at = new Date().toISOString();
   const signals = await loadSignals({
     allowExpiredDiskCache: true,
     preferCached: true,
@@ -10101,6 +10100,10 @@ export async function getWorldDashboardState(
         buildDashboardLiveBenchSummary(arena),
         evaluation?.platform_model,
       );
+  // Snapshot freshness is measured against cache-file mtimes. Record the
+  // completion time after signal loading and normalization so a successful
+  // long refresh is not immediately mislabeled as stale.
+  const generated_at = new Date().toISOString();
   const state: WorldDashboardStatePayload = {
     generated_at,
     scene,
