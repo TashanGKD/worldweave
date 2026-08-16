@@ -190,8 +190,8 @@ jobs:
             umask 077
             printf '%s\n' "$DEPLOY_ENV" > .env
 
-            check_egress https://registry.npmjs.org/
-            check_egress https://api.scnet.cn/
+            retry 3 check_egress https://registry.npmjs.org/
+            retry 3 check_egress https://api.scnet.cn/
 
             docker compose config --quiet
             if docker image inspect worldweave:local >/dev/null 2>&1; then

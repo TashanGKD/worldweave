@@ -91,6 +91,8 @@ test('GitHub Actions deploys main with the configured server secrets', () => {
   assert.match(deploy, /docker compose up -d --remove-orphans/)
   assert.match(deploy, /worldweave:rollback/)
   assert.match(deploy, /timeout --signal=TERM --kill-after=30s 60m/)
+  assert.match(deploy, /retry 3 check_egress https:\/\/registry\.npmjs\.org\//)
+  assert.match(deploy, /retry 3 check_egress https:\/\/api\.scnet\.cn\//)
   assert.match(deploy, /check_refresh_egress/)
   assert.match(deploy, /https:\/\/world-monitor\.com\//)
   assert.match(deploy, /\/api\/v1\/world\/asean\/refresh/)
