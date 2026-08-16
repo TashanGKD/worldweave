@@ -657,7 +657,7 @@ async function warmWorldCaches(args, signal, runId) {
     {
       method: 'GET',
       pathname: '/api/v1/world/livebench/questions?scene=global&limit=500',
-      timeoutMs: 15000,
+      timeoutMs: 30000,
       critical: true,
       batchHeader: snapshotBatchHeader,
       snapshot: { scene: 'global', key: 'livebench_questions' },
@@ -665,7 +665,7 @@ async function warmWorldCaches(args, signal, runId) {
     {
       method: 'GET',
       pathname: '/api/v1/world/livebench/evaluation?scene=global',
-      timeoutMs: 15000,
+      timeoutMs: 30000,
       critical: true,
       batchHeader: snapshotBatchHeader,
       snapshot: { scene: 'global', key: 'livebench_evaluation' },
@@ -673,7 +673,7 @@ async function warmWorldCaches(args, signal, runId) {
     {
       method: 'GET',
       pathname: '/api/v1/world/source-knowledge/status?scene=global',
-      timeoutMs: 15000,
+      timeoutMs: 30000,
       critical: false,
       batchHeader: snapshotBatchHeader,
       snapshot: { scene: 'global', key: 'source_status' },
@@ -681,7 +681,7 @@ async function warmWorldCaches(args, signal, runId) {
     {
       method: 'GET',
       pathname: '/api/v1/world/source-knowledge/status?scene=tech-ai',
-      timeoutMs: 15000,
+      timeoutMs: 30000,
       critical: false,
       batchHeader: snapshotBatchHeader,
       snapshot: { scene: 'tech-ai', key: 'source_status' },
@@ -689,7 +689,7 @@ async function warmWorldCaches(args, signal, runId) {
     {
       method: 'GET',
       pathname: '/api/v1/world/asean?limit=80&fresh=1',
-      timeoutMs: 15000,
+      timeoutMs: 30000,
       critical: false,
       batchHeader: snapshotBatchHeader,
       snapshot: { scene: 'asean', key: 'topic' },
@@ -745,19 +745,23 @@ async function warmWorldCaches(args, signal, runId) {
     }
   }
 
-  let cursor = 0;
-  const snapshotResults = [];
-  const concurrency = Math.min(snapshotEndpoints.length, Math.max(1, args.endpointConcurrency));
-  const workers = Array.from({ length: concurrency }, async () => {
-    while (cursor < snapshotEndpoints.length && !signal?.aborted) {
-      const endpoint = snapshotEndpoints[cursor];
-      cursor += 1;
-      const result = await runEndpoint(endpoint);
-      snapshotResults.push(result);
-      results.push(result);
-    }
-  });
-  await Promise.all(workers);
+  const runSnapshotBatch = async (endpoints) => {
+    let cursor = 0;
+    const batchResults = [];
+    const concurrency = Math.min(endpoints.length, Math.max(1, args.endpointConcurrency));
+    const workers = Array.from({ length: concurrency }, async () => {
+      while (cursor < endpoints.length && !signal?.aborted) {
+        const endpoint = endpoints[cursor];
+        cursor += 1;
+        batchResults.push(await runEndpoint(endpoint));
+      }
+    });
+    await Promise.all(workers);
+    return batchResults;
+  };
+
+  const snapshotResults = await runSnapshotBatch(snapshotEndpoints);
+  results.push(...snapshotResults);
 
   const timedOutSnapshots = snapshotResults.filter((result) => result.timed_out);
   if (timedOutSnapshots.length && !signal?.aborted) {
@@ -768,6 +772,22 @@ async function warmWorldCaches(args, signal, runId) {
         signal,
       ),
     );
+    if (!signal?.aborted) {
+      const timedOutPaths = new Set(timedOutSnapshots.map((result) => result.path));
+      const retryResults = await runSnapshotBatch(
+        snapshotEndpoints.filter((endpoint) => timedOutPaths.has(endpoint.pathname)),
+      );
+      for (const retryResult of retryResults) {
+        const resultIndex = results.findIndex((result) => result.path === retryResult.path && result.timed_out);
+        const recoveredResult = {
+          ...retryResult,
+          retried_after_worker_reset: true,
+          recovered_after_timeout: retryResult.ok,
+        };
+        if (resultIndex >= 0) results.splice(resultIndex, 1, recoveredResult);
+        else results.push(recoveredResult);
+      }
+    }
   }
 
   if (signal?.aborted) {

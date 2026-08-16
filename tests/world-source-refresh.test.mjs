@@ -14,10 +14,11 @@ test('world source refresh rebuilds both public dashboard scenes every cycle', (
   assert.deepEqual(
     SCHEDULED_DASHBOARD_REFRESH_ENDPOINTS.map((endpoint) => endpoint.pathname),
     [
-      '/api/v1/world/state?scene=tech-ai&fresh=1&rebuild=1',
       '/api/v1/world/state?scene=geo-politics-daily&fresh=1&rebuild=1',
+      '/api/v1/world/state?scene=tech-ai&fresh=1&rebuild=1',
     ],
   );
+  assert.ok(ROTATING_MAINTENANCE_ENDPOINTS.every((endpoint) => endpoint.timeoutMs >= 300000));
   assert.ok(SCHEDULED_DASHBOARD_REFRESH_ENDPOINTS.every((endpoint) => endpoint.timeoutMs >= 180000));
   assert.ok(ROTATING_MAINTENANCE_ENDPOINTS.every((endpoint) => !endpoint.pathname.includes('/world/state?')));
   assert.match(sourceRefreshScript, /\.\.\.SCHEDULED_DASHBOARD_REFRESH_ENDPOINTS/);
@@ -33,5 +34,7 @@ test('world source refresh rotates heavy work and resets its managed worker afte
   assert.match(sourceRefreshScript, /terminateProcessTree/);
   assert.match(sourceRefreshScript, /replacement_pid/);
   assert.match(sourceRefreshScript, /snapshot-timeouts:/);
+  assert.match(sourceRefreshScript, /retried_after_worker_reset/);
+  assert.match(sourceRefreshScript, /recovered_after_timeout/);
   assert.match(sourceRefreshScript, /final_worker_health_after_recovery/);
 });

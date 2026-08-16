@@ -51,7 +51,7 @@ test('standalone Docker stack isolates web and refresh containers', () => {
   assert.match(compose, /scripts\/world-source-refresh-daemon\.mjs/)
   assert.match(compose, /scripts\/world-source-refresh-health\.mjs/)
   assert.match(compose, /WORLD_SOURCE_REFRESH_MANAGE_WORKER: "1"/)
-  assert.match(compose, /WORLD_SOURCE_REFRESH_TIMEOUT_MINUTES:-12/)
+  assert.match(compose, /WORLD_SOURCE_REFRESH_TIMEOUT_MINUTES:-20/)
   assert.match(compose, /WORLD_SOURCE_REFRESH_HEAVY_BATCH_SIZE:-1/)
   assert.match(compose, /WORLD_SOURCE_REFRESH_WORKER_HEALTH_FAILURE_THRESHOLD:-2/)
   assert.match(compose, /host\.docker\.internal:host-gateway/)
