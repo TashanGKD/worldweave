@@ -16,6 +16,10 @@ import {
   withDeadline,
   writeJsonAtomicSync,
 } from './world-refresh-control.mjs';
+import {
+  ROTATING_MAINTENANCE_ENDPOINTS,
+  SCHEDULED_DASHBOARD_REFRESH_ENDPOINTS,
+} from './world-source-refresh-endpoints.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, '..');
@@ -643,44 +647,10 @@ async function warmWorldCaches(args, signal, runId) {
   }
   let heavyEndpoints = [];
   if (args.includeHeavyWorldSync) {
-    const heavyEndpointPool = [
-      {
-        method: 'POST',
-        pathname: '/api/v1/world/source-knowledge/sync?scene=global&batch=1',
-        timeoutMs: 90000,
-        critical: false,
-        batchHeader: true,
-      },
-      {
-        method: 'POST',
-        pathname: '/api/v1/world/livebench/sync?scene=global&batch=1',
-        timeoutMs: 120000,
-        critical: false,
-        batchHeader: true,
-      },
-      {
-        method: 'POST',
-        pathname: '/api/v1/world/source-knowledge/sync?scene=tech-ai&batch=1',
-        timeoutMs: 90000,
-        critical: false,
-        batchHeader: true,
-      },
-      {
-        method: 'GET',
-        pathname: '/api/v1/world/state?scene=tech-ai&fresh=1&rebuild=1',
-        timeoutMs: 30000,
-        critical: false,
-        batchHeader: false,
-      },
-      {
-        method: 'GET',
-        pathname: '/api/v1/world/state?scene=geo-politics-daily&fresh=1&rebuild=1',
-        timeoutMs: 60000,
-        critical: false,
-        batchHeader: false,
-      },
+    heavyEndpoints = [
+      ...selectRotatingHeavyEndpoints(ROTATING_MAINTENANCE_ENDPOINTS, args.heavyBatchSize),
+      ...SCHEDULED_DASHBOARD_REFRESH_ENDPOINTS,
     ];
-    heavyEndpoints = selectRotatingHeavyEndpoints(heavyEndpointPool, args.heavyBatchSize);
   }
   const snapshotBatchHeader = args.includeHeavyWorldSync;
   const snapshotEndpoints = [

@@ -107,6 +107,8 @@ pnpm audit:world-skill
 - `worldweave`：对外 Web/API，宿主机默认仅监听 `127.0.0.1:5000`
 - `worldweave-refresh`：独立的信源刷新 daemon 和重任务 worker
 
+每个定时刷新周期都会重建地缘和 AI 两个公开时间线；信源知识与 LiveBench 维护任务继续按批次轮转。若目标服务器需要通过宿主机代理访问外部信源，请在 `DEPLOY_ENV` 中设置 `WORLDWEAVE_REFRESH_NODE_USE_ENV_PROXY=1`、`WORLDWEAVE_REFRESH_HTTP_PROXY`、`WORLDWEAVE_REFRESH_HTTPS_PROXY` 和 `WORLDWEAVE_REFRESH_NO_PROXY`。Compose 只把这些代理值注入刷新容器，并通过 `host.docker.internal` 访问宿主机代理。
+
 服务器仓库密钥使用 `DEPLOY_HOST`、`DEPLOY_USER`、`SSH_PRIVATE_KEY`、`DEPLOY_ENV`。公网入口为：
 
 - `https://worldweave.tashan.chat`

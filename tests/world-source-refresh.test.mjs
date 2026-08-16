@@ -3,11 +3,24 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 
+import {
+  ROTATING_MAINTENANCE_ENDPOINTS,
+  SCHEDULED_DASHBOARD_REFRESH_ENDPOINTS,
+} from '../scripts/world-source-refresh-endpoints.mjs';
+
 const sourceRefreshScript = readFileSync(join(process.cwd(), 'scripts', 'world-source-refresh.mjs'), 'utf8');
 
-test('world source refresh warms both AI and geo-politics scene states', () => {
-  assert.match(sourceRefreshScript, /\/api\/v1\/world\/state\?scene=tech-ai&fresh=1&rebuild=1/);
-  assert.match(sourceRefreshScript, /\/api\/v1\/world\/state\?scene=geo-politics-daily&fresh=1&rebuild=1/);
+test('world source refresh rebuilds both public dashboard scenes every cycle', () => {
+  assert.deepEqual(
+    SCHEDULED_DASHBOARD_REFRESH_ENDPOINTS.map((endpoint) => endpoint.pathname),
+    [
+      '/api/v1/world/state?scene=tech-ai&fresh=1&rebuild=1',
+      '/api/v1/world/state?scene=geo-politics-daily&fresh=1&rebuild=1',
+    ],
+  );
+  assert.ok(SCHEDULED_DASHBOARD_REFRESH_ENDPOINTS.every((endpoint) => endpoint.timeoutMs >= 180000));
+  assert.ok(ROTATING_MAINTENANCE_ENDPOINTS.every((endpoint) => !endpoint.pathname.includes('/world/state?')));
+  assert.match(sourceRefreshScript, /\.\.\.SCHEDULED_DASHBOARD_REFRESH_ENDPOINTS/);
   assert.match(sourceRefreshScript, /WORLD_SOURCE_REFRESH_INCLUDE_HEAVY_SYNC/);
 });
 

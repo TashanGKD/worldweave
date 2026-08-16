@@ -127,6 +127,11 @@ jobs:
               echo "[deploy] egress $url -> HTTP $status"
             }
 
+            check_refresh_egress() {
+              docker compose exec -T worldweave-refresh node -e \
+                "fetch('https://world-monitor.com/',{signal:AbortSignal.timeout(20000)}).then(r=>{if(!r.ok)throw new Error('world-monitor HTTP '+r.status);console.log('[deploy] refresh egress world-monitor -> HTTP '+r.status)}).catch(e=>{console.error(e);process.exit(1)})"
+            }
+
             wait_for_healthy() {
               local service="$1"
               local container_id=""
@@ -209,6 +214,11 @@ jobs:
             fi
 
             if ! wait_for_healthy worldweave || ! wait_for_healthy worldweave-refresh; then
+              rollback_worldweave
+              exit 1
+            fi
+
+            if ! retry 3 check_refresh_egress; then
               rollback_worldweave
               exit 1
             fi
