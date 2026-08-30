@@ -64,6 +64,16 @@ const LIVEBENCH_ACTIVE_CANDIDATE_LIMIT = 96;
 const LIVEBENCH_RESOLVED_CANDIDATE_LIMIT = 64;
 const LIVEBENCH_WATCHLIST_CANDIDATE_LIMIT = 160;
 const LIVEBENCH_RESOLVED_RETENTION_DAYS = resolveLiveBenchInteger('WORLD_LIVEBENCH_RESOLVED_RETENTION_DAYS', 3650, 30, 3650);
+const LIVEBENCH_RETAINED_ARCHIVE_CHUNK_LIMIT = resolveLiveBenchInteger(
+  'WORLD_LIVEBENCH_RETAINED_ARCHIVE_CHUNK_LIMIT',
+  2400,
+  200,
+  20000,
+);
+// Embeddings are the dominant share of the persisted state files (hundreds of
+// megabytes at full precision). Rounding to five decimals keeps retrieval
+// quality while shrinking parse peaks well below the container heap limit.
+const LIVEBENCH_EMBEDDING_PERSIST_PRECISION = 100000;
 const LIVEBENCH_QUESTION_SNAPSHOT_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const LIVEBENCH_MIN_OPEN_QUESTION_COUNT = 20;
 const LIVEBENCH_MIN_TOTAL_QUESTION_COUNT = 40;
@@ -2026,7 +2036,11 @@ async function loadStore(): Promise<LiveBenchStore> {
     const shouldRepairVotes = Array.isArray(parsed.votes) && JSON.stringify(parsed.votes) !== JSON.stringify(normalizedVotes);
     if (shouldRepairVotes) {
       const tempFile = `${LIVEBENCH_STATE_FILE}.${process.pid}.${Date.now()}.repair.tmp`;
-      await fs.writeFile(tempFile, JSON.stringify(normalizedStore, null, 2), 'utf-8');
+      await fs.writeFile(
+        tempFile,
+        JSON.stringify({ ...normalizedStore, chunks: quantizeChunksForPersistence(normalizedStore.chunks) }),
+        'utf-8',
+      );
       await moveTempFileIntoPlace(tempFile, LIVEBENCH_STATE_FILE);
     }
     const storeWithMetadata = {
@@ -2048,6 +2062,29 @@ async function loadStore(): Promise<LiveBenchStore> {
   } catch {
     return getInitialStore();
   }
+}
+
+function quantizePersistedEmbedding(embedding: unknown): number[] {
+  if (!Array.isArray(embedding)) return [];
+  return embedding.map((value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    return Math.round(numeric * LIVEBENCH_EMBEDDING_PERSIST_PRECISION) / LIVEBENCH_EMBEDDING_PERSIST_PRECISION;
+  });
+}
+
+function quantizeChunksForPersistence(chunks: SourceEmbeddingChunk[]): SourceEmbeddingChunk[] {
+  return chunks.map((chunk) => ({
+    ...chunk,
+    embedding: quantizePersistedEmbedding(chunk.embedding),
+  }));
+}
+
+function limitRetainedArchiveChunks(chunks: SourceEmbeddingChunk[]): SourceEmbeddingChunk[] {
+  if (chunks.length <= LIVEBENCH_RETAINED_ARCHIVE_CHUNK_LIMIT) return chunks;
+  return [...chunks]
+    .sort((left, right) => new Date(right.expires_at).getTime() - new Date(left.expires_at).getTime())
+    .slice(0, LIVEBENCH_RETAINED_ARCHIVE_CHUNK_LIMIT);
 }
 
 async function persistStore(
@@ -2095,9 +2132,10 @@ async function persistStore(
         last_synced_at: nowIso(),
       };
     }
+    const compactStore = { ...storeToWrite, chunks: quantizeChunksForPersistence(storeToWrite.chunks) };
     await fs.mkdir(path.dirname(LIVEBENCH_STATE_FILE), { recursive: true });
     const tempFile = `${LIVEBENCH_STATE_FILE}.${process.pid}.${Date.now()}.tmp`;
-    await fs.writeFile(tempFile, JSON.stringify(storeToWrite, null, 2), 'utf-8');
+    await fs.writeFile(tempFile, JSON.stringify(compactStore), 'utf-8');
     await moveTempFileIntoPlace(tempFile, LIVEBENCH_STATE_FILE);
     try {
       const stat = await fs.stat(LIVEBENCH_STATE_FILE);
@@ -2105,7 +2143,7 @@ async function persistStore(
         file_path: LIVEBENCH_STATE_FILE,
         mtime_ms: stat.mtimeMs,
         size: stat.size,
-        store: storeToWrite,
+        store: compactStore,
       });
     } catch {
       // Cache refresh is best-effort; disk persistence above is authoritative.
@@ -2228,11 +2266,13 @@ async function persistRetainedLiveBenchArchive(store: LiveBenchStore): Promise<v
     votes: mergeVotesById(existingArchive.votes, mergedStore.votes, store.votes).filter((vote) =>
       validQuestionIds.has(vote.question_id),
     ),
-    chunks: mergeChunksById(mergedStore.chunks, existingArchive.chunks, store.chunks),
+    chunks: limitRetainedArchiveChunks(
+      quantizeChunksForPersistence(mergeChunksById(mergedStore.chunks, existingArchive.chunks, store.chunks)),
+    ),
   };
   await fs.mkdir(path.dirname(LIVEBENCH_RETAINED_ARCHIVE_FILE), { recursive: true });
   const tempFile = `${LIVEBENCH_RETAINED_ARCHIVE_FILE}.${process.pid}.${Date.now()}.tmp`;
-  await fs.writeFile(tempFile, JSON.stringify(payload, null, 2), 'utf-8');
+  await fs.writeFile(tempFile, JSON.stringify(payload), 'utf-8');
   await moveTempFileIntoPlace(tempFile, LIVEBENCH_RETAINED_ARCHIVE_FILE);
 }
 

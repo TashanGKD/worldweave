@@ -13,7 +13,7 @@ services:
     init: true
     stop_signal: SIGTERM
     stop_grace_period: ${WORLDWEAVE_STOP_GRACE_PERIOD:-45s}
-    mem_limit: ${WORLDWEAVE_MEM_LIMIT:-2g}
+    mem_limit: ${WORLDWEAVE_MEM_LIMIT:-2560m}
     env_file:
       - ${ENV_FILE:-.env}
     environment:
@@ -21,7 +21,7 @@ services:
       HOST: 0.0.0.0
       WORLD_HOST: 0.0.0.0
       WORLD_WEB_ENABLE_HEAVY_REFRESH: "0"
-      NODE_OPTIONS: ${WORLDWEAVE_NODE_OPTIONS:---max-old-space-size=1536}
+      NODE_OPTIONS: ${WORLDWEAVE_NODE_OPTIONS:---max-old-space-size=2048}
     ports:
       - "${WORLDWEAVE_BIND_HOST:-127.0.0.1}:${WORLDWEAVE_HOST_PORT:-5000}:5000"
     volumes:

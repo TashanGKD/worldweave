@@ -59,6 +59,7 @@ const restartDelayMs = Math.max(1_000, Number(process.env.WORLD_SOURCE_REFRESH_R
 const stopGraceMs = Math.max(3_000, Number(process.env.WORLD_SOURCE_REFRESH_STOP_GRACE_MS || 15_000));
 const workerHealthIntervalMs = Math.max(5_000, Number(process.env.WORLD_SOURCE_REFRESH_WORKER_HEALTH_INTERVAL_MS || 15_000));
 const workerHealthFailureThreshold = Math.max(1, Number(process.env.WORLD_SOURCE_REFRESH_WORKER_HEALTH_FAILURE_THRESHOLD || 2));
+const workerProbeTimeoutMs = Math.max(1_000, Number(process.env.WORLD_SOURCE_REFRESH_WORKER_PROBE_TIMEOUT_MS || 8_000));
 const includeHeavyWorldSync = process.env.WORLD_SOURCE_REFRESH_INCLUDE_HEAVY_SYNC !== '0';
 
 const out = openLog(outPath);
@@ -126,7 +127,7 @@ function startWorker() {
 async function probeWorkerReady() {
   try {
     const response = await fetch(`${workerBaseUrl}/api/v1/openclaw/skill.md`, {
-      signal: combineAbortSignals([lifecycleController.signal, AbortSignal.timeout(2_000)]),
+      signal: combineAbortSignals([lifecycleController.signal, AbortSignal.timeout(workerProbeTimeoutMs)]),
     });
     await response.arrayBuffer().catch(() => null);
     return response.ok;

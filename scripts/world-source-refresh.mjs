@@ -442,12 +442,16 @@ async function fetchWorldJson(baseUrl, pathname, timeoutMs = 45000, batchHeader 
   }
 }
 
+// Cold workers can need several seconds before their first response; probes
+// must not mistake warm-up latency for a dead base URL.
+const worldProbeTimeoutMs = Math.max(2_000, Number(process.env.WORLD_SOURCE_REFRESH_PROBE_TIMEOUT_MS || 15_000));
+
 async function probeWorldBaseUrl(baseUrl, signal) {
   const startedAt = Date.now();
   try {
     const response = await fetch(`${baseUrl}/api/v1/world/livebench/questions?scene=global&limit=1`, {
       headers: { Accept: 'application/json' },
-      signal: combineAbortSignals([signal, AbortSignal.timeout(5000)]),
+      signal: combineAbortSignals([signal, AbortSignal.timeout(worldProbeTimeoutMs)]),
     });
     await response.arrayBuffer().catch(() => null);
     return {
@@ -472,7 +476,7 @@ async function probeManagedWorkerHealth(baseUrl, signal) {
   try {
     const response = await fetch(`${baseUrl}/api/v1/openclaw/skill.md`, {
       headers: { Accept: 'text/markdown, text/plain;q=0.9, */*;q=0.5' },
-      signal: combineAbortSignals([signal, AbortSignal.timeout(5_000)]),
+      signal: combineAbortSignals([signal, AbortSignal.timeout(worldProbeTimeoutMs)]),
     });
     await response.arrayBuffer().catch(() => null);
     return {

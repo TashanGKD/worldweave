@@ -14,6 +14,12 @@ const SOURCE_STATUS_SNAPSHOT_MAX_AGE_MS = 90 * 60 * 1000;
 const SOURCE_STATUS_STALE_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const SOURCE_LATEST_SIGNAL_STALE_HOURS = 48;
 const SOURCE_MONITOR_DB_STATUS_TIMEOUT_MS = 1200;
+// The fallback path parses the persisted knowledge state file. Quantized,
+// compact persistence keeps it near 150-200 MB (parse peak ~1 GB, safe for
+// the 2048 MB heap). If the file regrows past this budget, skip the
+// whole-file parse instead of exhausting the web container heap; callers
+// then fall back to snapshots or a 503 response.
+const SOURCE_STATUS_FALLBACK_MAX_STATE_FILE_BYTES = 256 * 1024 * 1024;
 
 function toPublicSourceStatus(state: WorldSourceKnowledgeState): WorldSourceKnowledgeState {
   const { governance: _governance, source_refresh_summary: _sourceRefreshSummary, ...publicState } = state;
@@ -87,6 +93,10 @@ async function readFallbackSourceStatus(scene: WorldScene): Promise<WorldSourceK
   try {
     const statePath = path.join(process.cwd(), '.cache', 'world-source-knowledge-state.json');
     const refreshStatusPath = path.join(process.cwd(), '.cache', 'world-source-refresh-status.json');
+    const stateStat = await fs.stat(statePath).catch(() => null);
+    if (!stateStat || stateStat.size > SOURCE_STATUS_FALLBACK_MAX_STATE_FILE_BYTES) {
+      return null;
+    }
     const [stateRaw, refreshRaw] = await Promise.all([
       fs.readFile(statePath, 'utf-8'),
       fs.readFile(refreshStatusPath, 'utf-8').catch(() => '{}'),
