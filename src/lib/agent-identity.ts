@@ -6,7 +6,7 @@ export async function resolveVoteIdentity(request: Request, claimedId?: string) 
     return { xia_id: `anonymous:${encodeURIComponent(claimedId)}`, identity_verified: false,
       agent_uid: null, legacy_xia_id: null, contributor_label: claimedId };
   }
-  const base = (process.env.TOPICLAB_ACCOUNT_BASE_URL || 'http://host.docker.internal:8011').replace(/\/+$/, '');
+  const base = (process.env.TOPICLAB_ACCOUNT_BASE_URL || 'https://world.tashan.chat').replace(/\/+$/, '');
   const response = await fetch(`${base}/api/v1/agents/me`, {
     headers: { Authorization: authorization }, signal: AbortSignal.timeout(10000), cache: 'no-store', redirect: 'error',
   });
