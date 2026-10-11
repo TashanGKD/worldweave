@@ -905,7 +905,9 @@ async function runSourceRefreshRemediation(args, warmStatus, signal, runId) {
 
   const sourceStatusPayload = await fetchWorldJson(
     args.worldBaseUrl,
-    '/api/v1/world/source-knowledge/status?scene=global&fresh=1',
+    // The warm phase already rebuilt live data. Inspect its signal timestamps
+    // before deciding whether another full synchronization is necessary.
+    '/api/v1/world/source-knowledge/status?scene=global',
     45000,
     true,
     signal,
@@ -969,7 +971,7 @@ async function runSourceRefreshRemediation(args, warmStatus, signal, runId) {
       args.worldBaseUrl,
       'POST',
       '/api/v1/world/source-knowledge/sync?scene=global&batch=1',
-      120000,
+      300000,
       { scene: 'global', key: 'source_sync_after_remediation' },
       true,
       signal,
@@ -999,7 +1001,7 @@ async function runSourceRefreshRemediation(args, warmStatus, signal, runId) {
     if (syncResult.ok) {
       const afterSyncStatus = await fetchWorldJson(
         args.worldBaseUrl,
-        '/api/v1/world/source-knowledge/status?scene=global&fresh=1',
+        '/api/v1/world/source-knowledge/status?scene=global',
         45000,
         true,
         signal,
