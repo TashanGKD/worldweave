@@ -108,7 +108,7 @@ export function buildOpenClawSkillUrl(baseUrl: string | null | undefined) {
 }
 
 export function resolveConfiguredPublicOrigin() {
-  return normalizeOrigin(process.env.OPENCLAW_BASE_URL);
+  return normalizeOrigin(process.env.AGENT_PUBLIC_BASE_URL || process.env.OPENCLAW_BASE_URL);
 }
 
 function withRequestPortWhenLocal(configuredOrigin: string | null, requestOrigin: string | null) {
@@ -140,23 +140,7 @@ export function resolvePublicSkillUrl(input?: {
   requestUrl?: string | null;
   fallbackOrigin?: string | null;
 }) {
-  const requestOrigin = resolveRequestOrigin(input);
-  const requestBaseUrl = resolveRequestBaseUrl(input);
-  const configuredOrigin = withRequestPortWhenLocal(resolveConfiguredPublicOrigin(), requestOrigin);
-  if (requestOrigin) {
-    try {
-      if (isLocalHostname(new URL(requestOrigin).hostname)) {
-        return buildOpenClawSkillUrl(requestBaseUrl || requestOrigin);
-      }
-    } catch {
-      // Fall through to the configured public origin.
-    }
-  }
-  if (configuredOrigin && hasPathPrefix(configuredOrigin)) return buildOpenClawSkillUrl(configuredOrigin);
-  if (requestBaseUrl) return buildOpenClawSkillUrl(requestBaseUrl);
-  if (configuredOrigin) return buildOpenClawSkillUrl(configuredOrigin);
-
-  return buildOpenClawSkillUrl(requestBaseUrl || requestOrigin);
+  return buildOpenClawSkillUrl(resolvePublicBaseUrl(input));
 }
 
 export function resolvePublicBaseUrl(input?: {
@@ -167,6 +151,15 @@ export function resolvePublicBaseUrl(input?: {
   const requestOrigin = resolveRequestOrigin(input);
   const requestBaseUrl = resolveRequestBaseUrl(input);
   const configuredOrigin = withRequestPortWhenLocal(resolveConfiguredPublicOrigin(), requestOrigin);
+  if (requestOrigin) {
+    const hostname = new URL(requestOrigin).hostname;
+    const internalProxy = hostname.endsWith('.internal') || hostname.startsWith('10.') ||
+      hostname.startsWith('192.168.') || /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+    if (internalProxy) {
+      if (configuredOrigin) return configuredOrigin;
+      throw new Error('Public Agent base URL is missing; configure AGENT_PUBLIC_BASE_URL or forwarded host');
+    }
+  }
   if (requestOrigin) {
     try {
       if (isLocalHostname(new URL(requestOrigin).hostname)) {

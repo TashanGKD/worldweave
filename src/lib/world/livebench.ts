@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import {reserveVoteReceipt,completeVoteReceipt} from './vote-receipts';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
@@ -7274,6 +7275,10 @@ function defaultDirectionProbability(side: LiveQuestionSide) {
 }
 
 type SubmitLiveBenchVoteInput = {
+  idempotency_key?: string;
+  identity_verified?: boolean;
+  agent_uid?: string | null;
+  legacy_xia_id?: string | null;
   question_id: string;
   xia_id: string;
   source?: 'xia' | 'external';
@@ -7344,6 +7349,9 @@ function buildLiveBenchVote(input: SubmitLiveBenchVoteInput, question: LiveQuest
   }
 
   const vote: LiveVote = {
+    identity_verified: input.identity_verified,
+    agent_uid: input.agent_uid,
+    legacy_xia_id: input.legacy_xia_id,
     vote_id: `vote_${crypto.randomUUID().replace(/-/g, '').slice(0, 18)}`,
     question_id: input.question_id,
     xia_id: input.xia_id,
@@ -7484,13 +7492,24 @@ async function persistFastVoteIntoStore(vote: LiveVote) {
 }
 
 export async function submitLiveBenchVoteFast(input: SubmitLiveBenchVoteInput) {
+  const {idempotency_key, ...payload} = input;
+  const receipt = idempotency_key ? await reserveVoteReceipt(LIVEBENCH_VOTE_JOURNAL_FILE + '.receipts', input.agent_uid || input.xia_id, idempotency_key, payload) : null;
+  if(receipt && !receipt.created) {
+    if(receipt.vote) return receipt.vote as LiveVote;
+    const recovered = (await readLiveBenchVoteJournal()).find(vote => vote.idempotency_receipt_id === receipt.id);
+    if(recovered) {await completeVoteReceipt(receipt,recovered);return recovered;}
+    throw new Error('write_outcome_unknown');
+  }
+
   const fastQuestion = await findFastVoteQuestion(input.question_id);
   if (!fastQuestion) {
     throw new Error('Live question not found');
   }
   const journalVotes = await readLiveBenchVoteJournal();
   const vote = buildLiveBenchVote(input, fastQuestion.question, [...fastQuestion.votes, ...journalVotes]);
+  if(receipt) vote.idempotency_receipt_id = receipt.id;
   await appendLiveBenchVoteJournal(vote);
+  if(receipt) await completeVoteReceipt(receipt,vote);
   addVoteToLiveBenchStoreCache(vote);
   void persistFastVoteIntoStore(vote).catch((error) => {
     console.warn('[livebench] fast vote background persistence failed:', error instanceof Error ? error.message : String(error));

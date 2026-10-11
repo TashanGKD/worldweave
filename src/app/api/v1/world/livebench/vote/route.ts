@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { resolveVoteIdentity } from '@/lib/agent-identity';
 
 import { deleteWorldApiSnapshots } from '@/lib/world/api-snapshot';
 import { submitLiveBenchVoteFast } from '@/lib/world/livebench';
@@ -35,7 +36,7 @@ export async function GET() {
     {
       endpoint: '/api/v1/world/livebench/vote',
       method: 'POST',
-      required_fields: ['question_id', 'xia_id', 'side'],
+      required_fields: ['question_id', 'side'],
       recommended_fields: [
         'source',
         'contributor_kind',
@@ -46,7 +47,7 @@ export async function GET() {
       ],
       identity: {
         xia_id:
-          'Use one stable agent id for the same external xia across runs, for example hermes-minimax or your-agent-name.',
+          'Authenticated votes use the verified Agent UID. Anonymous labels are stored in a separate namespace.',
         source: 'Use xia for agent votes. Use external only for native platform/community discussion imports.',
       },
       side_values: ['yes', 'no'],
@@ -76,26 +77,31 @@ export async function POST(request: Request) {
   const startedAt = Date.now();
   try {
     const body = (await request.json()) as VoteBody;
-    if (!body.question_id || !body.xia_id || !body.side) {
+    if (!body.question_id || !['yes', 'no'].includes(body.side || '')) {
       return NextResponse.json({ error: 'question_id, xia_id, side are required' }, { status: 400 });
     }
 
+    const identity = await resolveVoteIdentity(request, body.xia_id);
     const vote = await submitLiveBenchVoteFast({
+      idempotency_key: request.headers.get("Idempotency-Key") || undefined,
+      identity_verified: identity.identity_verified,
+      agent_uid: identity.agent_uid,
+      legacy_xia_id: identity.legacy_xia_id,
       question_id: body.question_id,
-      xia_id: body.xia_id,
-      source: body.source,
-      contributor_kind: body.contributor_kind,
-      contributor_label: body.contributor_label,
+      xia_id: identity.xia_id,
+      source: 'xia',
+      contributor_kind: 'ai',
+      contributor_label: identity.contributor_label,
       origin_url: body.origin_url,
-      side: body.side,
+      side: body.side!,
       probability_yes: typeof body.probability_yes === 'number' ? body.probability_yes : undefined,
       human_readable_prediction: body.human_readable_prediction || '',
       human_readable_why: body.human_readable_why || '',
       cited_signal_ids: body.cited_signal_ids,
       cited_vote_ids: body.cited_vote_ids,
       what_changes_my_mind: body.what_changes_my_mind,
-      created_at: body.created_at,
-      historical_backfill: body.historical_backfill,
+      created_at: undefined,
+      historical_backfill: false,
       source_attached: body.source_attached,
       source_snapshot_id: body.source_snapshot_id,
       source_context_generated_at: body.source_context_generated_at,
@@ -114,14 +120,16 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to submit livebench vote';
+    const isConflict = /^(idempotency_conflict|write_outcome_unknown)$/.test(message);
+    const isAuthenticationError = /authentication failed|identity required|permission required/.test(message);
     const isValidationError =
       error instanceof Error &&
       /(question_id, xia_id, side are required|Live question not found|still in cooldown|must include|must align|too generic|conflicts with side\/probability_yes)/i.test(
         error.message,
       );
     return NextResponse.json(
-      { error: message },
-      { status: isValidationError ? 400 : 500 },
+      { error: message, code: isConflict ? message : undefined, retryable: false },
+      { status: isConflict ? 409 : isAuthenticationError ? 403 : isValidationError ? 400 : /Anonymous vote requires|Invalid Idempotency-Key/.test(message) ? 400 : 500 },
     );
   }
 }
