@@ -609,6 +609,10 @@ export interface SourceEmbeddingChunk {
 }
 
 export interface LiveVote {
+  idempotency_receipt_id?: string;
+  identity_verified?: boolean;
+  agent_uid?: string | null;
+  legacy_xia_id?: string | null;
   vote_id: string;
   question_id: string;
   xia_id: string;

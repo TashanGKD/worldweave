@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { signalFreshness } from '@/lib/signal-freshness';
 
 import { resolveRequestOrigin } from '@/lib/request-origin';
 import {
@@ -94,6 +95,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         generated_at: dashboard.generated_at,
+        ...signalFreshness(signals.map(signal => signal.published_at), dashboard.generated_at),
         scene,
         limit,
         offset,
