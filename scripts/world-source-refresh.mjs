@@ -543,12 +543,14 @@ function summarizeSourceFreshness(payload) {
     typeof payload?.latest_signal_published_at === 'string' ? payload.latest_signal_published_at : null;
   let latestSignalAgeHours =
     typeof health.latest_signal_age_hours === 'number' ? health.latest_signal_age_hours : null;
-  if (latestSignalAgeHours === null && latestSignalPublishedAt) {
+  // Snapshot health fields were computed earlier; age the source timestamp
+  // at the time of this check instead of trusting the stored age.
+  if (latestSignalPublishedAt) {
     const age = (Date.now() - Date.parse(latestSignalPublishedAt)) / 36e5;
-    latestSignalAgeHours = Number.isFinite(age) ? Number(age.toFixed(2)) : null;
+    latestSignalAgeHours = Number.isFinite(age) && age >= 0 ? Number(age.toFixed(2)) : null;
   }
   const freshnessStatus =
-    typeof health.freshness_status === 'string'
+    !latestSignalPublishedAt && typeof health.freshness_status === 'string'
       ? health.freshness_status
       : latestSignalAgeHours === null
         ? 'unknown'

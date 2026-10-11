@@ -7,6 +7,21 @@ const source = readFileSync(new URL('../scripts/world-source-refresh.mjs', impor
 const ast = ts.createSourceFile('refresh.mjs', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
 const declaration = (name) => ast.statements.find((node) => ts.isFunctionDeclaration(node) && node.name?.text === name).getText(ast);
 
+test('snapshot health fields cannot conceal aged or invalid source timestamps', () => {
+  const summarize = new Function(`const SOURCE_LATEST_SIGNAL_STALE_HOURS=48; return ${declaration('summarizeSourceFreshness')};`)();
+  const stale = summarize({ latest_signal_published_at: new Date(Date.now() - 72 * 3600000).toISOString(),
+    source_health: { latest_signal_age_hours: 0.01, freshness_status: 'fresh' } });
+  assert.equal(stale.stale, true);
+  assert.equal(stale.freshness_status, 'stale');
+  assert.equal(stale.latest_signal_age_hours, 72);
+  for (const date of ['invalid', new Date(Date.now() + 3600000).toISOString()]) {
+    const result = summarize({ latest_signal_published_at: date,
+      source_health: { latest_signal_age_hours: 0.01, freshness_status: 'fresh' } });
+    assert.equal(result.freshness_status, 'unknown');
+    assert.equal(result.latest_signal_age_hours, null);
+  }
+});
+
 function remediation(firstAge) {
   const calls = [];
   let readCount = 0;
