@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { readAseanDatasetMetricState } from '@/lib/world/asean-dataset-metrics';
 import { withAseanTimeout } from '@/lib/world/asean-abort';
+import { aseanProviderTimeout } from '@/lib/world/asean-refresh-policy';
 import { readAseanMetasoSearchStatus, readAseanMetasoSignals, type AseanMetasoSearchStatus } from '@/lib/world/asean-metaso-search';
 import { readAseanPublicRiskSignals } from '@/lib/world/asean-public-risk-events';
 import { readAseanResearchResults } from '@/lib/world/asean-research-results';
@@ -133,6 +134,8 @@ async function readAseanTopicUncached(
   }
 > {
   const limit = options.limit || 40;
+  const providerTimeout = (defaultMs: number) =>
+    aseanProviderTimeout(defaultMs, options.force === true, options.cacheOnly === true);
   const dashboard = readAseanDashboard();
   const signals = dedupeSignals([
     ...(dashboard.top_signals || []),
@@ -153,28 +156,28 @@ async function readAseanTopicUncached(
   ] = await Promise.all([
     withAseanTimeout(
       (signal) => readAseanMetasoSignals({ force: options.force, cacheOnly: options.cacheOnly, signal }),
-      20_000,
+      providerTimeout(20_000),
       [],
       options.signal,
       'ASEAN Metaso refresh',
     ),
     withAseanTimeout(
       (signal) => readAseanSourceFeedSignals({ force: options.force, cacheOnly: options.cacheOnly, signal }),
-      20_000,
+      providerTimeout(20_000),
       [],
       options.signal,
       'ASEAN source feed refresh',
     ),
     withAseanTimeout(
       (signal) => readAseanPublicRiskSignals({ force: options.force, cacheOnly: options.cacheOnly, signal }),
-      20_000,
+      providerTimeout(20_000),
       [],
       options.signal,
       'ASEAN public risk refresh',
     ),
     withAseanTimeout(
       (signal) => readAseanDatasetMetricState({ force: options.force, cacheOnly: options.cacheOnly, signal }),
-      25_000,
+      providerTimeout(25_000),
       {
         enabled: false,
         refreshed_at: new Date(0).toISOString(),

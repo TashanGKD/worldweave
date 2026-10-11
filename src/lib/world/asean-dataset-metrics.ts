@@ -10,6 +10,7 @@ import {
   type AseanReadOptions,
 } from './asean-abort';
 import { ASEAN_SOURCE_POOL, type AseanSignalLike, type AseanTopicKey, type AseanTopicSource } from './asean-topic';
+import { reusableCsvDataset } from './asean-refresh-policy';
 
 export type AseanDatasetMetric = {
   id: string;
@@ -51,6 +52,7 @@ export type AseanDatasetSourceHealth = {
   metric_count: number;
   status: 'ok' | 'empty' | 'failed';
   checked_at: string;
+  cache_reused?: boolean;
 };
 
 type AseanDatasetMetricCache = {
@@ -71,7 +73,10 @@ type AseanDatasetMetricCache = {
 const CACHE_FILE = path.join(process.cwd(), '.cache', 'asean-dataset-metric-cache.json');
 const ENABLED = process.env.WORLD_ASEAN_DATASET_METRICS !== '0';
 const CACHE_TTL_MS = Math.max(15, Number(process.env.WORLD_ASEAN_DATASET_METRIC_TTL_MINUTES || 180)) * 60 * 1000;
+const CSV_CACHE_TTL_MS = Math.max(0, Number(process.env.WORLD_ASEAN_CSV_CACHE_TTL_HOURS || 24)) * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = Math.min(30000, Math.max(5000, Number(process.env.WORLD_ASEAN_DATASET_METRIC_TIMEOUT_MS || 8000)));
+const CSV_REQUEST_TIMEOUT_MS = Math.min(300000, Math.max(REQUEST_TIMEOUT_MS,
+  Number(process.env.WORLD_ASEAN_CSV_REQUEST_TIMEOUT_MS || 120000)));
 const SOURCE_LIMIT = Math.min(48, Math.max(1, Number(process.env.WORLD_ASEAN_DATASET_METRIC_SOURCE_LIMIT || 36)));
 const METRICS_LIMIT = Math.min(240, Math.max(8, Number(process.env.WORLD_ASEAN_DATASET_METRIC_LIMIT || 220)));
 const SERIES_LIMIT = Math.min(220, Math.max(8, Number(process.env.WORLD_ASEAN_DATASET_SERIES_LIMIT || 160)));
@@ -314,7 +319,7 @@ async function fetchJson(source: AseanTopicSource, signal?: AbortSignal): Promis
         },
         signal: timeout.signal,
       });
-      if (response.ok) return response.json();
+      if (response.ok) return await response.json();
       if (response.status < 500 && response.status !== 429) return null;
     } catch {
       throwIfAseanAborted(signal);
@@ -333,7 +338,7 @@ async function fetchJson(source: AseanTopicSource, signal?: AbortSignal): Promis
 async function fetchText(source: AseanTopicSource, signal?: AbortSignal): Promise<string | null> {
   for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt += 1) {
     throwIfAseanAborted(signal);
-    const timeout = createLinkedTimeoutSignal(signal, REQUEST_TIMEOUT_MS, `ASEAN dataset ${source.name}`);
+    const timeout = createLinkedTimeoutSignal(signal, CSV_REQUEST_TIMEOUT_MS, `ASEAN dataset ${source.name}`);
     try {
       const response = await fetch(source.url, {
         headers: {
@@ -342,7 +347,7 @@ async function fetchText(source: AseanTopicSource, signal?: AbortSignal): Promis
         },
         signal: timeout.signal,
       });
-      if (response.ok) return response.text();
+      if (response.ok) return await response.text();
       if (response.status < 500 && response.status !== 429) return null;
     } catch {
       throwIfAseanAborted(signal);
@@ -1099,6 +1104,16 @@ async function refreshMetrics(cache: AseanDatasetMetricCache | null, nowIso: str
     FETCH_CONCURRENCY,
     async (source) => {
       throwIfAseanAborted(signal);
+      const previousHealth = cache?.source_health?.find((item) => item.source_url === source.url);
+      const previousMetrics = (cache?.metrics || []).filter((item) => item.source_url === source.url);
+      const previousSeries = (cache?.series || []).filter((item) => item.source_url === source.url);
+      if (reusableCsvDataset(source.source_type, previousHealth?.checked_at, previousHealth?.status,
+        previousMetrics.length > 0 || previousSeries.length > 0, Date.parse(nowIso), CSV_CACHE_TTL_MS)) {
+        metrics.push(...previousMetrics);
+        series.push(...previousSeries);
+        sourceHealth.push({ ...previousHealth!, cache_reused: true });
+        return;
+      }
       const payload = source.source_type === 'csv' ? await fetchText(source, signal) : await fetchJson(source, signal);
       if (!payload) {
         failedCount += 1;

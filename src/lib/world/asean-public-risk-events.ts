@@ -154,7 +154,7 @@ async function fetchText(url: string, signal?: AbortSignal) {
       signal: timeout.signal,
     });
     if (!response.ok) return null;
-    return response.text();
+    return await response.text();
   } catch {
     throwIfAseanAborted(signal);
     return null;
@@ -174,7 +174,7 @@ async function fetchJson(url: string, signal?: AbortSignal) {
       signal: timeout.signal,
     });
     if (!response.ok) return null;
-    return response.json();
+    return await response.json();
   } catch {
     throwIfAseanAborted(signal);
     return null;

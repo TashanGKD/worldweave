@@ -5,6 +5,7 @@ import path from 'node:path';
 
 import { createAseanAbortError, createLinkedTimeoutSignal, raceAseanAbort, writeAseanCacheAtomic } from './asean-abort';
 import { readAseanTopic } from './asean-page-data';
+import { latestSuccessfulProviderRefresh } from './asean-refresh-policy';
 
 export type AseanRefreshState = 'idle' | 'queued' | 'running' | 'success' | 'degraded' | 'timed_out' | 'canceled' | 'failed';
 
@@ -170,13 +171,18 @@ async function executeRefresh(initial: AseanRefreshStatus, controller: AbortCont
       readAseanTopic({ cacheOnly: true, signal: timeout.signal, limit: 80 }),
       timeout.signal,
     );
+    const providerCaches = await Promise.all([
+      'asean-dataset-metric-cache.json', 'asean-source-feed-cache.json',
+      'asean-public-risk-cache.json', 'asean-metaso-search-cache.json',
+    ].map((file) => readJson<{ refreshed_at?: string; latest_run?: { fetched_count?: number } }>(path.join(cacheDir, file))));
+    const freshAt = latestSuccessfulProviderRefresh(providerCaches, startedAt);
     status = {
       ...status,
-      state: topic.signals.length || topic.dataset_metrics.length ? 'success' : 'degraded',
-      data_refreshed_at: topic.data_refreshed_at,
+      state: freshAt ? 'success' : 'degraded',
+      data_refreshed_at: freshAt || topic.data_refreshed_at,
       signal_count: topic.signals.length,
       metric_count: topic.dataset_metrics.length,
-      error: null,
+      error: freshAt ? null : 'No provider completed a live refresh; retained previous data',
     };
   } catch (error) {
     const timedOut = timeout.timedOut();
